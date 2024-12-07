@@ -2,6 +2,7 @@ package net.minestom.server.gamedata.tags;
 
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.key.Keyed;
+import net.minestom.server.MinecraftServer;
 import net.minestom.server.entity.EntityType;
 import net.minestom.server.game.GameEvent;
 import net.minestom.server.instance.block.Block;
@@ -17,29 +18,25 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
 /**
  * Represents a group of items, blocks, fluids, entity types or function.
  * Immutable by design
  */
-public final class Tag implements ProtocolObject, Keyed {
+public final value record Tag(NamespaceID name, Set<NamespaceID> values) implements ProtocolObject, Keyed {
     private final NamespaceID name;
     private final Set<NamespaceID> values;
+
+    Tag {
+        values = new HashSet<>(values);
+    }
 
     /**
      * Creates a new empty tag. This does not cache the tag.
      */
     public Tag(@NotNull NamespaceID name) {
-        this.name = name;
-        this.values = new HashSet<>();
-    }
-
-    /**
-     * Creates a new tag with the given values. This does not cache the tag.
-     */
-    public Tag(@NotNull NamespaceID name, @NotNull Set<NamespaceID> values) {
-        this.name = name;
-        this.values = new HashSet<>(values);
+        this(name, new HashSet<>());
     }
 
     /**

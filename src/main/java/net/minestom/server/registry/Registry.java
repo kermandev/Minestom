@@ -282,36 +282,36 @@ public final class Registry {
         }
     }
 
-    public record GameEventEntry(NamespaceID namespace, Properties main, Properties custom) implements Entry {
+    public value record GameEventEntry(NamespaceID namespace, Properties main, Properties custom) implements Entry {
         public GameEventEntry(String namespace, Properties main, Properties custom) {
             this(NamespaceID.from(namespace), main, custom);
         }
     }
 
-    public static final class BlockEntry implements Entry {
-        private final NamespaceID namespace;
-        private final int id;
-        private final int stateId;
-        private final String translationKey;
-        private final double hardness;
-        private final double explosionResistance;
-        private final double friction;
-        private final double speedFactor;
-        private final double jumpFactor;
-        private final boolean air;
-        private final boolean solid;
-        private final boolean liquid;
-        private final boolean occludes;
-        private final boolean requiresTool;
-        private final int lightEmission;
-        private final boolean replaceable;
-        private final String blockEntity;
-        private final int blockEntityId;
-        private final Supplier<Material> materialSupplier;
-        private final Shape shape;
-        private final boolean redstoneConductor;
-        private final boolean signalSource;
-        private final Properties custom;
+    public static final value record BlockEntry(
+            NamespaceID namespace,
+            int id,
+            int stateId,
+            String translationKey,
+            double hardness,
+            double explosionResistance,
+            double friction,
+            double speedFactor,
+            double jumpFactor,
+            boolean air,
+            boolean solid,
+            boolean liquid,
+            boolean occludes,
+            boolean requiresTool,
+            int lightEmission,
+            boolean replaceable,
+            String blockEntity,
+            int blockEntityId,
+            Supplier<Material> materialSupplier,
+            Shape shape,
+            boolean redstoneConductor,
+            boolean signalSource,
+            Properties custom) implements Entry {
 
         private BlockEntry(String namespace, Properties main, Properties custom) {
             this.custom = custom;
@@ -1012,7 +1012,7 @@ public final class Registry {
         }
     }
 
-    public record JukeboxSongEntry(NamespaceID namespace, SoundEvent soundEvent, Component description,
+    public value record JukeboxSongEntry(NamespaceID namespace, SoundEvent soundEvent, Component description,
                                    float lengthInSeconds, int comparatorOutput, Properties custom) implements Entry {
         public JukeboxSongEntry(String namespace, Properties main, Properties custom) {
             this(NamespaceID.from(namespace),
@@ -1024,7 +1024,7 @@ public final class Registry {
         }
     }
 
-    public record InstrumentEntry(NamespaceID namespace, SoundEvent soundEvent, float useDuration, float range,
+    public value record InstrumentEntry(NamespaceID namespace, SoundEvent soundEvent, float useDuration, float range,
                                   Component description, Properties custom) implements Entry {
         public InstrumentEntry(String namespace, Properties main, Properties custom) {
             this(NamespaceID.from(namespace),
