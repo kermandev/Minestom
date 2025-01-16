@@ -52,14 +52,13 @@ public class EntityProjectile extends Entity {
     }
 
     public void shoot(Point to, double power, double spread) {
-        final EntityShootEvent shootEvent = new EntityShootEvent(this.shooter, this, to, power, spread);
-        EventDispatcher.call(shootEvent);
-        if (shootEvent.isCancelled()) {
+        final var shootEvent = EventDispatcher.callCancellable(new EntityShootEvent(this.shooter, this, to, power, spread));
+        if (shootEvent.cancelled()) {
             remove();
             return;
         }
         final Pos from = this.shooter.getPosition().add(0D, this.shooter.getEyeHeight(), 0D);
-        shoot(from, to, shootEvent.getPower(), shootEvent.getSpread());
+        shoot(from, to, shootEvent.power(), shootEvent.spread());
     }
 
     private void shoot(@NotNull Point from, @NotNull Point to, double power, double spread) {
@@ -153,10 +152,9 @@ public class EntityProjectile extends Entity {
                 blockPos = pos;
             }
             if (block.isSolid()) {
-                final ProjectileCollideWithBlockEvent event = new ProjectileCollideWithBlockEvent(this, pos, block);
-                EventDispatcher.call(event);
+                final var event = EventDispatcher.callCancellable(new ProjectileCollideWithBlockEvent(this, pos, block));
                 if (isRemoved()) return true;
-                if (!event.isCancelled()) {
+                if (!event.cancelled()) {
                     teleport(pos);
                     return true;
                 }
@@ -182,9 +180,8 @@ public class EntityProjectile extends Entity {
             final Optional<LivingEntity> victimOptional = victimsStream.findAny();
             if (victimOptional.isPresent()) {
                 final LivingEntity target = victimOptional.get();
-                final ProjectileCollideWithEntityEvent event = new ProjectileCollideWithEntityEvent(this, pos, target);
-                EventDispatcher.call(event);
-                if (!event.isCancelled()) {
+                final var event = EventDispatcher.callCancellable(new ProjectileCollideWithEntityEvent(this, pos, target));
+                if (!event.cancelled()) {
                     return super.onGround;
                 }
             }
