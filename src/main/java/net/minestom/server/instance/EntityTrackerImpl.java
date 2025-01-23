@@ -2,12 +2,11 @@ package net.minestom.server.instance;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
-import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.minestom.server.ServerFlag;
 import net.minestom.server.coordinate.ChunkRange;
@@ -21,7 +20,10 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
@@ -31,31 +33,29 @@ final class EntityTrackerImpl implements EntityTracker {
     private static final EntitySelector<Entity> SELECTOR = EntitySelector.entity(builder -> builder.gather(EntitySelector.Gather.chunkRange(ServerFlag.ENTITY_VIEW_DISTANCE)));
 
     // Class Cache TODO, probably not necessary.
-    private final Object2ObjectMap<Class<? extends Entity>, ObjectArrayList<Class<? extends Entity>>> inheritanceMapCache = new Object2ObjectLinkedOpenHashMap<>();
+    private final Object2ObjectLinkedOpenHashMap<Class<? extends Entity>, ObjectArrayList<Class<? extends Entity>>> inheritanceMapCache = new Object2ObjectLinkedOpenHashMap<>(0);
 
     // Indexes
-    private final Object2ObjectLinkedOpenHashMap<Class<? extends Entity>, Int2ObjectMap<TrackedEntity>> classToIndex = new Object2ObjectLinkedOpenHashMap<>();
+    private final Object2ObjectLinkedOpenHashMap<Class<? extends Entity>, Int2ObjectMap<TrackedEntity>> classToIndex = new Object2ObjectLinkedOpenHashMap<>(0);
+    private final Object2ObjectOpenHashMap<UUID, TrackedEntity> uuidIndex = new Object2ObjectOpenHashMap<>(0);
 
-    private final IntArraySet idIndex = new IntArraySet();
-    private final Map<UUID, TrackedEntity> uuidIndex = new HashMap<>();
-    //private final Int2ObjectMap<TrackedEntity> playerIdIndex = new Int2ObjectOpenHashMap<>();
-
-        // Spatial partitioning
-    private final Long2ObjectMap<Set<Entity>> chunksEntities = new Long2ObjectOpenHashMap<>();
+    // Spatial partitioning
+    private final Long2ObjectMap<ObjectArrayList<TrackedEntity>> chunksEntities = new Long2ObjectOpenHashMap<>(0);
 
     @Override
     public synchronized void register(@NotNull Entity entity, @NotNull Point point, @Nullable Update update) {
         TrackedEntity newEntry = new TrackedEntity(entity, new AtomicReference<>(point));
+        // Validate entity id hasnt been used.
+        var idEntries = classToIndex.get(Entity.class);
+        Check.isTrue(idEntries == null || !idEntries.containsKey(entity.getEntityId()), "There is already an entity registered with id {0}", entity.getEntityId());
         // Indexing
-        var exists = idIndex.add(entity.getEntityId());
-        Check.isTrue(exists, "There is already an entity registered with id {0}", entity.getEntityId());
         TrackedEntity prevEntryWithUuid = uuidIndex.putIfAbsent(entity.getUuid(), newEntry);
         Check.isTrue(prevEntryWithUuid == null, "There is already an entity registered with uuid {0}", entity.getUuid());
         addEntityClass(newEntry);
         // Spatial partitioning
         final long index = CoordConversion.chunkIndex(point);
-        Set<Entity> chunkEntities = chunksEntities.computeIfAbsent(index, t -> new HashSet<>());
-        chunkEntities.add(entity);
+        ObjectArrayList<TrackedEntity> chunkEntities = chunksEntities.computeIfAbsent(index, t -> new ObjectArrayList<>(1));
+        chunkEntities.add(newEntry);
         // Update
         if (update != null) {
             update.referenceUpdate(point, this);
@@ -69,16 +69,15 @@ final class EntityTrackerImpl implements EntityTracker {
     @Override
     public synchronized void unregister(@NotNull Entity entity, @Nullable Update update) {
         // Indexing
-        var removed = idIndex.remove(entity.getEntityId());
-        if (!removed) return;
-        uuidIndex.remove(entity.getUuid());
+        var removed = uuidIndex.remove(entity.getUuid());
+        if (removed == null) return;
         var entry = removeEntityClass(entity);
         Check.notNull(entry, "Unregistered entity does not have a valid entry!");
         // Spatial partitioning
         final Point point = entry.lastPosition().getPlain();
         final long index = CoordConversion.chunkIndex(point);
-        Set<Entity> chunkEntities = chunksEntities.get(index);
-        chunkEntities.remove(entity);
+        ObjectArrayList<TrackedEntity> chunkEntities = chunksEntities.get(index);
+        chunkEntities.remove(entry);
         if (chunkEntities.isEmpty()) {
             chunksEntities.remove(index); // Empty chunk
         }
@@ -102,19 +101,26 @@ final class EntityTrackerImpl implements EntityTracker {
         Point oldPoint = entry.lastPosition().getPlain();
         entry.lastPosition().setPlain(newPoint);
         if (oldPoint == null || oldPoint.sameChunk(newPoint)) return;
+        Check.notNull(entry, "Entity does not have a valid entry for move!");
         // Chunk change, update partitions
         final long oldIndex = CoordConversion.chunkIndex(oldPoint);
         final long newIndex = CoordConversion.chunkIndex(newPoint);
-        Set<Entity> oldPartition = chunksEntities.computeIfAbsent(oldIndex, t -> new HashSet<>());
-        Set<Entity> newPartition = chunksEntities.computeIfAbsent(newIndex, t -> new HashSet<>());
-        oldPartition.remove(entity);
-        newPartition.add(entity);
-        if (oldPartition.isEmpty()) {
+        ObjectArrayList<TrackedEntity> oldPartition = chunksEntities.get(oldIndex);
+        ObjectArrayList<TrackedEntity> newPartition = chunksEntities.computeIfAbsent(newIndex, t -> new ObjectArrayList<>(1));
+
+        if (oldPartition != null) {
+            oldPartition.remove(entry);
+        } else {
+            LOGGER.warn("Attempted to move unregistered chunk entity {} in the entity tracker", entity.getEntityId());
+        }
+
+        newPartition.add(entry);
+
+        //Cleanup
+        if (oldPartition != null && oldPartition.isEmpty()) {
             chunksEntities.remove(oldIndex); // Empty chunk
         }
-        if (newPartition.isEmpty()) {
-            chunksEntities.remove(newIndex); // Empty chunk
-        }
+
         // Update
         if (update != null) {
             difference(oldPoint, newPoint, new Update() {
@@ -144,7 +150,7 @@ final class EntityTrackerImpl implements EntityTracker {
             }
             case EntitySelector.Gather.OnlyUuid(UUID entityUuid) -> {
                 final TrackedEntity trackedEntity = uuidIndex.get(entityUuid);
-                yield trackedEntity != null ? Stream.of(trackedEntity) : Stream.empty();
+                yield trackedEntity != null ? Stream.of(trackedEntity).filter(entity -> selector.target().type().isAssignableFrom(entity.entity().getClass())) : Stream.empty();
             }
             case EntitySelector.Gather.Range(double radius) -> {
                 //TODO optimize for always inside chunk.
@@ -153,8 +159,9 @@ final class EntityTrackerImpl implements EntityTracker {
             }
             case EntitySelector.Gather.Chunk(int chunkX, int chunkZ) -> {
                 final long index = CoordConversion.chunkIndex(chunkX, chunkZ);
-                final Set<Entity> entities = chunksEntities.get(index);
-                yield entities != null ? entities.stream().map(entity -> correctIndex.get(entity.getEntityId())) : Stream.empty();
+                final ObjectArrayList<TrackedEntity> entities = chunksEntities.get(index);
+                yield entities != null ? entities.stream()
+                        .filter(entity -> selector.target().type().isAssignableFrom(entity.entity().getClass())) : Stream.empty();
             }
             case EntitySelector.Gather.ChunkRange(int radius) -> {
                 final LongArrayList chunkIndexes = new LongArrayList();
@@ -165,11 +172,10 @@ final class EntityTrackerImpl implements EntityTracker {
                     }
                 });
 
-                yield chunkIndexes.longStream()
+                yield (ServerFlag.ENTITY_TRACKER_PARALLEL_CHUNK_STREAM ? chunkIndexes.longParallelStream() : chunkIndexes.longStream())
                         .mapToObj(chunksEntities::get)
                         .flatMap(Collection::stream)
-                        .filter(entity -> selector.target().type().isAssignableFrom(entity.getClass()))
-                        .map(entity -> correctIndex.get(entity.getEntityId()));
+                        .filter(entity -> selector.target().type().isAssignableFrom(entity.entity().getClass()));
             }
             // Maybe `None` condition?
             case null -> correctIndex.values().stream();
@@ -209,7 +215,7 @@ final class EntityTrackerImpl implements EntityTracker {
             stream = stream.limit(selector.limit());
         }
 
-        // We will pass the error back up the chain if it's wrong.
+        // They have already been identified to cast to R; let's not manually do it.
         return stream.map(TrackedEntity::entity)
                 .map(it -> selector.target().type().cast(it));
     }
@@ -243,6 +249,11 @@ final class EntityTrackerImpl implements EntityTracker {
         if (out.isEmpty()){
             inheritanceMapCache.remove(index);
             classToIndex.remove(index);
+
+            // Trim everything once we do this.
+            classToIndex.trim();
+            inheritanceMapCache.trim();
+            uuidIndex.trim();
         }
         return entry;
     }
@@ -264,14 +275,14 @@ final class EntityTrackerImpl implements EntityTracker {
         ChunkRange.chunksInRangeDiffering(newPoint.chunkX(), newPoint.chunkZ(), oldPoint.chunkX(), oldPoint.chunkZ(),
                 ServerFlag.ENTITY_VIEW_DISTANCE, (chunkX, chunkZ) -> {
                     // Add
-                    final Set<Entity> entities = chunksEntities.get(CoordConversion.chunkIndex(chunkX, chunkZ));
+                    final ObjectArrayList<TrackedEntity> entities = chunksEntities.get(CoordConversion.chunkIndex(chunkX, chunkZ));
                     if (entities == null || entities.isEmpty()) return;
-                    for (Entity entity : entities) update.add(entity);
+                    for (TrackedEntity entity : entities) update.add(entity.entity());
                 }, (chunkX, chunkZ) -> {
                     // Remove
-                    final Set<Entity> entities = chunksEntities.get(CoordConversion.chunkIndex(chunkX, chunkZ));
+                    final ObjectArrayList<TrackedEntity> entities = chunksEntities.get(CoordConversion.chunkIndex(chunkX, chunkZ));
                     if (entities == null || entities.isEmpty()) return;
-                    for (Entity entity : entities) update.remove(entity);
+                    for (TrackedEntity entity : entities) update.remove(entity.entity());
                 });
     }
 

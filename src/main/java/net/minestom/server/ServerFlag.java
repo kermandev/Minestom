@@ -71,6 +71,7 @@ public final class ServerFlag {
     public static final boolean REGISTRY_LATE_REGISTER = booleanProperty("minestom.registry.late-register");
     public static final boolean REGISTRY_UNSAFE_OPS = booleanProperty("minestom.registry.unsafe-ops");
     public static final boolean EVENT_NODE_ALLOW_MULTIPLE_PARENTS = booleanProperty("minestom.event.multiple-parents");
+    public static final boolean ENTITY_TRACKER_PARALLEL_CHUNK_STREAM = booleanProperty("minestom.entity-tracker.parallel-chunk-stream", false);
 
     public static boolean INSIDE_TEST = booleanProperty("minestom.inside-test", false);
 
