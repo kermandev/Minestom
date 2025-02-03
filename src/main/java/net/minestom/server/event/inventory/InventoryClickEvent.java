@@ -21,6 +21,7 @@ public record InventoryClickEvent(@NotNull AbstractInventory inventory, @NotNull
      *
      * @return the player who clicked in the inventory
      */
+    @Override
     public @NotNull Player player() {
         return player;
     }

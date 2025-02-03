@@ -32,7 +32,7 @@ public record PlayerPacketOutEvent(@NotNull Player player, @NotNull ServerPacket
 
         @Override
         public @NotNull PlayerPacketOutEvent mutated() {
-            return new PlayerPacketOutEvent(this.event.player, this.event.packet, this.isCancelled());
+            return new PlayerPacketOutEvent(this.originalEvent.player, this.originalEvent.packet, this.isCancelled());
         }
     }
 }

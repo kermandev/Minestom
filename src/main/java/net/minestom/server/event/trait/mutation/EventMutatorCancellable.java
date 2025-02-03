@@ -24,17 +24,16 @@ public interface EventMutatorCancellable<T extends MutableEvent<T>> extends Even
     /**
      * Simple cancelable implementation of {@link EventMutatorCancellable}.
      * <p>
-     * This should only be used when all fields are final except cancellable.
+     * This should only be used when most fields are final.
      *
      * @param <T> Event type
      */
-    abstract class Simple<T extends CancellableEvent<T>> implements EventMutatorCancellable<T> {
-        protected @NotNull T event;
+    abstract class Simple<T extends CancellableEvent<T>> extends EventMutator.Simple<T> implements EventMutatorCancellable<T> {
         private boolean cancelled;
         
         public Simple(@NotNull T event) {
-            this.event = event;
-            this.setCancelled(event.cancelled());
+            super(event);
+            this.cancelled = event.cancelled();
         }
         
         @Override

@@ -28,9 +28,4 @@ public record PlayerChunkLoadEvent(@NotNull Player player, int chunkX, int chunk
     public int chunkZ() {
         return chunkZ;
     }
-
-    @Override
-    public @NotNull Player player() {
-        return player;
-    }
 }

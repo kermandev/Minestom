@@ -40,7 +40,7 @@ public record AddEntityToInstanceEvent(@NotNull Instance instance, @NotNull Enti
 
         @Override
         public @NotNull AddEntityToInstanceEvent mutated() {
-            return new AddEntityToInstanceEvent(this.event.instance, this.event.entity, this.isCancelled());
+            return new AddEntityToInstanceEvent(this.originalEvent.instance, this.originalEvent.entity, this.isCancelled());
         }
     }
 }

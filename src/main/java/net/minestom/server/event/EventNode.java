@@ -221,13 +221,7 @@ public sealed interface EventNode<T extends Event> permits EventNodeImpl {
      * @param successCallback A callback if the event is not cancelled
      */
     default <E extends T> E callCancellable(@NotNull E event, @NotNull Runnable successCallback) {
-        var call = callMutable(event);
-
-        if (!(event instanceof CancellableEvent<?> cancellableEvent) || !cancellableEvent.cancelled()) {
-            successCallback.run();
-        }
-
-        return call;
+        return callCancellable(event, consumer -> successCallback.run());
     }
 
     /**

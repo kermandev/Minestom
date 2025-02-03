@@ -215,7 +215,7 @@ public class PlayerInit {
                 final Player player = event.player();
                 final ItemStack itemStack = event.itemStack();
                 if (itemStack.material() == Material.CROSSBOW && event.getUseDuration() > 25) {
-                    player.setItemInHand(event.getHand(), itemStack.with(ItemComponent.CHARGED_PROJECTILES, List.of(ItemStack.of(Material.ARROW))));
+                    player.setItemInHand(event.hand(), itemStack.with(ItemComponent.CHARGED_PROJECTILES, List.of(ItemStack.of(Material.ARROW))));
                     return;
                 }
             })
