@@ -31,9 +31,4 @@ public record PlayerCancelDiggingEvent(@NotNull Player player, @NotNull Block bl
     public @NotNull BlockVec blockPosition() {
         return blockPosition;
     }
-
-    @Override
-    public @NotNull Player player() {
-        return player;
-    }
 }

@@ -330,11 +330,11 @@ public class LivingEntity extends Entity implements EquipmentHandler {
 
         var event = EventDispatcher.callCancellable(new EntityDamageEvent(this, damage, damage.getSound(this)), (entityDamageEvent) -> {
             // Set the last damage type since the event is not cancelled
-            this.lastDamage = entityDamageEvent.getDamage();
+            this.lastDamage = entityDamageEvent.damage();
 
-            float remainingDamage = entityDamageEvent.getDamage().getAmount();
+            float remainingDamage = entityDamageEvent.damage().getAmount();
 
-            if (entityDamageEvent.shouldAnimate()) {
+            if (entityDamageEvent.animate()) {
                 sendPacketToViewersAndSelf(new EntityAnimationPacket(getEntityId(), EntityAnimationPacket.Animation.TAKE_DAMAGE));
             }
 
@@ -358,7 +358,7 @@ public class LivingEntity extends Entity implements EquipmentHandler {
             setHealth(getHealth() - remainingDamage);
 
             // play damage sound
-            final SoundEvent sound = entityDamageEvent.getSound();
+            final SoundEvent sound = entityDamageEvent.sound();
             if (sound != null) {
                 Source soundCategory;
                 if (this instanceof Player) {

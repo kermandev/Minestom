@@ -32,17 +32,13 @@ public record PlayerChangeHeldSlotEvent(@NotNull Player player, byte slot, boole
         return new Mutator(this);
     }
 
-    public static class Mutator implements EventMutatorCancellable<PlayerChangeHeldSlotEvent> {
-        private final Player player;
+    public static class Mutator extends EventMutatorCancellable.Simple<PlayerChangeHeldSlotEvent> {
         private byte slot;
 
-        private boolean cancelled;
-
         public Mutator(PlayerChangeHeldSlotEvent event) {
-            this.player = event.player;
-            this.slot = event.slot;
+            super(event);
 
-            this.cancelled = event.cancelled;
+            this.slot = event.slot;
         }
 
         /**
@@ -66,18 +62,8 @@ public record PlayerChangeHeldSlotEvent(@NotNull Player player, byte slot, boole
         }
 
         @Override
-        public boolean isCancelled() {
-            return this.cancelled;
-        }
-
-        @Override
-        public void setCancelled(boolean cancel) {
-            this.cancelled = cancel;
-        }
-
-        @Override
         public @NotNull PlayerChangeHeldSlotEvent mutated() {
-            return new PlayerChangeHeldSlotEvent(this.player, this.slot, this.cancelled);
+            return new PlayerChangeHeldSlotEvent(this.originalEvent.player, this.slot, this.isCancelled());
         }
     }
 }

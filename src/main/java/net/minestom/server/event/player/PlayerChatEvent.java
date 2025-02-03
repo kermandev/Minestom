@@ -1,14 +1,12 @@
 package net.minestom.server.event.player;
 
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.event.ClickEvent;
 import net.minestom.server.entity.Player;
 import net.minestom.server.event.trait.CancellableEvent;
 import net.minestom.server.event.trait.PlayerInstanceEvent;
 import net.minestom.server.event.trait.mutation.EventMutatorCancellable;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -62,20 +60,12 @@ public record PlayerChatEvent(@NotNull Player player, @NotNull Collection<Player
         return new Mutator(this);
     }
 
-    public static class Mutator implements EventMutatorCancellable<PlayerChatEvent> {
-        private final Player player;
-        private final Collection<Player> recipients;
-        private final String rawMessage;
-
+    public static class Mutator extends EventMutatorCancellable.Simple<PlayerChatEvent> {
         private Component formattedMessage;
-        private boolean cancelled;
 
         public Mutator(PlayerChatEvent event) {
-            this.player = event.player;
-            this.recipients = new ArrayList<>(event.recipients);
-            this.rawMessage = event.rawMessage;
+            super(event);
             this.formattedMessage = event.formattedMessage;
-            this.cancelled = event.cancelled;
         }
 
 
@@ -98,18 +88,8 @@ public record PlayerChatEvent(@NotNull Player player, @NotNull Collection<Player
         }
 
         @Override
-        public boolean isCancelled() {
-            return this.cancelled;
-        }
-
-        @Override
-        public void setCancelled(boolean cancel) {
-            this.cancelled = cancel;
-        }
-
-        @Override
         public @NotNull PlayerChatEvent mutated() {
-            return new PlayerChatEvent(this.player, this.recipients, this.rawMessage, this.formattedMessage, this.cancelled);
+            return new PlayerChatEvent(this.originalEvent.player, this.originalEvent.recipients, this.originalEvent.rawMessage, this.formattedMessage, this.isCancelled());
         }
     }
 

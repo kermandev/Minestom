@@ -38,7 +38,7 @@ public record PickupItemEvent(@NotNull LivingEntity livingEntity, @NotNull ItemE
 
         @Override
         public @NotNull PickupItemEvent mutated() {
-            return new PickupItemEvent(this.event.livingEntity, this.event.itemEntity, this.isCancelled());
+            return new PickupItemEvent(this.originalEvent.livingEntity, this.originalEvent.itemEntity, this.isCancelled());
         }
     }
 }

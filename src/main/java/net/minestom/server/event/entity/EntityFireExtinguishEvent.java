@@ -29,7 +29,7 @@ public record EntityFireExtinguishEvent(Entity entity, boolean natural, boolean 
 
         @Override
         public @NotNull EntityFireExtinguishEvent mutated() {
-            return new EntityFireExtinguishEvent(event.entity(), event.natural(), this.isCancelled());
+            return new EntityFireExtinguishEvent(originalEvent.entity(), originalEvent.natural(), this.isCancelled());
         }
     }
 }

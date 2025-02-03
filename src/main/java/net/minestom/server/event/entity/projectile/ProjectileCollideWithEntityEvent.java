@@ -33,7 +33,7 @@ public record ProjectileCollideWithEntityEvent(
 
         @Override
         public @NotNull ProjectileCollideWithEntityEvent mutated() {
-            return new ProjectileCollideWithEntityEvent(this.event.projectile, this.event.collisionPosition, this.event.target, this.isCancelled());
+            return new ProjectileCollideWithEntityEvent(this.originalEvent.projectile, this.originalEvent.collisionPosition, this.originalEvent.target, this.isCancelled());
         }
     }
 }
