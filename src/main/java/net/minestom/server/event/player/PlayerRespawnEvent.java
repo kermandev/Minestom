@@ -34,12 +34,11 @@ public record PlayerRespawnEvent(@NotNull Player player, @NotNull Pos respawnPos
         return new Mutator(this);
     }
 
-    public static class Mutator implements EventMutator<PlayerRespawnEvent> {
-        private final Player player;
+    public static class Mutator extends EventMutator.Simple<PlayerRespawnEvent> {
         private Pos respawnPosition;
 
         public Mutator(PlayerRespawnEvent event) {
-            this.player = event.player;
+            super(event);
             this.respawnPosition = event.respawnPosition;
         }
 
@@ -65,7 +64,7 @@ public record PlayerRespawnEvent(@NotNull Player player, @NotNull Pos respawnPos
 
         @Override
         public @NotNull PlayerRespawnEvent mutated() {
-            return new PlayerRespawnEvent(this.player, this.respawnPosition);
+            return new PlayerRespawnEvent(this.originalEvent.player, this.respawnPosition);
         }
     }
 }

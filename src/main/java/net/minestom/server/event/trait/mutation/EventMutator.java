@@ -13,4 +13,19 @@ public interface EventMutator<T extends MutableEvent<T>> {
      */
     @Contract(pure = true)
     @NotNull T mutated();
+
+    /**
+     * Simple cancelable implementation of {@link EventMutator}.
+     * <p>
+     * This should only be used when most fields are final.
+     *
+     * @param <T> Event type
+     */
+    abstract class Simple<T extends MutableEvent<T>> implements EventMutator<T> {
+        protected final @NotNull T originalEvent;
+
+        public Simple(@NotNull T originalEvent) {
+            this.originalEvent = originalEvent;
+        }
+    }
 }

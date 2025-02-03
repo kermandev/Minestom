@@ -28,12 +28,11 @@ public record PlayerSkinInitEvent(@NotNull Player player, @Nullable PlayerSkin s
         return new Mutator(this);
     }
 
-    public static class Mutator implements EventMutator<PlayerSkinInitEvent> {
-        private final Player player;
+    public static class Mutator extends EventMutator.Simple<PlayerSkinInitEvent> {
         private PlayerSkin skin;
 
         public Mutator(PlayerSkinInitEvent event) {
-            this.player = event.player;
+            super(event);
             this.skin = event.skin;
         }
 
@@ -57,7 +56,7 @@ public record PlayerSkinInitEvent(@NotNull Player player, @Nullable PlayerSkin s
 
         @Override
         public @NotNull PlayerSkinInitEvent mutated() {
-            return new PlayerSkinInitEvent(this.player, this.skin);
+            return new PlayerSkinInitEvent(this.originalEvent.player, this.skin);
         }
     }
 }

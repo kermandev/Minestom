@@ -45,7 +45,7 @@ public record ProjectileCollideWithBlockEvent(
 
         @Override
         public @NotNull ProjectileCollideWithBlockEvent mutated() {
-            return new ProjectileCollideWithBlockEvent(this.event.projectile, this.event.collisionPosition, this.event.block, this.isCancelled());
+            return new ProjectileCollideWithBlockEvent(this.originalEvent.projectile, this.originalEvent.collisionPosition, this.originalEvent.block, this.isCancelled());
         }
     }
 }

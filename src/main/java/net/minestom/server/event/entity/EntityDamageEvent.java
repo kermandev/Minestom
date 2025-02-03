@@ -1,6 +1,5 @@
 package net.minestom.server.event.entity;
 
-import net.minestom.server.entity.Entity;
 import net.minestom.server.entity.LivingEntity;
 import net.minestom.server.entity.damage.Damage;
 import net.minestom.server.event.trait.CancellableEvent;
@@ -19,19 +18,12 @@ public record EntityDamageEvent(@NotNull LivingEntity entity, @NotNull Damage da
         this(entity, damage, sound, true, false);
     }
 
-    @NotNull
-    @Override
-    public LivingEntity entity() {
-        return entity;
-    }
-
     /**
      * Gets the damage type.
      *
      * @return the damage type
      */
-    @NotNull
-    public Damage getDamage() {
+    public @NotNull Damage damage() {
         return damage;
     }
 
@@ -40,8 +32,7 @@ public record EntityDamageEvent(@NotNull LivingEntity entity, @NotNull Damage da
      *
      * @return the damage sound
      */
-    @Nullable
-    public SoundEvent getSound() {
+    public @Nullable SoundEvent sound() {
         return sound;
     }
 
@@ -51,7 +42,7 @@ public record EntityDamageEvent(@NotNull LivingEntity entity, @NotNull Damage da
      *
      * @return true if the animation should be played
      */
-    public boolean shouldAnimate() {
+    public boolean animate() {
         return animate;
     }
 
@@ -60,19 +51,14 @@ public record EntityDamageEvent(@NotNull LivingEntity entity, @NotNull Damage da
         return new Mutator(this);
     }
 
-    public static class Mutator implements EventMutatorCancellable<EntityDamageEvent> {
-        private final LivingEntity entity;
-        private final Damage damage;
+    public static class Mutator extends EventMutatorCancellable.Simple<EntityDamageEvent> {
         private SoundEvent sound;
         private boolean animate;
-        private boolean cancelled;
 
         public Mutator(EntityDamageEvent event) {
-            this.entity = event.entity;
-            this.damage = event.damage;
+            super(event);
             this.sound = event.sound;
             this.animate = event.animate;
-            this.cancelled = event.cancelled;
         }
 
         /**
@@ -113,18 +99,8 @@ public record EntityDamageEvent(@NotNull LivingEntity entity, @NotNull Damage da
         }
 
         @Override
-        public boolean isCancelled() {
-            return cancelled;
-        }
-
-        @Override
-        public void setCancelled(boolean cancel) {
-            this.cancelled = cancel;
-        }
-
-        @Override
         public @NotNull EntityDamageEvent mutated() {
-            return new EntityDamageEvent(this.entity, this.damage, this.sound, this.animate, this.cancelled);
+            return new EntityDamageEvent(this.originalEvent.entity, this.originalEvent.damage, this.sound, this.animate, this.isCancelled());
         }
     }
 }

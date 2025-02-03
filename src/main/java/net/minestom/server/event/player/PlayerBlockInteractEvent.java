@@ -89,28 +89,12 @@ public record PlayerBlockInteractEvent(@NotNull Player player, @NotNull PlayerHa
         return new Mutator(this);
     }
 
-    public static class Mutator implements EventMutatorCancellable<PlayerBlockInteractEvent> {
-        private final Player player;
-        private final PlayerHand hand;
-        private final Block block;
-        private final BlockVec blockPosition;
-        private final Point cursorPosition;
-        private final BlockFace blockFace;
-
+    public static class Mutator extends EventMutatorCancellable.Simple<PlayerBlockInteractEvent> {
         private boolean blocksItemUse;
 
-        private boolean cancelled;
-
         public Mutator(PlayerBlockInteractEvent event) {
-            this.player = event.player;
-            this.hand = event.hand;
-            this.block = event.block;
-            this.blockPosition = event.blockPosition;
-            this.cursorPosition = event.cursorPosition;
-            this.blockFace = event.blockFace;
-
+            super(event);
             this.blocksItemUse = event.blocksItemUse;
-            this.cancelled = event.cancelled;
         }
 
         /**
@@ -132,18 +116,8 @@ public record PlayerBlockInteractEvent(@NotNull Player player, @NotNull PlayerHa
         }
 
         @Override
-        public boolean isCancelled() {
-            return cancelled;
-        }
-
-        @Override
-        public void setCancelled(boolean cancel) {
-            this.cancelled = cancel;
-        }
-
-        @Override
         public @NotNull PlayerBlockInteractEvent mutated() {
-            return new PlayerBlockInteractEvent(this.player, this.hand, this.block, this.blockPosition, this.cursorPosition, this.blockFace, this.blocksItemUse, this.cancelled);
+            return new PlayerBlockInteractEvent(this.originalEvent.player, this.originalEvent.hand, this.originalEvent.block, this.originalEvent.blockPosition, this.originalEvent.cursorPosition, this.originalEvent.blockFace, this.blocksItemUse, this.isCancelled());
         }
     }
 }

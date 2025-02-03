@@ -68,7 +68,7 @@ public record PlayerStartDiggingEvent(@NotNull Player player, @NotNull Block blo
 
         @Override
         public @NotNull PlayerStartDiggingEvent mutated() {
-            return new PlayerStartDiggingEvent(event.player, event.block, event.blockPosition, event.blockFace, this.isCancelled());
+            return new PlayerStartDiggingEvent(originalEvent.player, originalEvent.block, originalEvent.blockPosition, originalEvent.blockFace, this.isCancelled());
         }
     }
 

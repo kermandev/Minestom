@@ -21,12 +21,7 @@ public record PlayerCancelItemUseEvent(@NotNull Player player, @NotNull PlayerHa
         this(player, hand, itemStack, useDuration, false);
     }
 
-    @Override
-    public @NotNull Player player() {
-        return player;
-    }
-
-    public @NotNull PlayerHand getHand() {
+    public @NotNull PlayerHand hand() {
         return hand;
     }
 
@@ -52,18 +47,11 @@ public record PlayerCancelItemUseEvent(@NotNull Player player, @NotNull PlayerHa
         return new Mutator(this);
     }
 
-    public static class Mutator implements EventMutator<PlayerCancelItemUseEvent> {
-        private final Player player;
-        private final PlayerHand hand;
-        private final ItemStack itemStack;
-        private final long useDuration;
+    public static class Mutator extends EventMutator.Simple<PlayerCancelItemUseEvent> {
         private boolean riptideSpinAttack;
 
         public Mutator(PlayerCancelItemUseEvent event) {
-            this.player = event.player;
-            this.hand = event.hand;
-            this.itemStack = event.itemStack;
-            this.useDuration = event.useDuration;
+            super(event);
             this.riptideSpinAttack = event.riptideSpinAttack;
         }
 
@@ -83,7 +71,7 @@ public record PlayerCancelItemUseEvent(@NotNull Player player, @NotNull PlayerHa
 
         @Override
         public @NotNull PlayerCancelItemUseEvent mutated() {
-            return new PlayerCancelItemUseEvent(this.player, this.hand, this.itemStack, this.useDuration, this.riptideSpinAttack);
+            return new PlayerCancelItemUseEvent(this.originalEvent.player, this.originalEvent.hand, this.originalEvent.itemStack, this.originalEvent.useDuration, this.riptideSpinAttack);
         }
     }
 }

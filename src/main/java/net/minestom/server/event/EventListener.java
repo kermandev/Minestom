@@ -1,10 +1,13 @@
 package net.minestom.server.event;
 
+import it.unimi.dsi.fastutil.Pair;
 import net.minestom.server.event.trait.CancellableEvent;
 import net.minestom.server.event.trait.MutableEvent;
 import net.minestom.server.event.trait.mutation.EventMutator;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.UnknownNullability;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,7 +27,7 @@ public interface EventListener<T extends Event> {
 
     @NotNull Class<T> eventType();
 
-    @NotNull Result<T> run(@NotNull T event);
+    @NotNull Pair run(@NotNull T event);
 
     boolean isMutator();
 
@@ -57,14 +60,20 @@ public interface EventListener<T extends Event> {
      * @return An event listener with the given properties
      */
     @Contract(pure = true)
-    static <T extends MutableEvent<T> & Event> @NotNull EventListener<T> of(@NotNull Class<T> eventType, @NotNull Function<@NotNull T, @NotNull EventMutator<T>> listener) {
-        return builder(eventType).handler(new Handler.FunctionHandler<>(listener.andThen(EventMutator::mutated))).build();
+    static <T extends MutableEvent<T> & Event> @NotNull EventListener<T> of(@NotNull Class<T> eventType, @NotNull Function<@NotNull T, @UnknownNullability EventMutator<T>> listener) {
+        return builder(eventType).handler(new Handler.FunctionHandler<>(listener.andThen((mutator) -> mutator != null ? mutator.mutated() : null))).build();
+    }
+
+    sealed interface Handler<T extends Event> {
+        record FunctionHandler<T extends Event>(Function<T, @Nullable T> handler) implements Handler<T> {
+        }
+        record ConsumerHandler<T extends Event>(Consumer<T> handler) implements Handler<T> {}
     }
 
     class Builder<T extends Event> {
         private final Class<T> eventType;
         private final List<Predicate<T>> filters = new ArrayList<>();
-        private boolean ignoreCancelled = true;
+        private boolean ignoreCancelled = false;
         private int expireCount;
         private Predicate<T> expireWhen;
         private Handler<T> handler;
@@ -147,38 +156,50 @@ public interface EventListener<T extends Event> {
                 }
 
                 @Override
-                public @NotNull Result<T> run(@NotNull T event) {
+                @SuppressWarnings("unchecked")
+                public @NotNull Pair<@NotNull Result, @Nullable T> run(@NotNull T event) {
                     // Event cancellation
                     if (ignoreCancelled && event instanceof CancellableEvent<?> cancellableEvent &&
                             cancellableEvent.cancelled()) {
-                        return (Result<T>) Result.INVALID;
+                        return (Pair<Result, T>) Result.INVALID.CACHED_PAIR;
                     }
                     // Expiration predicate
                     if (expireWhen != null && expireWhen.test(event)) {
-                        return (Result<T>) Result.EXPIRED;
+                        return (Pair<Result, T>) Result.EXPIRED.CACHED_PAIR;
                     }
                     // Filtering
                     if (!filters.isEmpty()) {
                         for (var filter : filters) {
                             if (!filter.test(event)) {
                                 // Cancelled
-                                return (Result<T>) Result.INVALID;
+                                return (Pair<Result, T>) Result.INVALID.CACHED_PAIR;
                             }
                         }
                     }
                     // Handler
-                    if (handler != null) {
-                        if (handler instanceof Handler.FunctionHandler<T>(Function<T, T> handlerHolder)) {
-                            return new Result<>(handlerHolder.apply(event));
-                        } else if (handler instanceof Handler.ConsumerHandler<T>(Consumer<T> handlerHolder)) {
+                    final var finalEvent = switch (handler) {
+                        case Handler.FunctionHandler<T>(Function<T, T> handlerHolder) -> handlerHolder.apply(event);
+                        case Handler.ConsumerHandler<T>(Consumer<T> handlerHolder) -> {
                             handlerHolder.accept(event);
+                            yield null;
                         }
-                    }
+                        case null -> null;
+                    };
+
                     // Expiration count
                     if (hasExpirationCount && expirationCount.decrementAndGet() == 0) {
-                        return (Result<T>) Result.EXPIRED;
+                        if (finalEvent != null) {
+                            return Pair.of(Result.EXPIRED, finalEvent);
+                        } else {
+                            return (Pair<Result, T>) Result.EXPIRED.CACHED_PAIR;
+                        }
                     }
-                    return (Result<T>) Result.SUCCESS;
+
+                    if (finalEvent != null) {
+                        return Pair.of(Result.SUCCESS, finalEvent);
+                    }
+
+                    return (Pair<Result, T>) Result.SUCCESS.CACHED_PAIR;
                 }
 
                 @Override
@@ -189,16 +210,12 @@ public interface EventListener<T extends Event> {
         }
     }
 
-    sealed interface Handler<T extends Event> {
-        record FunctionHandler<T extends Event>(Function<T, T> handler) implements Handler<T> {}
-        record ConsumerHandler<T extends Event>(Consumer<T> handler) implements Handler<T> {}
-    }
+    enum Result {
+        SUCCESS,
+        INVALID,
+        EXPIRED,
+        EXCEPTION;
 
-    // Dirty way to sometimes pass data back.
-    record Result<T extends Event>(T data) {
-        public static final Result<?> SUCCESS = new Result<>(null);
-        public static final Result<?> INVALID = new Result<>(null);
-        public static final Result<?> EXPIRED = new Result<>(null);
-        public static final Result<?> EXCEPTION = new Result<>(null);
+        final Pair<Result, ?> CACHED_PAIR = Pair.of(this, null);
     }
 }

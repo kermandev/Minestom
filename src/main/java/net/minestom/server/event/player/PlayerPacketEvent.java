@@ -24,7 +24,7 @@ public record PlayerPacketEvent(@NotNull Player player, @NotNull ClientPacket pa
         }
         @Override
         public @NotNull PlayerPacketEvent mutated() {
-            return new PlayerPacketEvent(this.event.player, this.event.packet, this.isCancelled());
+            return new PlayerPacketEvent(this.originalEvent.player, this.originalEvent.packet, this.isCancelled());
         }
     }
 }

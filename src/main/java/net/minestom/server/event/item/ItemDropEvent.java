@@ -14,11 +14,6 @@ public record ItemDropEvent(@NotNull Player player, @NotNull ItemStack itemStack
         this(player, itemStack, false);
     }
 
-    @Override
-    public @NotNull Player player() {
-        return player;
-    }
-
     @NotNull
     public ItemStack itemStack() {
         return itemStack;
@@ -37,7 +32,7 @@ public record ItemDropEvent(@NotNull Player player, @NotNull ItemStack itemStack
 
         @Override
         public @NotNull ItemDropEvent mutated() {
-            return new ItemDropEvent(this.event.player, this.event.itemStack, this.isCancelled());
+            return new ItemDropEvent(this.originalEvent.player, this.originalEvent.itemStack, this.isCancelled());
         }
     }
 }
