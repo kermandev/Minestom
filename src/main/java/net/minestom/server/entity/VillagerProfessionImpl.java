@@ -5,7 +5,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
 
-public record VillagerProfessionImpl(Registry.VillagerProfessionEntry registry) implements VillagerProfession {
+public value record VillagerProfessionImpl(Registry.VillagerProfessionEntry registry) implements VillagerProfession {
     private static final Registry.Container<VillagerProfession> CONTAINER = Registry.createStaticContainer(Registry.Resource.VILLAGER_PROFESSIONS,
             (namespace, properties) -> new VillagerProfessionImpl(Registry.villagerProfession(namespace, properties)));
 

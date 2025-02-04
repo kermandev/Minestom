@@ -11,7 +11,7 @@ import java.util.Objects;
 /**
  * An event called when a full query is received and ready to be responded to.
  */
-public record FullQueryEvent(@NotNull SocketAddress sender, int sessionID, @NotNull FullQueryResponse response, boolean cancelled) implements QueryEvent<FullQueryResponse, FullQueryEvent> {
+public value record FullQueryEvent(@NotNull SocketAddress sender, int sessionID, @NotNull FullQueryResponse response, boolean cancelled) implements QueryEvent<FullQueryResponse, FullQueryEvent> {
 
     /**
      * Creates a new full query event.

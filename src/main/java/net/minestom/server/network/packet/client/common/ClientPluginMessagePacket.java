@@ -11,7 +11,7 @@ import java.util.Objects;
 import static net.minestom.server.network.NetworkBuffer.RAW_BYTES;
 import static net.minestom.server.network.NetworkBuffer.STRING;
 
-public record ClientPluginMessagePacket(@NotNull String channel, byte[] data) implements ClientPacket {
+public value record ClientPluginMessagePacket(@NotNull String channel, byte[] data) implements ClientPacket {
     public static final NetworkBuffer.Type<ClientPluginMessagePacket> SERIALIZER = NetworkBufferTemplate.template(
             STRING, ClientPluginMessagePacket::channel,
             RAW_BYTES, ClientPluginMessagePacket::data,

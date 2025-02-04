@@ -10,7 +10,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Called when a player is modifying his position.
  */
-public record PlayerMoveEvent(@NotNull Player player, @NotNull Pos newPosition, boolean onGround, boolean cancelled) implements PlayerInstanceEvent, CancellableEvent<PlayerMoveEvent> {
+public value record PlayerMoveEvent(@NotNull Player player, @NotNull Pos newPosition, boolean onGround, boolean cancelled) implements PlayerInstanceEvent, CancellableEvent<PlayerMoveEvent> {
 
     public PlayerMoveEvent(@NotNull Player player, @NotNull Pos newPosition, boolean onGround) {
         this(player, newPosition, onGround, false);

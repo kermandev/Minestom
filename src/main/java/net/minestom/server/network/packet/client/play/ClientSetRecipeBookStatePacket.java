@@ -7,7 +7,7 @@ import org.jetbrains.annotations.NotNull;
 
 import static net.minestom.server.network.NetworkBuffer.BOOLEAN;
 
-public record ClientSetRecipeBookStatePacket(@NotNull BookType bookType,
+public value record ClientSetRecipeBookStatePacket(@NotNull BookType bookType,
                                              boolean bookOpen, boolean filterActive) implements ClientPacket {
     public static final NetworkBuffer.Type<ClientSetRecipeBookStatePacket> SERIALIZER = NetworkBufferTemplate.template(
             NetworkBuffer.Enum(BookType.class), ClientSetRecipeBookStatePacket::bookType,

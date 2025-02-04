@@ -10,7 +10,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Called when the gamemode of a player is being modified.
  */
-public record PlayerGameModeChangeEvent(@NotNull Player player, @NotNull GameMode newGameMode, boolean cancelled) implements PlayerInstanceEvent, CancellableEvent<PlayerGameModeChangeEvent> {
+public value record PlayerGameModeChangeEvent(@NotNull Player player, @NotNull GameMode newGameMode, boolean cancelled) implements PlayerInstanceEvent, CancellableEvent<PlayerGameModeChangeEvent> {
     public PlayerGameModeChangeEvent(@NotNull Player player, @NotNull GameMode newGameMode) {
         this(player, newGameMode, false);
     }

@@ -68,7 +68,7 @@ public final class PacketReading {
         }
     }
 
-    public record ParsedPacket<T>(ConnectionState nextState, T packet) {
+    public value record ParsedPacket<T>(ConnectionState nextState, T packet) {
     }
 
     public static Result<ClientPacket> readClients(

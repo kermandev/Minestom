@@ -7,7 +7,7 @@ import org.jetbrains.annotations.NotNull;
 
 import static net.minestom.server.network.NetworkBuffer.STRING;
 
-public record ResponsePacket(@NotNull String jsonResponse) implements ServerPacket.Status {
+public value record ResponsePacket(@NotNull String jsonResponse) implements ServerPacket.Status {
     public static final NetworkBuffer.Type<ResponsePacket> SERIALIZER = NetworkBufferTemplate.template(
             STRING, ResponsePacket::jsonResponse,
             ResponsePacket::new);

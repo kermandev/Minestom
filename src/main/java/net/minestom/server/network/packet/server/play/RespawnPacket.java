@@ -10,7 +10,7 @@ import org.jetbrains.annotations.Nullable;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-public record RespawnPacket(
+public value record RespawnPacket(
         int dimensionType, @NotNull String worldName,
         long hashedSeed, @NotNull GameMode gameMode, @NotNull GameMode previousGameMode,
         boolean isDebug, boolean isFlat, @Nullable WorldPos deathLocation,

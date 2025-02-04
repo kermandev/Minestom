@@ -12,7 +12,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.HashMap;
 import java.util.Map;
 
-public record ItemBlockState(@NotNull Map<String, String> properties) {
+public value record ItemBlockState(@NotNull Map<String, String> properties) {
     public static final ItemBlockState EMPTY = new ItemBlockState(Map.of());
 
     public static final NetworkBuffer.Type<ItemBlockState> NETWORK_TYPE = NetworkBufferTemplate.template(

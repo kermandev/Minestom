@@ -13,7 +13,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Represents a toast which can be sent to the player using {@link net.minestom.server.entity.Player#sendNotification(Notification)}.
  */
-public record Notification(@NotNull Component title, @NotNull FrameType frameType, @NotNull ItemStack icon) {
+public value record Notification(@NotNull Component title, @NotNull FrameType frameType, @NotNull ItemStack icon) {
     private static final String IDENTIFIER = "minestom:notification";
 
     public Notification(@NotNull Component title, @NotNull FrameType frameType, @NotNull Material icon) {

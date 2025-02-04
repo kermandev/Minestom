@@ -10,7 +10,7 @@ import java.util.Objects;
  * Represents a namespaced ID
  * https://minecraft.wiki/w/Namespaced_ID
  */
-public record NamespaceID(@NotNull String domain, @NotNull String path) implements CharSequence, Key {
+public value record NamespaceID(@NotNull String domain, @NotNull String path) implements CharSequence, Key {
     private static final String LEGAL_LETTERS = "[0123456789abcdefghijklmnopqrstuvwxyz_-]+";
     private static final String LEGAL_PATH_LETTERS = "[0123456789abcdefghijklmnopqrstuvwxyz./_-]+";
 
@@ -39,9 +39,9 @@ public record NamespaceID(@NotNull String domain, @NotNull String path) implemen
     public NamespaceID {
         domain = domain.intern();
         path = path.intern();
-        assert !domain.contains(".") && !domain.contains("/") : "Domain cannot contain a dot nor a slash character (" + asString() + ")";
-        assert domain.matches(LEGAL_LETTERS) : "Illegal character in domain (" + asString() + "). Must match " + LEGAL_LETTERS;
-        assert path.matches(LEGAL_PATH_LETTERS) : "Illegal character in path (" + asString() + "). Must match " + LEGAL_PATH_LETTERS;
+        //assert !domain.contains(".") && !domain.contains("/") : "Domain cannot contain a dot nor a slash character (" + asString() + ")";
+        //assert domain.matches(LEGAL_LETTERS) : "Illegal character in domain (" + asString() + "). Must match " + LEGAL_LETTERS;
+        //assert path.matches(LEGAL_PATH_LETTERS) : "Illegal character in path (" + asString() + "). Must match " + LEGAL_PATH_LETTERS;
     }
 
     @Override

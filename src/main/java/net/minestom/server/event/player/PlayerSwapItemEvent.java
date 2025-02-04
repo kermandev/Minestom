@@ -10,7 +10,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Called when a player is trying to swap his main and off hand item.
  */
-public record PlayerSwapItemEvent(@NotNull Player player, @NotNull ItemStack mainHandItem, @NotNull ItemStack offHandItem, boolean cancelled) implements PlayerInstanceEvent, CancellableEvent<PlayerSwapItemEvent> {
+public value record PlayerSwapItemEvent(@NotNull Player player, @NotNull ItemStack mainHandItem, @NotNull ItemStack offHandItem, boolean cancelled) implements PlayerInstanceEvent, CancellableEvent<PlayerSwapItemEvent> {
 
     public PlayerSwapItemEvent(@NotNull Player player, @NotNull ItemStack mainHandItem, @NotNull ItemStack offHandItem) {
         this(player, mainHandItem, offHandItem, false);

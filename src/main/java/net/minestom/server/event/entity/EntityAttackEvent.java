@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
  * Called when a player does a left click on an entity or with
  * {@link net.minestom.server.entity.EntityCreature#attack(Entity)}.
  */
-public record EntityAttackEvent(@NotNull Entity source, @NotNull Entity target) implements EntityInstanceEvent {
+public value record EntityAttackEvent(@NotNull Entity source, @NotNull Entity target) implements EntityInstanceEvent {
 
     @Override
     public @NotNull Entity entity() {

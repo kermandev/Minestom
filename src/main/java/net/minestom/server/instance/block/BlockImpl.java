@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-record BlockImpl(@NotNull Registry.BlockEntry registry,
+value record BlockImpl(@NotNull Registry.BlockEntry registry,
                  long propertiesArray,
                  @Nullable CompoundBinaryTag nbt,
                  @Nullable BlockHandler handler) implements Block {
@@ -254,7 +254,7 @@ record BlockImpl(@NotNull Registry.BlockEntry registry,
         }
     }
 
-    private record PropertyType(String key, List<String> values) {
+    private value record PropertyType(String key, List<String> values) {
     }
 
     static long updateIndex(long value, int index, byte newValue) {

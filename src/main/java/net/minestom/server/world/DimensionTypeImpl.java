@@ -6,7 +6,7 @@ import net.minestom.server.utils.nbt.BinaryTagSerializer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-record DimensionTypeImpl(
+value record DimensionTypeImpl(
         boolean ultrawarm,
         boolean natural,
         double coordinateScale,

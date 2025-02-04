@@ -13,7 +13,7 @@ import org.jetbrains.annotations.Nullable;
  * @param entity
  * @param direction the direction of the collision. ex. Vec(-1, 0, 0) means the entity collided with the west face of the entity
  */
-public record EntityCollisionResult(
+public value record EntityCollisionResult(
         @NotNull Point collisionPoint,
         @NotNull Entity entity,
         @NotNull Vec direction,

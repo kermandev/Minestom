@@ -204,6 +204,6 @@ public final class PlayerDiggingListener {
         }
     }
 
-    private record DiggingResult(Block block, boolean success) {
+    private value record DiggingResult(Block block, boolean success) {
     }
 }

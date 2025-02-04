@@ -7,7 +7,7 @@ import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-record DamageTypeImpl(
+value record DamageTypeImpl(
         float exhaustion,
         @NotNull String messageId,
         @NotNull String scaling,

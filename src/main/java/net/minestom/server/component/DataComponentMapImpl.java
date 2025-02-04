@@ -21,7 +21,7 @@ import java.util.function.IntFunction;
  *
  * @param components The component patch.
  */
-record DataComponentMapImpl(@NotNull Int2ObjectMap<Object> components) implements DataComponentMap {
+value record DataComponentMapImpl(@NotNull Int2ObjectMap<Object> components) implements DataComponentMap {
     private static final char REMOVAL_PREFIX = '!';
 
     @Override

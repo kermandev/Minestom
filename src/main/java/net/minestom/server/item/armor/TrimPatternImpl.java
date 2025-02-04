@@ -10,7 +10,7 @@ import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-record TrimPatternImpl(
+value record TrimPatternImpl(
         @NotNull NamespaceID assetId,
         @NotNull Material template,
         @NotNull Component description,

@@ -15,7 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public record ShapeImpl(CollisionData collisionData, LightData lightData) implements Shape {
+public value record ShapeImpl(CollisionData collisionData, LightData lightData) implements Shape {
     private static final Pattern PATTERN = Pattern.compile("\\d.\\d+", Pattern.MULTILINE);
 
     record CollisionData(List<BoundingBox> collisionBoundingBoxes,
@@ -296,6 +296,6 @@ public record ShapeImpl(CollisionData collisionData, LightData lightData) implem
         return new Rectangle(x1, y1, x2, y2);
     }
 
-    private record Rectangle(double x1, double y1, double x2, double y2) {
+    private value record Rectangle(double x1, double y1, double x2, double y2) {
     }
 }

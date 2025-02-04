@@ -12,7 +12,7 @@ import org.jetbrains.annotations.NotNull;
  * Called after {@link InventoryPreClickEvent}, this event cannot be cancelled and items related to the click
  * are already moved.
  */
-public record InventoryClickEvent(@NotNull AbstractInventory inventory, @NotNull Player player,
+public value record InventoryClickEvent(@NotNull AbstractInventory inventory, @NotNull Player player,
                                   int slot, @NotNull ClickType clickType,
                                   @NotNull ItemStack clickedItem, @NotNull ItemStack cursorItem) implements InventoryEvent, PlayerInstanceEvent {
 

@@ -4,7 +4,7 @@ import net.minestom.server.entity.Entity;
 import net.minestom.server.event.trait.EntityInstanceEvent;
 import org.jetbrains.annotations.NotNull;
 
-public record ProjectileUncollideEvent(@NotNull Entity projectile) implements EntityInstanceEvent {
+public value record ProjectileUncollideEvent(@NotNull Entity projectile) implements EntityInstanceEvent {
     @Override
     public @NotNull Entity entity() {
         return projectile;

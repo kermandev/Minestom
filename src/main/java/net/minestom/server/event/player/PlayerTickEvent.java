@@ -7,4 +7,4 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Called at each player tick.
  */
-public record PlayerTickEvent(@NotNull Player player) implements PlayerInstanceEvent {}
+public value record PlayerTickEvent(@NotNull Player player) implements PlayerInstanceEvent {}

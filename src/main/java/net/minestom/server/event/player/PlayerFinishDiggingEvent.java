@@ -13,7 +13,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Called when a {@link Player} successfully finishes digging a block
  */
-public record PlayerFinishDiggingEvent(@NotNull Player player, @NotNull Block block, @NotNull BlockVec blockPosition) implements PlayerInstanceEvent, BlockEvent, MutableEvent<PlayerFinishDiggingEvent> {
+public value record PlayerFinishDiggingEvent(@NotNull Player player, @NotNull Block block, @NotNull BlockVec blockPosition) implements PlayerInstanceEvent, BlockEvent, MutableEvent<PlayerFinishDiggingEvent> {
 
     /**
      * Gets the block which was dug.

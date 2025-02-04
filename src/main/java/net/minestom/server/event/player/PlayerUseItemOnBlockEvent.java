@@ -12,7 +12,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Used when a player is clicking on a block with an item (but is not a block in item form).
  */
-public record PlayerUseItemOnBlockEvent(@NotNull Player player, @NotNull PlayerHand hand,
+public value record PlayerUseItemOnBlockEvent(@NotNull Player player, @NotNull PlayerHand hand,
                                         @NotNull ItemStack itemStack,
                                         @NotNull Point position, @NotNull Point cursorPosition,
                                         @NotNull BlockFace blockFace) implements PlayerInstanceEvent, ItemEvent {

@@ -14,7 +14,7 @@ import java.util.List;
 
 import static net.minestom.server.network.NetworkBuffer.VAR_INT;
 
-public record Ingredient(@NotNull List<@NotNull Material> items) {
+public value record Ingredient(@NotNull List<@NotNull Material> items) {
     public static final NetworkBuffer.Type<Ingredient> NETWORK_TYPE = NetworkBufferTemplate.template(
             // FIXME(1.21.2): This is really an ObjectSet, but currently ObjectSet does not properly support
             //  non-dynamic registry types. We need to improve how the tag system works generally.

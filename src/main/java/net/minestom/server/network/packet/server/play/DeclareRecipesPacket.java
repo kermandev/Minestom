@@ -12,7 +12,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.List;
 import java.util.Map;
 
-public record DeclareRecipesPacket(
+public value record DeclareRecipesPacket(
         @NotNull Map<RecipeProperty, List<Material>> itemProperties,
         @NotNull List<StonecutterRecipe> stonecutterRecipes
 ) implements ServerPacket.Play {
@@ -29,7 +29,7 @@ public record DeclareRecipesPacket(
         stonecutterRecipes = List.copyOf(stonecutterRecipes);
     }
 
-    public record StonecutterRecipe(
+    public value record StonecutterRecipe(
             @NotNull Ingredient ingredient,
             @NotNull SlotDisplay optionDisplay
     ) {

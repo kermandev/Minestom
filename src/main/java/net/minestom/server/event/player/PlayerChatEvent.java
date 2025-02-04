@@ -15,7 +15,7 @@ import java.util.List;
  * Called every time a {@link Player} writes and sends something in the chat.
  * The event can be cancelled to not send anything, and the final message can be changed.
  */
-public record PlayerChatEvent(@NotNull Player player, @NotNull Collection<Player> recipients,
+public value record PlayerChatEvent(@NotNull Player player, @NotNull Collection<Player> recipients,
                              @NotNull String rawMessage, @NotNull Component formattedMessage, boolean cancelled) implements PlayerInstanceEvent, CancellableEvent<PlayerChatEvent> {
 
     public PlayerChatEvent(@NotNull Player player, @NotNull Collection<Player> recipients,

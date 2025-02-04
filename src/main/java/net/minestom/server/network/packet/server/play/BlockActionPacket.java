@@ -9,7 +9,7 @@ import org.jetbrains.annotations.NotNull;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-public record BlockActionPacket(@NotNull Point blockPosition, byte actionId,
+public value record BlockActionPacket(@NotNull Point blockPosition, byte actionId,
                                 byte actionParam, int blockId) implements ServerPacket.Play {
     public static final NetworkBuffer.Type<BlockActionPacket> SERIALIZER = NetworkBufferTemplate.template(
             BLOCK_POSITION, BlockActionPacket::blockPosition,

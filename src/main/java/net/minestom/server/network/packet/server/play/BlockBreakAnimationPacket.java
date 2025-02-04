@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-public record BlockBreakAnimationPacket(int entityId, @NotNull Point blockPosition,
+public value record BlockBreakAnimationPacket(int entityId, @NotNull Point blockPosition,
                                         byte destroyStage) implements ServerPacket.Play {
     public static final NetworkBuffer.Type<BlockBreakAnimationPacket> SERIALIZER = NetworkBufferTemplate.template(
             VAR_INT, BlockBreakAnimationPacket::entityId,

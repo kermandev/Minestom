@@ -10,7 +10,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-public record ServerLinksPacket(@NotNull List<Entry> entries) implements ServerPacket.Configuration, ServerPacket.Play {
+public value record ServerLinksPacket(@NotNull List<Entry> entries) implements ServerPacket.Configuration, ServerPacket.Play {
     private static final int MAX_ENTRIES = 100;
 
     public static final NetworkBuffer.Type<ServerLinksPacket> SERIALIZER = NetworkBufferTemplate.template(
@@ -25,7 +25,7 @@ public record ServerLinksPacket(@NotNull List<Entry> entries) implements ServerP
         this(List.of(entries));
     }
 
-    public record Entry(@Nullable KnownLinkType knownType, @Nullable Component customType, @NotNull String link) {
+    public value record Entry(@Nullable KnownLinkType knownType, @Nullable Component customType, @NotNull String link) {
         public static final NetworkBuffer.Type<Entry> NETWORK_TYPE = new NetworkBuffer.Type<>() {
             @Override
             public void write(@NotNull NetworkBuffer buffer, Entry value) {

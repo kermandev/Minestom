@@ -5,7 +5,7 @@ import net.minestom.server.network.NetworkBufferTemplate;
 import net.minestom.server.network.packet.server.ServerPacket;
 import org.jetbrains.annotations.NotNull;
 
-public record TransferPacket(
+public value record TransferPacket(
         @NotNull String host,
         int port
 ) implements ServerPacket.Configuration, ServerPacket.Play {

@@ -187,7 +187,7 @@ public final class Registry {
     }
 
     @ApiStatus.Internal
-    public record Container<T extends StaticProtocolObject>(Resource resource,
+    public value record Container<T extends StaticProtocolObject>(Resource resource,
                                                             Map<String, T> namespaces,
                                                             ObjectArray<T> ids) {
         public Container {
@@ -277,7 +277,7 @@ public final class Registry {
         }
     }
 
-    public static final class BlockEntry implements Entry {
+    public static final value class BlockEntry implements Entry {
         private final NamespaceID namespace;
         private final int id;
         private final int stateId;
@@ -316,9 +316,11 @@ public final class Registry {
             this.air = main.getBoolean("air", false);
             this.solid = main.getBoolean("solid");
             this.liquid = main.getBoolean("liquid", false);
-            this.occludes = main.getBoolean("occludes", true);
+            final boolean occludes = main.getBoolean("occludes", true);
+            this.occludes = occludes;
             this.requiresTool = main.getBoolean("requiresTool", true);
-            this.lightEmission = main.getInt("lightEmission", 0);
+            final int lightEmission = main.getInt("lightEmission", 0);
+            this.lightEmission = lightEmission;
             this.replaceable = main.getBoolean("replaceable", false);
             {
                 Properties blockEntity = main.section("blockEntity");
@@ -337,7 +339,7 @@ public final class Registry {
             {
                 final String collision = main.getString("collisionShape");
                 final String occlusion = main.getString("occlusionShape");
-                this.shape = CollisionUtils.parseBlockShape(collision, occlusion, this);
+                this.shape = CollisionUtils.parseBlockShape(collision, occlusion, occludes, lightEmission);
             }
             this.redstoneConductor = main.getBoolean("redstoneConductor");
             this.signalSource = main.getBoolean("signalSource", false);
@@ -441,7 +443,7 @@ public final class Registry {
         }
     }
 
-    public record DimensionTypeEntry(
+    public value record DimensionTypeEntry(
             NamespaceID namespace,
             boolean ultrawarm,
             boolean natural,
@@ -807,7 +809,7 @@ public final class Registry {
         }
     }
 
-    public record FeatureFlagEntry(NamespaceID namespace, int id, Properties custom) implements Entry {
+    public value record FeatureFlagEntry(NamespaceID namespace, int id, Properties custom) implements Entry {
         public FeatureFlagEntry(String namespace, Properties main, Properties custom) {
             this(NamespaceID.from(namespace),
                     main.getInt("id"),
@@ -816,7 +818,7 @@ public final class Registry {
         }
     }
 
-    public record DamageTypeEntry(NamespaceID namespace, float exhaustion,
+    public value record DamageTypeEntry(NamespaceID namespace, float exhaustion,
                                   String messageId,
                                   String scaling,
                                   @Nullable String effects,
@@ -833,7 +835,7 @@ public final class Registry {
         }
     }
 
-    public record TrimMaterialEntry(@NotNull NamespaceID namespace,
+    public value record TrimMaterialEntry(@NotNull NamespaceID namespace,
                                     @NotNull String assetName,
                                     @NotNull Material ingredient,
                                     @NotNull Map<String, String> overrideArmorMaterials,
@@ -852,7 +854,7 @@ public final class Registry {
         }
     }
 
-    public record TrimPatternEntry(@NotNull NamespaceID namespace,
+    public value record TrimPatternEntry(@NotNull NamespaceID namespace,
                                    @NotNull NamespaceID assetID,
                                    @NotNull Material template,
                                    @NotNull Component description,
@@ -870,7 +872,7 @@ public final class Registry {
         }
     }
 
-    public record PotionEffectEntry(NamespaceID namespace, int id,
+    public value record PotionEffectEntry(NamespaceID namespace, int id,
                                     String translationKey,
                                     int color,
                                     boolean isInstantaneous,
@@ -885,7 +887,7 @@ public final class Registry {
         }
     }
 
-    public record AttributeEntry(NamespaceID namespace, int id,
+    public value record AttributeEntry(NamespaceID namespace, int id,
                                  String translationKey, double defaultValue,
                                  boolean clientSync,
                                  double maxValue, double minValue,
@@ -902,7 +904,7 @@ public final class Registry {
         }
     }
 
-    public record BannerPatternEntry(NamespaceID namespace, NamespaceID assetId, String translationKey, Properties custom) implements Entry {
+    public value record BannerPatternEntry(NamespaceID namespace, NamespaceID assetId, String translationKey, Properties custom) implements Entry {
         public BannerPatternEntry(String namespace, Properties main, Properties custom) {
             this(NamespaceID.from(namespace),
                     NamespaceID.from(main.getString("asset_id")),
@@ -911,7 +913,7 @@ public final class Registry {
         }
     }
 
-    public record WolfVariantEntry(NamespaceID namespace, NamespaceID wildTexture, NamespaceID tameTexture, NamespaceID angryTexture, List<String> biomes, Properties custom) implements Entry {
+    public value record WolfVariantEntry(NamespaceID namespace, NamespaceID wildTexture, NamespaceID tameTexture, NamespaceID angryTexture, List<String> biomes, Properties custom) implements Entry {
         public WolfVariantEntry(String namespace, Properties main, Properties custom) {
             this(NamespaceID.from(namespace),
                     NamespaceID.from(main.getString("wild_texture")),
@@ -985,13 +987,13 @@ public final class Registry {
 
     }
 
-    public record EnchantmentEntry(NamespaceID namespace, String raw, Properties custom) implements Entry {
+    public value record EnchantmentEntry(NamespaceID namespace, String raw, Properties custom) implements Entry {
         public EnchantmentEntry(String namespace, Properties main, Properties custom) {
             this(NamespaceID.from(namespace), main.getString("raw"), custom);
         }
     }
 
-    public record PaintingVariantEntry(NamespaceID namespace, NamespaceID assetId, int width, int height, Properties custom) implements Entry {
+    public value record PaintingVariantEntry(NamespaceID namespace, NamespaceID assetId, int width, int height, Properties custom) implements Entry {
         public PaintingVariantEntry(String namespace, Properties main, Properties custom) {
             this(NamespaceID.from(namespace),
                     NamespaceID.from(main.getString("asset_id")),
@@ -1001,7 +1003,7 @@ public final class Registry {
         }
     }
 
-    public record JukeboxSongEntry(NamespaceID namespace, SoundEvent soundEvent, Component description,
+    public value record JukeboxSongEntry(NamespaceID namespace, SoundEvent soundEvent, Component description,
                                    float lengthInSeconds, int comparatorOutput, Properties custom) implements Entry {
         public JukeboxSongEntry(String namespace, Properties main, Properties custom) {
             this(NamespaceID.from(namespace),
@@ -1013,7 +1015,7 @@ public final class Registry {
         }
     }
 
-    public record InstrumentEntry(NamespaceID namespace, SoundEvent soundEvent, float useDuration, float range,
+    public value record InstrumentEntry(NamespaceID namespace, SoundEvent soundEvent, float useDuration, float range,
                                   Component description, Properties custom) implements Entry {
         public InstrumentEntry(String namespace, Properties main, Properties custom) {
             this(NamespaceID.from(namespace),

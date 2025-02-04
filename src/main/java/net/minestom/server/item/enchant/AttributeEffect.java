@@ -6,7 +6,7 @@ import net.minestom.server.utils.NamespaceID;
 import net.minestom.server.utils.nbt.BinaryTagSerializer;
 import org.jetbrains.annotations.NotNull;
 
-public record AttributeEffect(
+public value record AttributeEffect(
         @NotNull NamespaceID id,
         @NotNull Attribute attribute,
         @NotNull LevelBasedValue amount,

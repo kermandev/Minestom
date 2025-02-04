@@ -12,7 +12,7 @@ import net.minestom.server.utils.nbt.BinaryTagTemplate;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public record Equippable(
+public value record Equippable(
         @NotNull EquipmentSlot slot,
         @NotNull SoundEvent equipSound,
         @Nullable String assetId,

@@ -9,7 +9,7 @@ import org.jetbrains.annotations.NotNull;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-public record EntitySoundEffectPacket(
+public value record EntitySoundEffectPacket(
         @NotNull SoundEvent soundEvent,
         @NotNull Sound.Source source,
         int entityId,

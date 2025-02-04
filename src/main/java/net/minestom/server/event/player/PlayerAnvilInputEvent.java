@@ -12,4 +12,4 @@ import org.jetbrains.annotations.NotNull;
  *
  * @see ClientNameItemPacket
  */
-public record PlayerAnvilInputEvent(@NotNull Player player, @NotNull Inventory inventory, @NotNull String input) implements PlayerInstanceEvent, InventoryEvent {}
+public value record PlayerAnvilInputEvent(@NotNull Player player, @NotNull Inventory inventory, @NotNull String input) implements PlayerInstanceEvent, InventoryEvent {}

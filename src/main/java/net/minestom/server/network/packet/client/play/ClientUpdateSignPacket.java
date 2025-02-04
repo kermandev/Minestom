@@ -9,7 +9,7 @@ import java.util.List;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-public record ClientUpdateSignPacket(
+public value record ClientUpdateSignPacket(
         @NotNull Point blockPosition,
         boolean isFrontText,
         @NotNull List<String> lines

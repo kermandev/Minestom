@@ -7,7 +7,7 @@ import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-record ChatTypeImpl(
+value record ChatTypeImpl(
         @NotNull ChatTypeDecoration chat,
         @NotNull ChatTypeDecoration narration,
         @Nullable Registry.ChatTypeEntry registry

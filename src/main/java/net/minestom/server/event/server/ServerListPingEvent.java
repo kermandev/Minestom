@@ -17,7 +17,7 @@ import java.util.Objects;
  * Called when a {@link PlayerConnection} sends a status packet,
  * usually to display information on the server list.
  */
-public record ServerListPingEvent(@Nullable PlayerConnection connection, @NotNull ServerListPingType type, @NotNull ResponseData responseData, boolean cancelled) implements CancellableEvent<ServerListPingEvent> {
+public value record ServerListPingEvent(@Nullable PlayerConnection connection, @NotNull ServerListPingType type, @NotNull ResponseData responseData, boolean cancelled) implements CancellableEvent<ServerListPingEvent> {
 
     /**
      * Creates a new server list ping event with no player connection.

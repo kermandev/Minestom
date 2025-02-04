@@ -28,7 +28,7 @@ import java.util.Set;
  *
  * <p>It is valid to kick a player using {@link Player#kick(net.kyori.adventure.text.Component)} during this event.</p>
  */
-public record AsyncPlayerConfigurationEvent(@NotNull Player player, boolean firstConfig,
+public value record AsyncPlayerConfigurationEvent(@NotNull Player player, boolean firstConfig,
                                             ObjectSet<FeatureFlag> featureFlags, boolean hardcore,
                                             boolean clearChat, boolean sendRegistryData,
                                             @Nullable Instance spawningInstance) implements PlayerEvent, MutableEvent<AsyncPlayerConfigurationEvent> {

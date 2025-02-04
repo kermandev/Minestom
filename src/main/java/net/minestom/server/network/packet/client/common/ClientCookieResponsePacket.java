@@ -11,7 +11,7 @@ import org.jetbrains.annotations.Nullable;
 import static net.minestom.server.network.NetworkBuffer.BYTE_ARRAY;
 import static net.minestom.server.network.NetworkBuffer.STRING;
 
-public record ClientCookieResponsePacket(
+public value record ClientCookieResponsePacket(
         @NotNull String key,
         byte @Nullable [] value
 ) implements ClientPacket {

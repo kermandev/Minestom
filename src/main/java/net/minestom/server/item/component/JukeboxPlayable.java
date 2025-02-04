@@ -9,7 +9,7 @@ import net.minestom.server.utils.nbt.BinaryTagTemplate;
 import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.NotNull;
 
-public record JukeboxPlayable(@NotNull DynamicRegistry.Key<JukeboxSong> song, boolean showInTooltip) {
+public value record JukeboxPlayable(@NotNull DynamicRegistry.Key<JukeboxSong> song, boolean showInTooltip) {
     public static final NetworkBuffer.Type<JukeboxPlayable> NETWORK_TYPE = new NetworkBuffer.Type<>() {
         // For some reason I(matt) cannot discern, the wire format for this type can write the song
         // as either a registry ID or a namespace ID. Minestom always writes as a registry id.

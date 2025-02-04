@@ -14,7 +14,7 @@ import org.jetbrains.annotations.NotNull;
  * Currently, do not support viewable packets.
  */
 @ApiStatus.Experimental
-public record PlayerPacketOutEvent(@NotNull Player player, @NotNull ServerPacket packet, boolean cancelled) implements PlayerEvent, CancellableEvent<PlayerPacketOutEvent> {
+public value record PlayerPacketOutEvent(@NotNull Player player, @NotNull ServerPacket packet, boolean cancelled) implements PlayerEvent, CancellableEvent<PlayerPacketOutEvent> {
 
     public PlayerPacketOutEvent(@NotNull Player player, @NotNull ServerPacket packet) {
         this(player, packet, false);

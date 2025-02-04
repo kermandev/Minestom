@@ -11,4 +11,4 @@ import org.jetbrains.annotations.NotNull;
  * @param entity the entity who has the potion added
  * @param potion the potion that was removed
  */
-public record EntityPotionRemoveEvent(@NotNull Entity entity, @NotNull Potion potion) implements EntityInstanceEvent {}
+public value record EntityPotionRemoveEvent(@NotNull Entity entity, @NotNull Potion potion) implements EntityInstanceEvent {}

@@ -8,7 +8,7 @@ import org.jetbrains.annotations.Nullable;
 
 import static net.minestom.server.network.NetworkBuffer.STRING;
 
-public record ClientAdvancementTabPacket(@NotNull AdvancementAction action,
+public value record ClientAdvancementTabPacket(@NotNull AdvancementAction action,
                                          @Nullable String tabIdentifier) implements ClientPacket {
     public static final NetworkBuffer.Type<ClientAdvancementTabPacket> SERIALIZER = new NetworkBuffer.Type<>() {
         @Override

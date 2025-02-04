@@ -11,7 +11,7 @@ import static net.minestom.server.network.NetworkBuffer.POS;
 import static net.minestom.server.network.packet.client.play.ClientPlayerPositionPacket.FLAG_HORIZONTAL_COLLISION;
 import static net.minestom.server.network.packet.client.play.ClientPlayerPositionPacket.FLAG_ON_GROUND;
 
-public record ClientPlayerPositionAndRotationPacket(@NotNull Pos position, byte flags) implements ClientPacket {
+public value record ClientPlayerPositionAndRotationPacket(@NotNull Pos position, byte flags) implements ClientPacket {
     public static final NetworkBuffer.Type<ClientPlayerPositionAndRotationPacket> SERIALIZER = NetworkBufferTemplate.template(
             POS, ClientPlayerPositionAndRotationPacket::position,
             BYTE, ClientPlayerPositionAndRotationPacket::flags,

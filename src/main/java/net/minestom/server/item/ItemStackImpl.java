@@ -16,7 +16,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 import java.util.function.Consumer;
 
-record ItemStackImpl(Material material, int amount, DataComponentMap components) implements ItemStack {
+value record ItemStackImpl(Material material, int amount, DataComponentMap components) implements ItemStack {
 
     static ItemStack create(Material material, int amount, DataComponentMap components) {
         if (amount <= 0) return AIR;

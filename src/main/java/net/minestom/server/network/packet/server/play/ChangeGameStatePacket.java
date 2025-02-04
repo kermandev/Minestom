@@ -7,7 +7,7 @@ import org.jetbrains.annotations.NotNull;
 import static net.minestom.server.network.NetworkBuffer.BYTE;
 import static net.minestom.server.network.NetworkBuffer.FLOAT;
 
-public record ChangeGameStatePacket(@NotNull Reason reason, float value) implements ServerPacket.Play {
+public value record ChangeGameStatePacket(@NotNull Reason reason, float value) implements ServerPacket.Play {
     public static final NetworkBuffer.Type<ChangeGameStatePacket> SERIALIZER = new NetworkBuffer.Type<>() {
         @Override
         public void write(@NotNull NetworkBuffer buffer, ChangeGameStatePacket value) {

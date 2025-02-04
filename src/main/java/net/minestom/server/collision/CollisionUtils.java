@@ -177,8 +177,8 @@ public final class CollisionUtils {
         return newPosition;
     }
 
-    public static Shape parseBlockShape(String collision, String occlusion, Registry.BlockEntry blockEntry) {
-        return ShapeImpl.parseBlockFromRegistry(collision, occlusion, blockEntry.occludes(), blockEntry.lightEmission());
+    public static Shape parseBlockShape(String collision, String occlusion, boolean occludes, int lightEmission) {
+        return ShapeImpl.parseBlockFromRegistry(collision, occlusion, occludes, lightEmission);
     }
 
     /**

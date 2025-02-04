@@ -10,7 +10,7 @@ import org.jetbrains.annotations.NotNull;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-public record ClientPlayerBlockPlacementPacket(
+public value record ClientPlayerBlockPlacementPacket(
         @NotNull PlayerHand hand, @NotNull Point blockPosition, @NotNull BlockFace blockFace,
         float cursorPositionX, float cursorPositionY, float cursorPositionZ,
         boolean insideBlock, boolean hitWorldBorder, int sequence) implements ClientPacket {

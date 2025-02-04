@@ -11,7 +11,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
-public record Consumable(
+public value record Consumable(
         float consumeSeconds,
         @NotNull ItemAnimation animation,
         @NotNull SoundEvent sound,

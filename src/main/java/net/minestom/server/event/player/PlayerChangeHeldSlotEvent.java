@@ -11,7 +11,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Called when a player change his held slot (by pressing 1-9 keys).
  */
-public record PlayerChangeHeldSlotEvent(@NotNull Player player, byte slot, boolean cancelled) implements PlayerInstanceEvent, CancellableEvent<PlayerChangeHeldSlotEvent> {
+public value record PlayerChangeHeldSlotEvent(@NotNull Player player, byte slot, boolean cancelled) implements PlayerInstanceEvent, CancellableEvent<PlayerChangeHeldSlotEvent> {
 
     public PlayerChangeHeldSlotEvent(@NotNull Player player, byte slot) {
         this(player, slot, false);

@@ -4,7 +4,7 @@ import net.kyori.adventure.nbt.CompoundBinaryTag;
 import net.minestom.server.utils.nbt.BinaryTagSerializer;
 import org.jetbrains.annotations.NotNull;
 
-public record SeededContainerLoot(@NotNull String lootTable, long seed) {
+public value record SeededContainerLoot(@NotNull String lootTable, long seed) {
 
     public static final BinaryTagSerializer<SeededContainerLoot> NBT_TYPE = BinaryTagSerializer.COMPOUND.map(
             tag -> new SeededContainerLoot(tag.getString("loot_table"), tag.getLong("seed")),

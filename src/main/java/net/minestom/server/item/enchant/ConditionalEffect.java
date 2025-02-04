@@ -5,7 +5,7 @@ import net.minestom.server.utils.nbt.BinaryTagSerializer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public record ConditionalEffect<E extends Enchantment.Effect>(
+public value record ConditionalEffect<E extends Enchantment.Effect>(
         @NotNull E effect,
         @Nullable DataPredicate requirements
 ) implements Enchantment.Effect {

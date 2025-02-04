@@ -10,7 +10,7 @@ import net.minestom.server.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
 
-public record EntityEquipEvent(@NotNull Entity entity, @NotNull ItemStack equippedItem, @NotNull EquipmentSlot slot) implements EntityInstanceEvent, ItemEvent, MutableEvent<EntityEquipEvent> {
+public value record EntityEquipEvent(@NotNull Entity entity, @NotNull ItemStack equippedItem, @NotNull EquipmentSlot slot) implements EntityInstanceEvent, ItemEvent, MutableEvent<EntityEquipEvent> {
 
     /**
      * Same as {@link #equippedItem()}.

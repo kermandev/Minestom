@@ -22,7 +22,7 @@ import java.util.function.Predicate;
 public final class RecipeManager {
     private static final AtomicInteger NEXT_DISPLAY_ID = new AtomicInteger();
 
-    private record RecipeData(
+    private value record RecipeData(
             @NotNull Recipe recipe,
             @NotNull List<RecipeBookAddPacket.Entry> displays,
             @NotNull Predicate<Player> predicate

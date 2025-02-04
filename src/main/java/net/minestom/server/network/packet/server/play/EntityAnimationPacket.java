@@ -7,7 +7,7 @@ import org.jetbrains.annotations.NotNull;
 import static net.minestom.server.network.NetworkBuffer.BYTE;
 import static net.minestom.server.network.NetworkBuffer.VAR_INT;
 
-public record EntityAnimationPacket(int entityId, @NotNull Animation animation) implements ServerPacket.Play {
+public value record EntityAnimationPacket(int entityId, @NotNull Animation animation) implements ServerPacket.Play {
     public static final NetworkBuffer.Type<EntityAnimationPacket> SERIALIZER = new NetworkBuffer.Type<>() {
         @Override
         public void write(@NotNull NetworkBuffer buffer, EntityAnimationPacket value) {

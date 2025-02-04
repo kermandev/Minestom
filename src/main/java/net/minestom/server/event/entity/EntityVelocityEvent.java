@@ -11,7 +11,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Called when a velocity is applied to an entity using {@link Entity#setVelocity(Vec)}.
  */
-public record EntityVelocityEvent(@NotNull Entity entity, @NotNull Vec velocity, boolean cancelled) implements EntityInstanceEvent, CancellableEvent<EntityVelocityEvent> {
+public value record EntityVelocityEvent(@NotNull Entity entity, @NotNull Vec velocity, boolean cancelled) implements EntityInstanceEvent, CancellableEvent<EntityVelocityEvent> {
 
     public EntityVelocityEvent(@NotNull Entity entity, @NotNull Vec velocity) {
         this(entity, velocity, false);

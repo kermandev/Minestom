@@ -10,7 +10,7 @@ import java.util.List;
 import static net.minestom.server.network.NetworkBuffer.BITSET;
 import static net.minestom.server.network.NetworkBuffer.BYTE_ARRAY;
 
-public record LightData(
+public value record LightData(
         @NotNull BitSet skyMask, @NotNull BitSet blockMask,
         @NotNull BitSet emptySkyMask, @NotNull BitSet emptyBlockMask,
         @NotNull List<byte[]> skyLight,

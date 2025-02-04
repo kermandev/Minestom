@@ -10,13 +10,13 @@ import java.util.List;
 
 import static net.minestom.server.network.NetworkBuffer.VECTOR3D;
 
-public record MoveMinecartPacket(int entityId, @NotNull List<LerpStep> lerpSteps) implements ServerPacket.Play {
+public value record MoveMinecartPacket(int entityId, @NotNull List<LerpStep> lerpSteps) implements ServerPacket.Play {
     public static final NetworkBuffer.Type<MoveMinecartPacket> SERIALIZER = NetworkBufferTemplate.template(
             NetworkBuffer.VAR_INT, MoveMinecartPacket::entityId,
             LerpStep.SERIALIZER.list(Short.MAX_VALUE), MoveMinecartPacket::lerpSteps,
             MoveMinecartPacket::new);
 
-    public record LerpStep(
+    public value record LerpStep(
             @NotNull Point position, @NotNull Point velocity,
             float yaw, float pitch, float weight
     ) {

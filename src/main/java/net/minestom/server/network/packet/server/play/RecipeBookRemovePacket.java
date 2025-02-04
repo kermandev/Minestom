@@ -7,7 +7,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
-public record RecipeBookRemovePacket(@NotNull List<Integer> displayIds) implements ServerPacket.Play {
+public value record RecipeBookRemovePacket(@NotNull List<Integer> displayIds) implements ServerPacket.Play {
     public static final NetworkBuffer.Type<RecipeBookRemovePacket> SERIALIZER = NetworkBufferTemplate.template(
             NetworkBuffer.VAR_INT.list(), RecipeBookRemovePacket::displayIds,
             RecipeBookRemovePacket::new);

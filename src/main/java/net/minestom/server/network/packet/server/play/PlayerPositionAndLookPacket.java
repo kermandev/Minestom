@@ -10,7 +10,7 @@ import org.jetbrains.annotations.NotNull;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-public record PlayerPositionAndLookPacket(
+public value record PlayerPositionAndLookPacket(
         int teleportId, @NotNull Point position, @NotNull Point delta,
         float yaw, float pitch,
         @MagicConstant(flagsFromClass = RelativeFlags.class) int flags

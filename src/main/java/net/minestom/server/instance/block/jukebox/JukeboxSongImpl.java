@@ -9,7 +9,7 @@ import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-record JukeboxSongImpl(
+value record JukeboxSongImpl(
         @NotNull SoundEvent soundEvent,
         @NotNull Component description,
         float lengthInSeconds,

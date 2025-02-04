@@ -11,7 +11,7 @@ import org.jetbrains.annotations.NotNull;
 import static net.minestom.server.network.NetworkBuffer.LONG;
 import static net.minestom.server.network.NetworkBuffer.STRING;
 
-public record ClientSignedCommandChatPacket(@NotNull String message, long timestamp,
+public value record ClientSignedCommandChatPacket(@NotNull String message, long timestamp,
                                             long salt, @NotNull ArgumentSignatures signatures,
                                             LastSeenMessages.@NotNull Update lastSeenMessages) implements ClientPacket {
     public static final NetworkBuffer.Type<ClientSignedCommandChatPacket> SERIALIZER = NetworkBufferTemplate.template(

@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Called when a player send {@link ClientPluginMessagePacket}.
  */
-public record PlayerPluginMessageEvent(@NotNull Player player, @NotNull String identifier, byte @NotNull [] message) implements PlayerInstanceEvent {
+public value record PlayerPluginMessageEvent(@NotNull Player player, @NotNull String identifier, byte @NotNull [] message) implements PlayerInstanceEvent {
 
     /**
      * Gets the message identifier.

@@ -12,7 +12,7 @@ import java.util.function.UnaryOperator;
 
 import static net.minestom.server.network.NetworkBuffer.JSON_COMPONENT;
 
-public record LoginDisconnectPacket(@NotNull Component kickMessage) implements ServerPacket.Login,
+public value record LoginDisconnectPacket(@NotNull Component kickMessage) implements ServerPacket.Login,
         ServerPacket.ComponentHolding {
     public static final NetworkBuffer.Type<LoginDisconnectPacket> SERIALIZER = NetworkBufferTemplate.template(
             JSON_COMPONENT, LoginDisconnectPacket::kickMessage,

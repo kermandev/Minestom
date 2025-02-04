@@ -7,7 +7,7 @@ import net.minestom.server.utils.NamespaceID;
 import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.NotNull;
 
-public record CookieStorePacket(
+public value record CookieStorePacket(
         @NotNull String key, byte[] value
 ) implements ServerPacket.Configuration, ServerPacket.Play {
     public static final int MAX_VALUE_LENGTH = 5120;

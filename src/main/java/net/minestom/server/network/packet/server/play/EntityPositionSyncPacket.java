@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-public record EntityPositionSyncPacket(
+public value record EntityPositionSyncPacket(
         int entityId, @NotNull Point position, @NotNull Point delta,
         float yaw, float pitch, boolean onGround
 ) implements ServerPacket.Play {

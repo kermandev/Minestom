@@ -9,7 +9,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
-public record SelectKnownPacksPacket(
+public value record SelectKnownPacksPacket(
         @NotNull List<Entry> entries
 ) implements ServerPacket.Configuration {
     private static final int MAX_ENTRIES = 64;
@@ -24,7 +24,7 @@ public record SelectKnownPacksPacket(
         entries = List.copyOf(entries);
     }
 
-    public record Entry(
+    public value record Entry(
             @NotNull String namespace,
             @NotNull String id,
             @NotNull String version

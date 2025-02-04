@@ -9,7 +9,7 @@ import java.util.List;
 
 import static net.minestom.server.network.NetworkBuffer.VAR_INT;
 
-public record DestroyEntitiesPacket(@NotNull List<Integer> entityIds) implements ServerPacket.Play {
+public value record DestroyEntitiesPacket(@NotNull List<Integer> entityIds) implements ServerPacket.Play {
     public static final int MAX_ENTRIES = Short.MAX_VALUE;
 
     public static final NetworkBuffer.Type<DestroyEntitiesPacket> SERIALIZER = NetworkBufferTemplate.template(

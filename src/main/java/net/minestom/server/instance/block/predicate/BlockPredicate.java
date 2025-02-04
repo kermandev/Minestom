@@ -31,7 +31,7 @@ import static net.minestom.server.network.NetworkBuffer.NBT_COMPOUND;
  * @param state  The block properties to match.
  * @param nbt    The block nbt to match.
  */
-public record BlockPredicate(
+public value record BlockPredicate(
         @Nullable BlockTypeFilter blocks,
         @Nullable PropertiesPredicate state,
         @Nullable CompoundBinaryTag nbt

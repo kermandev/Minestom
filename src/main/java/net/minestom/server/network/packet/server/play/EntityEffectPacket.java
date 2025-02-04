@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 
 import static net.minestom.server.network.NetworkBuffer.VAR_INT;
 
-public record EntityEffectPacket(int entityId, @NotNull Potion potion) implements ServerPacket.Play {
+public value record EntityEffectPacket(int entityId, @NotNull Potion potion) implements ServerPacket.Play {
     public static final NetworkBuffer.Type<EntityEffectPacket> SERIALIZER = NetworkBufferTemplate.template(
             VAR_INT, EntityEffectPacket::entityId,
             Potion.NETWORK_TYPE, EntityEffectPacket::potion,

@@ -4,4 +4,4 @@ import net.minestom.server.event.Event;
 import net.minestom.server.monitoring.TickMonitor;
 import org.jetbrains.annotations.NotNull;
 
-public record ServerTickMonitorEvent(@NotNull TickMonitor tickMonitor) implements Event {}
+public value record ServerTickMonitorEvent(@NotNull TickMonitor tickMonitor) implements Event {}

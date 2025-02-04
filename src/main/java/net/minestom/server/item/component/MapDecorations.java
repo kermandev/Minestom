@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.HashMap;
 import java.util.Map;
 
-public record MapDecorations(@NotNull Map<String, Entry> decorations) {
+public value record MapDecorations(@NotNull Map<String, Entry> decorations) {
 
     public static final BinaryTagSerializer<MapDecorations> NBT_TYPE = BinaryTagSerializer.COMPOUND.map(
             tag -> {
@@ -59,6 +59,6 @@ public record MapDecorations(@NotNull Map<String, Entry> decorations) {
         return new MapDecorations(newDecorations);
     }
 
-    public record Entry(@NotNull String type, double x, double z, float rotation) {
+    public value record Entry(@NotNull String type, double x, double z, float rotation) {
     }
 }

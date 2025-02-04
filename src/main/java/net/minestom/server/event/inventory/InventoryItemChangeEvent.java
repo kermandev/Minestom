@@ -10,7 +10,7 @@ import org.jetbrains.annotations.NotNull;
  * Called when {@link AbstractInventory#setItemStack(int, ItemStack)} is being invoked.
  * This event cannot be cancelled and items related to the change are already moved.
  */
-public record InventoryItemChangeEvent(@NotNull AbstractInventory inventory, int slot,
+public value record InventoryItemChangeEvent(@NotNull AbstractInventory inventory, int slot,
                                        @NotNull ItemStack previousItem, @NotNull ItemStack newItem) implements InventoryEvent, RecursiveEvent {
 
     /**

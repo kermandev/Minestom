@@ -10,7 +10,7 @@ import java.util.List;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-public record TradeListPacket(int windowId, @NotNull List<Trade> trades,
+public value record TradeListPacket(int windowId, @NotNull List<Trade> trades,
                               int villagerLevel, int experience,
                               boolean regularVillager, boolean canRestock) implements ServerPacket.Play {
     public static final int MAX_TRADES = Short.MAX_VALUE;
@@ -28,7 +28,7 @@ public record TradeListPacket(int windowId, @NotNull List<Trade> trades,
         trades = List.copyOf(trades);
     }
 
-    public record Trade(ItemStack inputItem1, ItemStack result,
+    public value record Trade(ItemStack inputItem1, ItemStack result,
                         ItemStack inputItem2, boolean tradeDisabled,
                         int tradeUsesNumber, int maxTradeUsesNumber, int exp,
                         int specialPrice, float priceMultiplier, int demand) {

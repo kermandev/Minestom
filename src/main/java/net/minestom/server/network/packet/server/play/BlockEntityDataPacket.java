@@ -9,7 +9,7 @@ import org.jetbrains.annotations.Nullable;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-public record BlockEntityDataPacket(@NotNull Point blockPosition, int action,
+public value record BlockEntityDataPacket(@NotNull Point blockPosition, int action,
                                     @Nullable CompoundBinaryTag data) implements ServerPacket.Play {
     public static final NetworkBuffer.Type<BlockEntityDataPacket> SERIALIZER = new Type<>() {
         @Override

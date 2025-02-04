@@ -12,7 +12,7 @@ import static net.minestom.server.network.NetworkBuffer.STRING_TERMINATED;
 /**
  * A basic query response containing a fixed set of responses.
  */
-public record BasicQueryResponse(String motd, String gameType,
+public value record BasicQueryResponse(String motd, String gameType,
                                  String map,
                                  String numPlayers, String maxPlayers,
                                  short port, String address) {

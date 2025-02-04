@@ -9,7 +9,7 @@ import java.util.BitSet;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-public record ClientChatMessagePacket(String message, long timestamp,
+public value record ClientChatMessagePacket(String message, long timestamp,
                                       long salt, byte @Nullable [] signature,
                                       int ackOffset, BitSet ackList) implements ClientPacket {
     public static final NetworkBuffer.Type<ClientChatMessagePacket> SERIALIZER = NetworkBufferTemplate.template(

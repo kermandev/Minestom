@@ -9,7 +9,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.HashMap;
 import java.util.Map;
 
-public record DebugStickState(@NotNull Map<String, String> state) {
+public value record DebugStickState(@NotNull Map<String, String> state) {
     public static final DebugStickState EMPTY = new DebugStickState(Map.of());
 
     public static final BinaryTagSerializer<DebugStickState> NBT_TYPE = BinaryTagSerializer.COMPOUND.map(

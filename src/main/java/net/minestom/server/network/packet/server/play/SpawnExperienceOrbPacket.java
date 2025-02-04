@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-public record SpawnExperienceOrbPacket(int entityId,
+public value record SpawnExperienceOrbPacket(int entityId,
                                        @NotNull Point position, short expCount) implements ServerPacket.Play {
     public static final NetworkBuffer.Type<SpawnExperienceOrbPacket> SERIALIZER = NetworkBufferTemplate.template(
             VAR_INT, SpawnExperienceOrbPacket::entityId,

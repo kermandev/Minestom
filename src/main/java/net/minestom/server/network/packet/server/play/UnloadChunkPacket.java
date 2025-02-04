@@ -6,7 +6,7 @@ import org.jetbrains.annotations.NotNull;
 
 import static net.minestom.server.network.NetworkBuffer.INT;
 
-public record UnloadChunkPacket(int chunkX, int chunkZ) implements ServerPacket.Play {
+public value record UnloadChunkPacket(int chunkX, int chunkZ) implements ServerPacket.Play {
     public static final NetworkBuffer.Type<UnloadChunkPacket> SERIALIZER = new NetworkBuffer.Type<>() {
         @Override
         public void write(@NotNull NetworkBuffer buffer, UnloadChunkPacket value) {

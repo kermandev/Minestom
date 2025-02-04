@@ -9,7 +9,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
-public record WritableBookContent(@NotNull List<FilteredText<String>> pages) {
+public value record WritableBookContent(@NotNull List<FilteredText<String>> pages) {
     public static final WritableBookContent EMPTY = new WritableBookContent(List.of());
 
     public static final NetworkBuffer.Type<WritableBookContent> NETWORK_TYPE = NetworkBufferTemplate.template(

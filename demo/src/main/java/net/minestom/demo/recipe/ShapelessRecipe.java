@@ -11,7 +11,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
-public record ShapelessRecipe(
+public value record ShapelessRecipe(
         @NotNull RecipeBookCategory recipeBookCategory,
         @NotNull List<Material> ingredients,
         @NotNull ItemStack result

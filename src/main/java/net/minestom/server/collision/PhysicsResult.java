@@ -20,7 +20,7 @@ import org.jetbrains.annotations.UnknownNullability;
  * @param collisionShapePositions the positions of the shapes the entity collided with
  */
 @ApiStatus.Experimental
-public record PhysicsResult(
+public value record PhysicsResult(
         Pos newPosition,
         Vec newVelocity,
         boolean isOnGround,

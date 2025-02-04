@@ -11,7 +11,7 @@ import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public record InstrumentImpl(
+public value record InstrumentImpl(
         @NotNull SoundEvent soundEvent,
         float useDuration,
         float range,

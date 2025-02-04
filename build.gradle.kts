@@ -36,7 +36,7 @@ allprojects {
         withSourcesJar()
         withJavadocJar()
 
-        toolchain.languageVersion = JavaLanguageVersion.of(21)
+        toolchain.languageVersion = JavaLanguageVersion.of(23)
     }
 
     tasks.withType<Zip> {
@@ -84,6 +84,11 @@ dependencies {
 }
 
 tasks {
+    compileJava {
+        options.compilerArgs.add("--enable-preview")
+        //options.allCompilerArgs.add("--enable-preview")
+    }
+
     jar {
         manifest {
             attributes("Automatic-Module-Name" to "net.minestom.server")

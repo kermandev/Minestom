@@ -6,7 +6,7 @@ import net.minestom.server.sound.SoundEvent;
 import net.minestom.server.utils.nbt.BinaryTagSerializer;
 import org.jetbrains.annotations.Nullable;
 
-public record CrossbowChargingSounds(
+public value record CrossbowChargingSounds(
         @Nullable ObjectSet<SoundEvent> start,
         @Nullable ObjectSet<SoundEvent> mid,
         @Nullable ObjectSet<SoundEvent> end

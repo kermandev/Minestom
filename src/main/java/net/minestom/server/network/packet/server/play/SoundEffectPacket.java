@@ -10,7 +10,7 @@ import org.jetbrains.annotations.NotNull;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-public record SoundEffectPacket(
+public value record SoundEffectPacket(
         @NotNull SoundEvent soundEvent,
         @NotNull Source source,
         int x,

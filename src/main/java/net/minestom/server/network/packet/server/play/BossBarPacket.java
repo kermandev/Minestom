@@ -16,7 +16,7 @@ import java.util.function.UnaryOperator;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-public record BossBarPacket(@NotNull UUID uuid,
+public value record BossBarPacket(@NotNull UUID uuid,
                             @NotNull Action action) implements ServerPacket.Play, ServerPacket.ComponentHolding {
     public static final NetworkBuffer.Type<BossBarPacket> SERIALIZER = new Type<>() {
         @Override
@@ -68,7 +68,7 @@ public record BossBarPacket(@NotNull UUID uuid,
         int id();
     }
 
-    public record AddAction(@NotNull Component title, float health, @NotNull BossBar.Color color,
+    public value record AddAction(@NotNull Component title, float health, @NotNull BossBar.Color color,
                             @NotNull BossBar.Overlay overlay,
                             byte flags) implements Action, ComponentHolder<AddAction> {
         public AddAction(@NotNull BossBar bar) {
@@ -101,7 +101,7 @@ public record BossBarPacket(@NotNull UUID uuid,
         }
     }
 
-    public record RemoveAction() implements Action {
+    public value record RemoveAction() implements Action {
         public static final NetworkBuffer.Type<RemoveAction> SERIALIZER = NetworkBufferTemplate.template(RemoveAction::new);
 
         @Override
@@ -110,7 +110,7 @@ public record BossBarPacket(@NotNull UUID uuid,
         }
     }
 
-    public record UpdateHealthAction(float health) implements Action {
+    public value record UpdateHealthAction(float health) implements Action {
         public UpdateHealthAction(@NotNull BossBar bar) {
             this(bar.progress());
         }
@@ -126,7 +126,7 @@ public record BossBarPacket(@NotNull UUID uuid,
         }
     }
 
-    public record UpdateTitleAction(@NotNull Component title) implements Action, ComponentHolder<UpdateTitleAction> {
+    public value record UpdateTitleAction(@NotNull Component title) implements Action, ComponentHolder<UpdateTitleAction> {
         public UpdateTitleAction(@NotNull BossBar bar) {
             this(bar.name());
         }
@@ -152,7 +152,7 @@ public record BossBarPacket(@NotNull UUID uuid,
         }
     }
 
-    public record UpdateStyleAction(@NotNull BossBar.Color color,
+    public value record UpdateStyleAction(@NotNull BossBar.Color color,
                                     @NotNull BossBar.Overlay overlay) implements Action {
         public UpdateStyleAction(@NotNull BossBar bar) {
             this(bar.color(), bar.overlay());
@@ -170,7 +170,7 @@ public record BossBarPacket(@NotNull UUID uuid,
         }
     }
 
-    public record UpdateFlagsAction(byte flags) implements Action {
+    public value record UpdateFlagsAction(byte flags) implements Action {
         public UpdateFlagsAction(@NotNull BossBar bar) {
             this(AdventurePacketConvertor.getBossBarFlagValue(bar.flags()));
         }

@@ -13,7 +13,7 @@ import static net.minestom.server.network.NetworkBuffer.VAR_INT;
 /**
  * Represents a custom effect in {@link net.minestom.server.item.ItemComponent#POTION_CONTENTS}.
  */
-public record CustomPotionEffect(@NotNull PotionEffect id, @NotNull Settings settings) {
+public value record CustomPotionEffect(@NotNull PotionEffect id, @NotNull Settings settings) {
 
     public static final NetworkBuffer.Type<CustomPotionEffect> NETWORK_TYPE = NetworkBufferTemplate.template(
             PotionEffect.NETWORK_TYPE, CustomPotionEffect::id,
@@ -55,7 +55,7 @@ public record CustomPotionEffect(@NotNull PotionEffect id, @NotNull Settings set
         return settings.showIcon;
     }
 
-    public record Settings(
+    public value record Settings(
             int amplifier, int duration,
             boolean isAmbient, boolean showParticles, boolean showIcon,
             @Nullable Settings hiddenEffect

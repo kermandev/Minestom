@@ -10,7 +10,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
-public record CustomModelData(
+public value record CustomModelData(
         @NotNull List<Float> floats, @NotNull List<Boolean> flags,
         @NotNull List<String> strings, @NotNull List<RGBLike> colors
 ) {

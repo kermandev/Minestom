@@ -14,7 +14,7 @@ import java.util.Locale;
 
 import static net.minestom.server.network.NetworkBuffer.BOOLEAN;
 
-public record FireworkExplosion(
+public value record FireworkExplosion(
         @NotNull Shape shape,
         @NotNull List<RGBLike> colors,
         @NotNull List<RGBLike> fadeColors,

@@ -9,4 +9,4 @@ import org.jetbrains.annotations.NotNull;
  *
  * @param player the player who changed his settings; You can retrieve the new player settings with {@link Player#getSettings()}.
  */
-public record PlayerSettingsChangeEvent(@NotNull Player player) implements PlayerEvent {}
+public value record PlayerSettingsChangeEvent(@NotNull Player player) implements PlayerEvent {}

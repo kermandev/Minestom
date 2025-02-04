@@ -15,7 +15,7 @@ import java.util.function.UnaryOperator;
 
 import static net.minestom.server.network.NetworkBuffer.VAR_INT;
 
-public record WindowItemsPacket(int windowId, int stateId, @NotNull List<ItemStack> items,
+public value record WindowItemsPacket(int windowId, int stateId, @NotNull List<ItemStack> items,
                                 @NotNull ItemStack carriedItem) implements ServerPacket.Play, ServerPacket.ComponentHolding {
     public static final int MAX_ENTRIES = 128;
 

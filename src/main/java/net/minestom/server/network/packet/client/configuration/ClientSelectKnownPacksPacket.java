@@ -9,7 +9,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
-public record ClientSelectKnownPacksPacket(
+public value record ClientSelectKnownPacksPacket(
         @NotNull List<SelectKnownPacksPacket.Entry> entries
 ) implements ClientPacket {
     private static final int MAX_ENTRIES = 64;

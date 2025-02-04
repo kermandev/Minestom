@@ -14,7 +14,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-public record PotionContents(
+public value record PotionContents(
         @Nullable PotionType potion,
         @Nullable RGBLike customColor,
         @NotNull List<CustomPotionEffect> customEffects,

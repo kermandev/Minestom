@@ -12,7 +12,7 @@ import java.util.function.UnaryOperator;
 
 import static net.minestom.server.network.NetworkBuffer.COMPONENT;
 
-public record SetTitleTextPacket(@NotNull Component title) implements ServerPacket.Play, ServerPacket.ComponentHolding {
+public value record SetTitleTextPacket(@NotNull Component title) implements ServerPacket.Play, ServerPacket.ComponentHolding {
     public static final NetworkBuffer.Type<SetTitleTextPacket> SERIALIZER = NetworkBufferTemplate.template(
             COMPONENT, SetTitleTextPacket::title,
             SetTitleTextPacket::new);

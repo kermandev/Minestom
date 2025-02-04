@@ -10,7 +10,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Called when the player swings his hand.
  */
-public record PlayerHandAnimationEvent(@NotNull Player player, @NotNull PlayerHand hand, boolean cancelled) implements PlayerInstanceEvent, CancellableEvent<PlayerHandAnimationEvent> {
+public value record PlayerHandAnimationEvent(@NotNull Player player, @NotNull PlayerHand hand, boolean cancelled) implements PlayerInstanceEvent, CancellableEvent<PlayerHandAnimationEvent> {
 
     public PlayerHandAnimationEvent(@NotNull Player player, @NotNull PlayerHand hand) {
         this(player, hand, false);

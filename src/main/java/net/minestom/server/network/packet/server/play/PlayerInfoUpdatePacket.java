@@ -16,7 +16,7 @@ import java.util.UUID;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-public record PlayerInfoUpdatePacket(
+public value record PlayerInfoUpdatePacket(
         @NotNull EnumSet<@NotNull Action> actions,
         @NotNull List<@NotNull Entry> entries
 ) implements ServerPacket.Play {
@@ -46,7 +46,7 @@ public record PlayerInfoUpdatePacket(
         }
     };
 
-    public record Entry(UUID uuid, String username, List<Property> properties,
+    public value record Entry(UUID uuid, String username, List<Property> properties,
                         boolean listed, int latency, GameMode gameMode,
                         @Nullable Component displayName, @Nullable ChatSession chatSession,
                         int listOrder) {
@@ -93,7 +93,7 @@ public record PlayerInfoUpdatePacket(
         }
     }
 
-    public record Property(@NotNull String name, @NotNull String value, @Nullable String signature) {
+    public value record Property(@NotNull String name, @NotNull String value, @Nullable String signature) {
         public Property(@NotNull String name, @NotNull String value) {
             this(name, value, null);
         }

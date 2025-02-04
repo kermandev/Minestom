@@ -11,4 +11,4 @@ import org.jetbrains.annotations.NotNull;
  * @param entity the entity who has the potion added
  * @param potion the potion that was added
  */
-public record EntityPotionAddEvent(@NotNull Entity entity, @NotNull Potion potion) implements EntityInstanceEvent {}
+public value record EntityPotionAddEvent(@NotNull Entity entity, @NotNull Potion potion) implements EntityInstanceEvent {}

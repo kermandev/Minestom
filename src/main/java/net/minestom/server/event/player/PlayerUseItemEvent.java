@@ -12,7 +12,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Event when an item is used without clicking on a block.
  */
-public record PlayerUseItemEvent(@NotNull Player player, @NotNull PlayerHand hand, @NotNull ItemStack itemStack, long itemUseTime, boolean cancelled) implements PlayerInstanceEvent, ItemEvent, CancellableEvent<PlayerUseItemEvent> {
+public value record PlayerUseItemEvent(@NotNull Player player, @NotNull PlayerHand hand, @NotNull ItemStack itemStack, long itemUseTime, boolean cancelled) implements PlayerInstanceEvent, ItemEvent, CancellableEvent<PlayerUseItemEvent> {
 
     public PlayerUseItemEvent(@NotNull Player player, @NotNull PlayerHand hand, @NotNull ItemStack itemStack, long itemUseTime) {
         this(player, hand, itemStack, itemUseTime, false);

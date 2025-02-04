@@ -9,7 +9,7 @@ import org.jetbrains.annotations.NotNull;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-public record ClientPlayerDiggingPacket(@NotNull Status status, @NotNull Point blockPosition,
+public value record ClientPlayerDiggingPacket(@NotNull Status status, @NotNull Point blockPosition,
                                         @NotNull BlockFace blockFace, int sequence) implements ClientPacket {
     public static final NetworkBuffer.Type<ClientPlayerDiggingPacket> SERIALIZER = NetworkBufferTemplate.template(
             NetworkBuffer.Enum(Status.class), ClientPlayerDiggingPacket::status,

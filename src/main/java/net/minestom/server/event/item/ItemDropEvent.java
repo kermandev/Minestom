@@ -8,7 +8,7 @@ import net.minestom.server.event.trait.mutation.EventMutatorCancellable;
 import net.minestom.server.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
-public record ItemDropEvent(@NotNull Player player, @NotNull ItemStack itemStack, boolean cancelled) implements PlayerInstanceEvent, ItemEvent, CancellableEvent<ItemDropEvent> {
+public value record ItemDropEvent(@NotNull Player player, @NotNull ItemStack itemStack, boolean cancelled) implements PlayerInstanceEvent, ItemEvent, CancellableEvent<ItemDropEvent> {
 
     public ItemDropEvent(@NotNull Player player, @NotNull ItemStack itemStack) {
         this(player, itemStack, false);

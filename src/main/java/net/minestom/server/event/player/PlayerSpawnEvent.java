@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Called when a new instance is set for a player.
  */
-public record PlayerSpawnEvent(@NotNull Player player, @NotNull Instance spawnInstance, boolean firstSpawn) implements PlayerInstanceEvent {
+public value record PlayerSpawnEvent(@NotNull Player player, @NotNull Instance spawnInstance, boolean firstSpawn) implements PlayerInstanceEvent {
     /**
      * Use {@link #instance()} instead.
      * <p>
