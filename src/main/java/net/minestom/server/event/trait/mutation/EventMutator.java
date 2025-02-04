@@ -1,6 +1,7 @@
 package net.minestom.server.event.trait.mutation;
 
 import net.minestom.server.event.trait.MutableEvent;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
