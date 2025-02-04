@@ -32,32 +32,14 @@ public record PlayerHandAnimationEvent(@NotNull Player player, @NotNull PlayerHa
         return new Mutator(this);
     }
 
-    public static class Mutator implements EventMutatorCancellable<PlayerHandAnimationEvent> {
-        private final Player player;
-        private final PlayerHand hand;
-
-        private boolean cancelled;
-
+    public static final class Mutator extends EventMutatorCancellable.Simple<PlayerHandAnimationEvent> {
         public Mutator(PlayerHandAnimationEvent event) {
-            this.player = event.player;
-            this.hand = event.hand;
-
-            this.cancelled = event.cancelled;
-        }
-
-        @Override
-        public boolean isCancelled() {
-            return cancelled;
-        }
-
-        @Override
-        public void setCancelled(boolean cancelled) {
-            this.cancelled = cancelled;
+            super(event);
         }
 
         @Override
         public @NotNull PlayerHandAnimationEvent mutated() {
-            return new PlayerHandAnimationEvent(this.player, this.hand, this.cancelled);
+            return new PlayerHandAnimationEvent(this.originalEvent.player, this.originalEvent.hand, this.isCancelled());
         }
     }
 }

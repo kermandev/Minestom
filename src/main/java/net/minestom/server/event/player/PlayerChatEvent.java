@@ -60,7 +60,7 @@ public record PlayerChatEvent(@NotNull Player player, @NotNull Collection<Player
         return new Mutator(this);
     }
 
-    public static class Mutator extends EventMutatorCancellable.Simple<PlayerChatEvent> {
+    public static final class Mutator extends EventMutatorCancellable.Simple<PlayerChatEvent> {
         private Component formattedMessage;
 
         public Mutator(PlayerChatEvent event) {

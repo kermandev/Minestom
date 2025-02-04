@@ -16,17 +16,12 @@ public record EntitySetFireEvent(@NotNull Entity entity, int fireTicks, boolean 
         return new Mutator(this);
     }
 
-    public static class Mutator implements EventMutatorCancellable<EntitySetFireEvent> {
-
-        private final Entity entity;
+    public static final class Mutator extends EventMutatorCancellable.Simple<EntitySetFireEvent> {
         private int fireTicks;
 
-        private boolean cancelled;
-
         public Mutator(EntitySetFireEvent event) {
-            this.entity = event.entity;
+            super(event);
             this.fireTicks = event.fireTicks;
-            this.cancelled = event.cancelled;
         }
 
         public int getFireTicks() {
@@ -38,18 +33,8 @@ public record EntitySetFireEvent(@NotNull Entity entity, int fireTicks, boolean 
         }
 
         @Override
-        public void setCancelled(boolean cancelled) {
-            this.cancelled = cancelled;
-        }
-
-        @Override
-        public boolean isCancelled() {
-            return cancelled;
-        }
-
-        @Override
         public @NotNull EntitySetFireEvent mutated() {
-            return new EntitySetFireEvent(this.entity, this.fireTicks, this.cancelled);
+            return new EntitySetFireEvent(this.originalEvent.entity, this.fireTicks, this.isCancelled());
         }
     }
 }

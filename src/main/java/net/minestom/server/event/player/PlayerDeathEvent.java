@@ -38,13 +38,12 @@ public record PlayerDeathEvent(@NotNull Player player, @Nullable Component death
         return new Mutator(this);
     }
 
-    public static class Mutator implements EventMutator<PlayerDeathEvent> {
-        private final Player player;
+    public static final class Mutator extends EventMutator.Simple<PlayerDeathEvent> {
         private Component deathText;
         private Component chatMessage;
 
         public Mutator(PlayerDeathEvent event) {
-            this.player = event.player;
+            super(event);
             this.deathText = event.deathText;
             this.chatMessage = event.chatMessage;
         }
@@ -87,7 +86,7 @@ public record PlayerDeathEvent(@NotNull Player player, @Nullable Component death
 
         @Override
         public @NotNull PlayerDeathEvent mutated() {
-            return new PlayerDeathEvent(this.player, this.deathText, this.chatMessage);
+            return new PlayerDeathEvent(this.originalEvent.player, this.deathText, this.chatMessage);
         }
     }
 }

@@ -61,9 +61,4 @@ public record InventoryClickEvent(@NotNull AbstractInventory inventory, @NotNull
     public @NotNull ItemStack cursorItem() {
         return cursorItem;
     }
-
-    @Override
-    public @NotNull AbstractInventory inventory() {
-        return inventory;
-    }
 }

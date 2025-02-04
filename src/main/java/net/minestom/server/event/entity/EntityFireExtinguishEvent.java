@@ -22,7 +22,7 @@ public record EntityFireExtinguishEvent(Entity entity, boolean natural, boolean 
         return new Mutator(this);
     }
 
-    public static class Mutator extends EventMutatorCancellable.Simple<EntityFireExtinguishEvent> {
+    public static final class Mutator extends EventMutatorCancellable.Simple<EntityFireExtinguishEvent> {
         public Mutator(@NotNull EntityFireExtinguishEvent event) {
             super(event);
         }

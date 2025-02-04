@@ -79,29 +79,16 @@ public record PlayerBlockPlaceEvent(@NotNull Player player, @NotNull Block block
         return new Mutator(this);
     }
 
-    public static class Mutator implements EventMutatorCancellable<PlayerBlockPlaceEvent> {
-        private final Player player;
+    public static final class Mutator extends EventMutatorCancellable.Simple<PlayerBlockPlaceEvent> {
         private Block block;
-        private final BlockFace blockFace;
-        private final BlockVec blockPosition;
-        private final Point cursorPosition;
-        private final PlayerHand hand;
-
         private boolean consumesBlock;
         private boolean doBlockUpdates;
 
-        private boolean cancelled;
-
         public Mutator(PlayerBlockPlaceEvent event) {
-            this.player = event.player;
+            super(event);
             this.block = event.block;
-            this.blockFace = event.blockFace;
-            this.blockPosition = event.blockPosition;
-            this.cursorPosition = event.cursorPosition;
-            this.hand = event.hand;
             this.consumesBlock = event.consumesBlock;
             this.doBlockUpdates = event.doBlockUpdates;
-            this.cancelled = event.cancelled;
         }
 
         /**
@@ -159,18 +146,8 @@ public record PlayerBlockPlaceEvent(@NotNull Player player, @NotNull Block block
         }
 
         @Override
-        public boolean isCancelled() {
-            return cancelled;
-        }
-
-        @Override
-        public void setCancelled(boolean cancel) {
-            this.cancelled = cancel;
-        }
-
-        @Override
         public @NotNull PlayerBlockPlaceEvent mutated() {
-            return new PlayerBlockPlaceEvent(this.player, this.block, this.blockFace, this.blockPosition, this.cursorPosition, this.hand, this.consumesBlock, this.doBlockUpdates, this.cancelled);
+            return new PlayerBlockPlaceEvent(this.originalEvent.player, this.block, this.originalEvent.blockFace, this.originalEvent.blockPosition, this.originalEvent.cursorPosition, this.originalEvent.hand, this.consumesBlock, this.doBlockUpdates, this.isCancelled());
         }
     }
 

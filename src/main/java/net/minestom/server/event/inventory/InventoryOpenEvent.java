@@ -45,15 +45,12 @@ public record InventoryOpenEvent(@NotNull AbstractInventory inventory, @NotNull 
         return new Mutator(this);
     }
 
-    public static class Mutator implements EventMutatorCancellable<InventoryOpenEvent> {
+    public static final class Mutator extends EventMutatorCancellable.Simple<InventoryOpenEvent> {
         private AbstractInventory inventory;
-        private final Player player;
-        private boolean cancelled;
 
         public Mutator(InventoryOpenEvent event) {
+            super(event);
             this.inventory = event.inventory;
-            this.player = event.player;
-            this.cancelled = event.cancelled;
         }
 
         /**
@@ -76,20 +73,9 @@ public record InventoryOpenEvent(@NotNull AbstractInventory inventory, @NotNull 
             this.inventory = inventory;
         }
 
-
-        @Override
-        public boolean isCancelled() {
-            return cancelled;
-        }
-
-        @Override
-        public void setCancelled(boolean cancel) {
-            this.cancelled = cancel;
-        }
-
         @Override
         public @NotNull InventoryOpenEvent mutated() {
-            return new InventoryOpenEvent(this.inventory, this.player, this.cancelled);
+            return new InventoryOpenEvent(this.inventory, this.originalEvent.player, this.isCancelled());
         }
     }
 }

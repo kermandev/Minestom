@@ -67,23 +67,12 @@ public record PlayerBlockBreakEvent(@NotNull Player player,
         return new Mutator(this);
     }
 
-    public static class Mutator implements EventMutatorCancellable<PlayerBlockBreakEvent> {
-        private final Player player;
-        private final Block block;
+    public static final class Mutator extends EventMutatorCancellable.Simple<PlayerBlockBreakEvent> {
         private Block resultBlock;
-        private final BlockVec blockPosition;
-        private final BlockFace blockFace;
-
-
-        private boolean cancelled;
 
         public Mutator(PlayerBlockBreakEvent event) {
-            this.player = event.player;
-            this.block = event.block;
+            super(event);
             this.resultBlock = event.resultBlock;
-            this.blockPosition = event.blockPosition;
-            this.blockFace = event.blockFace;
-            this.cancelled = event.cancelled;
         }
 
         /**
@@ -104,20 +93,10 @@ public record PlayerBlockBreakEvent(@NotNull Player player,
             return resultBlock;
         }
 
-        @Override
-        public boolean isCancelled() {
-            return this.cancelled;
-        }
-
-        @Override
-        public void setCancelled(boolean cancel) {
-            this.cancelled = cancel;
-        }
-
         @Contract(pure = true)
         @Override
         public @NotNull PlayerBlockBreakEvent mutated() {
-            return new PlayerBlockBreakEvent(this.player, this.block, this.resultBlock, this.blockPosition, this.blockFace, this.cancelled);
+            return new PlayerBlockBreakEvent(this.originalEvent.player, this.originalEvent.block, this.resultBlock, this.originalEvent.blockPosition, this.originalEvent.blockFace, this.isCancelled());
         }
     }
 }

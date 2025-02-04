@@ -18,7 +18,7 @@ public record PickupExperienceEvent(@NotNull Player player, @NotNull ExperienceO
         return new Mutator(this);
     }
 
-    public static class Mutator implements EventMutatorCancellable<PickupExperienceEvent> {
+    public static final class Mutator implements EventMutatorCancellable<PickupExperienceEvent> {
         private final Player player;
         private final ExperienceOrb experienceOrb;
         private short experienceCount;

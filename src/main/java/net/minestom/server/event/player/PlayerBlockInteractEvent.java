@@ -89,7 +89,7 @@ public record PlayerBlockInteractEvent(@NotNull Player player, @NotNull PlayerHa
         return new Mutator(this);
     }
 
-    public static class Mutator extends EventMutatorCancellable.Simple<PlayerBlockInteractEvent> {
+    public static final class Mutator extends EventMutatorCancellable.Simple<PlayerBlockInteractEvent> {
         private boolean blocksItemUse;
 
         public Mutator(PlayerBlockInteractEvent event) {

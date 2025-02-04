@@ -33,7 +33,7 @@ public record AddEntityToInstanceEvent(@NotNull Instance instance, @NotNull Enti
         return new Mutator(this);
     }
 
-    public static class Mutator extends EventMutatorCancellable.Simple<AddEntityToInstanceEvent> {
+    public static final class Mutator extends EventMutatorCancellable.Simple<AddEntityToInstanceEvent> {
         public Mutator(@NotNull AddEntityToInstanceEvent event) {
             super(event);
         }

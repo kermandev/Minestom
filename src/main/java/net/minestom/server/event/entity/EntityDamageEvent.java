@@ -51,7 +51,7 @@ public record EntityDamageEvent(@NotNull LivingEntity entity, @NotNull Damage da
         return new Mutator(this);
     }
 
-    public static class Mutator extends EventMutatorCancellable.Simple<EntityDamageEvent> {
+    public static final class Mutator extends EventMutatorCancellable.Simple<EntityDamageEvent> {
         private SoundEvent sound;
         private boolean animate;
 

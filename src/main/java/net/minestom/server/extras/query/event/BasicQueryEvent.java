@@ -56,7 +56,7 @@ public record BasicQueryEvent(@NotNull SocketAddress sender, int sessionID, @Not
         return new Mutator(this);
     }
 
-    public static class Mutator implements EventMutatorCancellable<BasicQueryEvent> {
+    public static final class Mutator implements EventMutatorCancellable<BasicQueryEvent> {
         private final SocketAddress sender;
         private final int sessionID;
 

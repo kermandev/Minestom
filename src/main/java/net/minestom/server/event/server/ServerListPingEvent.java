@@ -72,23 +72,12 @@ public record ServerListPingEvent(@Nullable PlayerConnection connection, @NotNul
         return new Mutator(this);
     }
 
-    public static class Mutator implements EventMutatorCancellable<ServerListPingEvent> {
-        private final PlayerConnection connection;
-        private final ServerListPingType type;
-
+    public static final class Mutator extends EventMutatorCancellable.Simple<ServerListPingEvent> {
         private ResponseData responseData;
-        private boolean cancelled;
 
         public Mutator(ServerListPingEvent event) {
-            this.connection = event.connection;
-            this.type = event.type;
+            super(event);
             this.responseData = event.responseData;
-            this.cancelled = event.cancelled;
-        }
-
-        @Override
-        public boolean isCancelled() {
-            return cancelled;
         }
 
         /**
@@ -99,7 +88,7 @@ public record ServerListPingEvent(@Nullable PlayerConnection connection, @NotNul
          */
         @Override
         public void setCancelled(boolean cancel) {
-            this.cancelled = cancel;
+            super.setCancelled(cancel);
         }
 
         /**
@@ -124,7 +113,7 @@ public record ServerListPingEvent(@Nullable PlayerConnection connection, @NotNul
         @Contract(pure = true)
         @Override
         public @NotNull ServerListPingEvent mutated() {
-            return new ServerListPingEvent(this.connection, this.type, this.responseData, this.cancelled);
+            return new ServerListPingEvent(this.originalEvent.connection, this.originalEvent.type, this.responseData, this.isCancelled());
         }
     }
 }

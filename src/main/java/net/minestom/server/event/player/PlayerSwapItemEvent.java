@@ -41,14 +41,13 @@ public record PlayerSwapItemEvent(@NotNull Player player, @NotNull ItemStack mai
         return new Mutator(this);
     }
 
-    public static class Mutator implements EventMutatorCancellable<PlayerSwapItemEvent> {
-        private final Player player;
+    public static final class Mutator extends EventMutatorCancellable.Simple<PlayerSwapItemEvent> {
         private ItemStack mainHandItem;
         private ItemStack offHandItem;
         private boolean cancelled;
 
         public Mutator(PlayerSwapItemEvent event) {
-            this.player = event.player;
+            super(event);
             this.mainHandItem = event.mainHandItem;
             this.offHandItem = event.offHandItem;
             this.cancelled = event.cancelled;
@@ -102,7 +101,7 @@ public record PlayerSwapItemEvent(@NotNull Player player, @NotNull ItemStack mai
 
         @Override
         public @NotNull PlayerSwapItemEvent mutated() {
-            return new PlayerSwapItemEvent(this.player, this.mainHandItem, this.offHandItem, this.cancelled);
+            return new PlayerSwapItemEvent(this.originalEvent.player, this.mainHandItem, this.offHandItem, this.cancelled);
         }
     }
 }

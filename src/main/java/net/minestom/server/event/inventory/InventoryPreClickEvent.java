@@ -14,9 +14,9 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Called before {@link InventoryClickEvent}, used to potentially cancel the click.
  */
-public record InventoryPreClickEvent(@Nullable AbstractInventory inventory, @NotNull Player player, int slot, @NotNull ClickType clickType, @NotNull ItemStack clickedItem, @NotNull ItemStack cursorItem, boolean cancelled) implements InventoryEvent, PlayerInstanceEvent, CancellableEvent<InventoryPreClickEvent> {
+public record InventoryPreClickEvent(@NotNull AbstractInventory inventory, @NotNull Player player, int slot, @NotNull ClickType clickType, @NotNull ItemStack clickedItem, @NotNull ItemStack cursorItem, boolean cancelled) implements InventoryEvent, PlayerInstanceEvent, CancellableEvent<InventoryPreClickEvent> {
 
-    public InventoryPreClickEvent(@Nullable AbstractInventory inventory,
+    public InventoryPreClickEvent(@NotNull AbstractInventory inventory,
                                   @NotNull Player player,
                                   int slot, @NotNull ClickType clickType,
                                   @NotNull ItemStack clickedItem, @NotNull ItemStack cursorItem) {
@@ -74,33 +74,18 @@ public record InventoryPreClickEvent(@Nullable AbstractInventory inventory, @Not
     }
 
     @Override
-    public @Nullable AbstractInventory inventory() {
-        return inventory;
-    }
-
-    @Override
     public @NotNull Mutator mutator() {
         return new Mutator(this);
     }
 
-    public static class Mutator implements EventMutatorCancellable<InventoryPreClickEvent> {
-        private final AbstractInventory inventory;
-        private final Player player;
-        private final int slot;
-        private final ClickType clickType;
+    public static final class Mutator extends EventMutatorCancellable.Simple<InventoryPreClickEvent> {
         private ItemStack clickedItem;
         private ItemStack cursorItem;
 
-        private boolean cancelled;
-
         public Mutator(InventoryPreClickEvent event) {
-            this.inventory = event.inventory;
-            this.player = event.player;
-            this.slot = event.slot;
-            this.clickType = event.clickType;
+            super(event);
             this.clickedItem = event.clickedItem;
             this.cursorItem = event.cursorItem;
-            this.cancelled = event.cancelled;
         }
 
         /**
@@ -142,18 +127,8 @@ public record InventoryPreClickEvent(@Nullable AbstractInventory inventory, @Not
         }
 
         @Override
-        public boolean isCancelled() {
-            return cancelled;
-        }
-
-        @Override
-        public void setCancelled(boolean cancel) {
-            this.cancelled = cancel;
-        }
-
-        @Override
         public @NotNull InventoryPreClickEvent mutated() {
-            return new InventoryPreClickEvent(this.inventory, this.player, this.slot, this.clickType, this.clickedItem, this.cursorItem, this.cancelled);
+            return new InventoryPreClickEvent(this.originalEvent.inventory, this.originalEvent.player, this.originalEvent.slot, this.originalEvent.clickType, this.clickedItem, this.cursorItem, this.isCancelled());
         }
     }
 }

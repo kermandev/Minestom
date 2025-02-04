@@ -47,7 +47,7 @@ public record PlayerFinishItemUseEvent(@NotNull Player player, @NotNull PlayerHa
         return new Mutator(this);
     }
 
-    public static class Mutator extends EventMutator.Simple<PlayerFinishItemUseEvent> {
+    public static final class Mutator extends EventMutator.Simple<PlayerFinishItemUseEvent> {
         private boolean riptideSpinAttack;
 
         public Mutator(PlayerFinishItemUseEvent event) {

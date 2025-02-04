@@ -81,10 +81,10 @@ public record ClientPingServerEvent(@NotNull PlayerConnection connection, long p
 
     @Override
     public @NotNull Mutator mutator() {
-        return null;
+        return new Mutator(this);
     }
 
-    public static class Mutator implements EventMutatorCancellable<ClientPingServerEvent> {
+    public static final class Mutator implements EventMutatorCancellable<ClientPingServerEvent> {
         private final PlayerConnection connection;
 
         private long payload;

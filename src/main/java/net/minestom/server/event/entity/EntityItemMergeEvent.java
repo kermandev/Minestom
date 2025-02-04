@@ -55,7 +55,7 @@ public record EntityItemMergeEvent(@NotNull ItemEntity entity, @NotNull ItemEnti
         return new Mutator(this);
     }
 
-    public static class Mutator implements EventMutatorCancellable<EntityItemMergeEvent> {
+    public static final class Mutator implements EventMutatorCancellable<EntityItemMergeEvent> {
         private final ItemEntity entity;
         private final ItemEntity merged;
         private ItemStack result;

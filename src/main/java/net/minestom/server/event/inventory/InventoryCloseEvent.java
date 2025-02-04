@@ -64,16 +64,11 @@ public record InventoryCloseEvent(@NotNull AbstractInventory inventory, @NotNull
         return new Mutator(this);
     }
 
-    public static class Mutator implements EventMutator<InventoryCloseEvent> {
-        private final AbstractInventory inventory;
-        private final Player player;
-        private final boolean fromClient;
+    public static final class Mutator extends EventMutator.Simple<InventoryCloseEvent> {
         private Inventory newInventory;
 
         public Mutator(InventoryCloseEvent event) {
-            this.inventory = event.inventory;
-            this.player = event.player;
-            this.fromClient = event.fromClient;
+            super(event);
             this.newInventory = event.newInventory;
         }
 
@@ -97,7 +92,7 @@ public record InventoryCloseEvent(@NotNull AbstractInventory inventory, @NotNull
 
         @Override
         public @NotNull InventoryCloseEvent mutated() {
-            return new InventoryCloseEvent(this.inventory, this.player, this.fromClient, this.newInventory);
+            return new InventoryCloseEvent(this.originalEvent.inventory, this.originalEvent.player, this.originalEvent.fromClient, this.newInventory);
         }
     }
 }

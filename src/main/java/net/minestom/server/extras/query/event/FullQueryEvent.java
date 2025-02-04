@@ -56,7 +56,7 @@ public record FullQueryEvent(@NotNull SocketAddress sender, int sessionID, @NotN
         return new Mutator(this);
     }
 
-    public static class Mutator implements EventMutatorCancellable<FullQueryEvent> {
+    public static final class Mutator implements EventMutatorCancellable<FullQueryEvent> {
         private final SocketAddress sender;
         private final int sessionID;
 

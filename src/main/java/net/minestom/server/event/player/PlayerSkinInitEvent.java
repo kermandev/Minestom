@@ -28,7 +28,7 @@ public record PlayerSkinInitEvent(@NotNull Player player, @Nullable PlayerSkin s
         return new Mutator(this);
     }
 
-    public static class Mutator extends EventMutator.Simple<PlayerSkinInitEvent> {
+    public static final class Mutator extends EventMutator.Simple<PlayerSkinInitEvent> {
         private PlayerSkin skin;
 
         public Mutator(PlayerSkinInitEvent event) {

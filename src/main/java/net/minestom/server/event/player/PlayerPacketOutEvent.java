@@ -25,7 +25,7 @@ public record PlayerPacketOutEvent(@NotNull Player player, @NotNull ServerPacket
         return new Mutator(this);
     }
 
-    public static class Mutator extends EventMutatorCancellable.Simple<PlayerPacketOutEvent> {
+    public static final class Mutator extends EventMutatorCancellable.Simple<PlayerPacketOutEvent> {
         public Mutator(@NotNull PlayerPacketOutEvent event) {
             super(event);
         }

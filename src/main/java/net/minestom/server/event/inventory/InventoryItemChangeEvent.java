@@ -42,9 +42,4 @@ public record InventoryItemChangeEvent(@NotNull AbstractInventory inventory, int
     public @NotNull ItemStack newItem() {
         return newItem;
     }
-
-    @Override
-    public @NotNull AbstractInventory inventory() {
-        return inventory;
-    }
 }

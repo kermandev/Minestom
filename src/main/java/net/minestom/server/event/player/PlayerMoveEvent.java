@@ -42,18 +42,12 @@ public record PlayerMoveEvent(@NotNull Player player, @NotNull Pos newPosition, 
         return new Mutator(this);
     }
 
-    public static class Mutator implements EventMutatorCancellable<PlayerMoveEvent> {
-        private final Player player;
+    public static final class Mutator extends EventMutatorCancellable.Simple<PlayerMoveEvent> {
         private Pos newPosition;
-        private final boolean onGround;
-
-        private boolean cancelled;
 
         public Mutator(PlayerMoveEvent event) {
-            this.player = event.player;
+            super(event);
             this.newPosition = event.newPosition;
-            this.onGround = event.onGround;
-            this.cancelled = event.cancelled;
         }
 
 
@@ -75,20 +69,9 @@ public record PlayerMoveEvent(@NotNull Player player, @NotNull Pos newPosition, 
             this.newPosition = newPosition;
         }
 
-
-        @Override
-        public boolean isCancelled() {
-            return cancelled;
-        }
-
-        @Override
-        public void setCancelled(boolean cancel) {
-            this.cancelled = cancel;
-        }
-
         @Override
         public @NotNull PlayerMoveEvent mutated() {
-            return new PlayerMoveEvent(this.player, this.newPosition, this.onGround, this.cancelled);
+            return new PlayerMoveEvent(this.originalEvent.player, this.newPosition, this.originalEvent.onGround, this.isCancelled());
         }
     }
 }

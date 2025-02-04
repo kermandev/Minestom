@@ -41,7 +41,7 @@ public record PlayerBeginItemUseEvent(@NotNull Player player, @NotNull PlayerHan
         return new Mutator(this);
     }
 
-    public static class Mutator extends EventMutatorCancellable.Simple<PlayerBeginItemUseEvent> {
+    public static final class Mutator extends EventMutatorCancellable.Simple<PlayerBeginItemUseEvent> {
         private long itemUseDuration;
 
         public Mutator(PlayerBeginItemUseEvent event) {

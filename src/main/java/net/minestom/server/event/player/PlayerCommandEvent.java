@@ -30,17 +30,12 @@ public record PlayerCommandEvent(@NotNull Player player, @NotNull String command
         return new Mutator(this);
     }
 
-    public static class Mutator implements EventMutatorCancellable<PlayerCommandEvent> {
-        private final Player player;
+    public static final class Mutator extends EventMutatorCancellable.Simple<PlayerCommandEvent> {
         private String command;
 
-        private boolean cancelled;
-
         public Mutator(PlayerCommandEvent event) {
-            this.player = event.player;
+            super(event);
             this.command = event.command;
-
-            this.cancelled = event.cancelled;
         }
 
         /**
@@ -62,18 +57,8 @@ public record PlayerCommandEvent(@NotNull Player player, @NotNull String command
         }
 
         @Override
-        public boolean isCancelled() {
-            return cancelled;
-        }
-
-        @Override
-        public void setCancelled(boolean cancel) {
-            this.cancelled = cancel;
-        }
-
-        @Override
         public @NotNull PlayerCommandEvent mutated() {
-            return new PlayerCommandEvent(this.player, this.command, this.cancelled);
+            return new PlayerCommandEvent(this.originalEvent.player, this.command, this.isCancelled());
         }
     }
 }

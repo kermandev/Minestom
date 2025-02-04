@@ -25,7 +25,7 @@ public record EntityEquipEvent(@NotNull Entity entity, @NotNull ItemStack equipp
         return new Mutator(this);
     }
 
-    public static class Mutator implements EventMutator<EntityEquipEvent> {
+    public static final class Mutator implements EventMutator<EntityEquipEvent> {
         private final Entity entity;
         private ItemStack equippedItem;
         private final EquipmentSlot slot;

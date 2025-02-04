@@ -40,15 +40,12 @@ public record PlayerFinishDiggingEvent(@NotNull Player player, @NotNull Block bl
         return new Mutator(this);
     }
 
-    public static class Mutator implements EventMutator<PlayerFinishDiggingEvent> {
-        private final Player player;
+    public static final class Mutator extends EventMutator.Simple<PlayerFinishDiggingEvent> {
         private Block block;
-        private final BlockVec blockPosition;
 
         public Mutator(PlayerFinishDiggingEvent event) {
-            this.player = event.player;
+            super(event);
             this.block = event.block;
-            this.blockPosition = event.blockPosition;
         }
 
         /**
@@ -77,7 +74,7 @@ public record PlayerFinishDiggingEvent(@NotNull Player player, @NotNull Block bl
 
         @Override
         public @NotNull PlayerFinishDiggingEvent mutated() {
-            return new PlayerFinishDiggingEvent(this.player, this.block, this.blockPosition);
+            return new PlayerFinishDiggingEvent(this.originalEvent.player, this.block, this.originalEvent.blockPosition);
         }
     }
 }

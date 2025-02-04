@@ -60,22 +60,14 @@ public record EntityShootEvent(@NotNull Entity entity, @NotNull Entity projectil
         return new Mutator(this);
     }
 
-    public static class Mutator implements EventMutatorCancellable<EntityShootEvent> {
-        private final Entity entity;
-        private final Entity projectile;
-        private final Point to;
+    public static final class Mutator extends EventMutatorCancellable.Simple<EntityShootEvent> {
         private double power;
         private double spread;
 
-        private boolean cancelled;
-
         public Mutator(EntityShootEvent event) {
-            this.entity = event.entity;
-            this.projectile = event.projectile;
-            this.to = event.to;
+            super(event);
             this.power = event.power;
             this.spread = event.spread;
-            this.cancelled = event.cancelled;
         }
 
         /**
@@ -115,18 +107,8 @@ public record EntityShootEvent(@NotNull Entity entity, @NotNull Entity projectil
         }
 
         @Override
-        public void setCancelled(boolean cancelled) {
-            this.cancelled = cancelled;
-        }
-
-        @Override
-        public boolean isCancelled() {
-            return cancelled;
-        }
-
-        @Override
         public @NotNull EntityShootEvent mutated() {
-            return new EntityShootEvent(this.entity, this.projectile, this.to, this.power, this.spread, this.cancelled);
+            return new EntityShootEvent(this.originalEvent.entity, this.originalEvent.projectile, this.originalEvent.to, this.power, this.spread, this.isCancelled());
         }
     }
 

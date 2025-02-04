@@ -25,7 +25,7 @@ public record ProjectileCollideWithEntityEvent(
         return new Mutator(this);
     }
 
-    public static class Mutator extends EventMutatorCancellable.Simple<ProjectileCollideWithEntityEvent> {
+    public static final class Mutator extends EventMutatorCancellable.Simple<ProjectileCollideWithEntityEvent> {
 
         public Mutator(@NotNull ProjectileCollideWithEntityEvent event) {
             super(event);

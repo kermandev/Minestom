@@ -31,7 +31,7 @@ public record PickupItemEvent(@NotNull LivingEntity livingEntity, @NotNull ItemE
         return new Mutator(this);
     }
 
-    public static class Mutator extends EventMutatorCancellable.Simple<PickupItemEvent> {
+    public static final class Mutator extends EventMutatorCancellable.Simple<PickupItemEvent> {
         public Mutator(@NotNull PickupItemEvent event) {
             super(event);
         }

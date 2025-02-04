@@ -1,6 +1,5 @@
 package net.minestom.server.event.player;
 
-import net.minestom.server.event.Event;
 import net.minestom.server.event.trait.MutableEvent;
 import net.minestom.server.event.trait.mutation.EventMutator;
 import net.minestom.server.network.player.GameProfile;
@@ -10,7 +9,6 @@ import net.minestom.server.network.plugin.LoginPluginMessageProcessor;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -46,16 +44,12 @@ public record AsyncPlayerPreLoginEvent(@NotNull PlayerConnection connection,
         return new Mutator(this);
     }
 
-    public static class Mutator implements EventMutator<AsyncPlayerPreLoginEvent> {
-        private final PlayerConnection connection;
-        private final LoginPluginMessageProcessor pluginMessageProcessor;
-
+    public static final class Mutator extends EventMutator.Simple<AsyncPlayerPreLoginEvent> {
         private GameProfile gameProfile;
 
         public Mutator(AsyncPlayerPreLoginEvent event) {
-            this.connection = event.connection;
+            super(event);
             this.gameProfile = event.gameProfile;
-            this.pluginMessageProcessor = event.pluginMessageProcessor;
         }
 
         public void setGameProfile(GameProfile gameProfile) {
@@ -69,7 +63,7 @@ public record AsyncPlayerPreLoginEvent(@NotNull PlayerConnection connection,
         @Contract(pure = true)
         @Override
         public @NotNull AsyncPlayerPreLoginEvent mutated() {
-            return new AsyncPlayerPreLoginEvent(this.connection, this.gameProfile, this.pluginMessageProcessor);
+            return new AsyncPlayerPreLoginEvent(this.originalEvent.connection, this.gameProfile, this.originalEvent.pluginMessageProcessor);
         }
     }
 }

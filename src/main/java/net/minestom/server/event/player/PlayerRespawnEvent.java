@@ -34,7 +34,7 @@ public record PlayerRespawnEvent(@NotNull Player player, @NotNull Pos respawnPos
         return new Mutator(this);
     }
 
-    public static class Mutator extends EventMutator.Simple<PlayerRespawnEvent> {
+    public static final class Mutator extends EventMutator.Simple<PlayerRespawnEvent> {
         private Pos respawnPosition;
 
         public Mutator(PlayerRespawnEvent event) {

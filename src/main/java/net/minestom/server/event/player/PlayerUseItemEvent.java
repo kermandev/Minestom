@@ -54,29 +54,12 @@ public record PlayerUseItemEvent(@NotNull Player player, @NotNull PlayerHand han
         return new Mutator(this);
     }
 
-    public static class Mutator implements EventMutatorCancellable<PlayerUseItemEvent> {
-        private final Player player;
-        private final PlayerHand hand;
-        private final ItemStack itemStack;
+    public static final class Mutator extends EventMutatorCancellable.Simple<PlayerUseItemEvent> {
         private long itemUseTime;
-        private boolean cancelled;
 
         public Mutator(PlayerUseItemEvent event) {
-            this.player = event.player;
-            this.hand = event.hand;
-            this.itemStack = event.itemStack;
+            super(event);
             this.itemUseTime = event.itemUseTime;
-            this.cancelled = event.cancelled;
-        }
-
-        @Override
-        public boolean isCancelled() {
-            return cancelled;
-        }
-
-        @Override
-        public void setCancelled(boolean cancel) {
-            this.cancelled = cancel;
         }
 
         /**
@@ -100,7 +83,7 @@ public record PlayerUseItemEvent(@NotNull Player player, @NotNull PlayerHand han
 
         @Override
         public @NotNull PlayerUseItemEvent mutated() {
-            return new PlayerUseItemEvent(this.player, this.hand, this.itemStack, this.itemUseTime, this.cancelled);
+            return new PlayerUseItemEvent(this.originalEvent.player, this.originalEvent.hand, this.originalEvent.itemStack, this.itemUseTime, this.isCancelled());
         }
     }
 }

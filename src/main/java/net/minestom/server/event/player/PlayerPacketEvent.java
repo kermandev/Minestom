@@ -18,7 +18,7 @@ public record PlayerPacketEvent(@NotNull Player player, @NotNull ClientPacket pa
         return new Mutator(this);
     }
 
-    public static class Mutator extends EventMutatorCancellable.Simple<PlayerPacketEvent> {
+    public static final class Mutator extends EventMutatorCancellable.Simple<PlayerPacketEvent> {
         public Mutator(PlayerPacketEvent event) {
             super(event);
         }

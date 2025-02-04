@@ -24,7 +24,7 @@ public record ItemDropEvent(@NotNull Player player, @NotNull ItemStack itemStack
         return new Mutator(this);
     }
 
-    public static class Mutator extends EventMutatorCancellable.Simple<ItemDropEvent> {
+    public static final class Mutator extends EventMutatorCancellable.Simple<ItemDropEvent> {
 
         public Mutator(@NotNull ItemDropEvent event) {
             super(event);

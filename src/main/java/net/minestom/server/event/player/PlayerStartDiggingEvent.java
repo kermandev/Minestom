@@ -61,7 +61,7 @@ public record PlayerStartDiggingEvent(@NotNull Player player, @NotNull Block blo
         return new Mutator(this);
     }
 
-    public static class Mutator extends EventMutatorCancellable.Simple<PlayerStartDiggingEvent> {
+    public static final class Mutator extends EventMutatorCancellable.Simple<PlayerStartDiggingEvent> {
         public Mutator(@NotNull PlayerStartDiggingEvent event) {
             super(event);
         }

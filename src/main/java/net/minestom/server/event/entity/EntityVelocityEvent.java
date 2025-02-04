@@ -42,16 +42,12 @@ public record EntityVelocityEvent(@NotNull Entity entity, @NotNull Vec velocity,
         return new Mutator(this);
     }
 
-    public static class Mutator implements EventMutatorCancellable<EntityVelocityEvent> {
-        private final Entity entity;
+    public static final class Mutator extends EventMutatorCancellable.Simple<EntityVelocityEvent> {
         private Vec velocity;
 
-        private boolean cancelled;
-
         public Mutator(EntityVelocityEvent event) {
-            this.entity = event.entity;
+            super(event);
             this.velocity = event.velocity;
-            this.cancelled = event.cancelled;
         }
 
         public @NotNull Vec getVelocity() {
@@ -63,18 +59,8 @@ public record EntityVelocityEvent(@NotNull Entity entity, @NotNull Vec velocity,
         }
 
         @Override
-        public void setCancelled(boolean cancelled) {
-            this.cancelled = cancelled;
-        }
-
-        @Override
-        public boolean isCancelled() {
-            return cancelled;
-        }
-
-        @Override
         public @NotNull EntityVelocityEvent mutated() {
-            return new EntityVelocityEvent(this.entity, this.velocity, this.cancelled);
+            return new EntityVelocityEvent(this.originalEvent.entity, this.velocity, this.isCancelled());
         }
     }
 }

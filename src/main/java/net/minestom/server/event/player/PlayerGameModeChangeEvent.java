@@ -30,17 +30,12 @@ public record PlayerGameModeChangeEvent(@NotNull Player player, @NotNull GameMod
     }
 
 
-    public static class Mutator implements EventMutatorCancellable<PlayerGameModeChangeEvent> {
-        private final Player player;
+    public static final class Mutator extends EventMutatorCancellable.Simple<PlayerGameModeChangeEvent> {
         private GameMode newGameMode;
 
-        private boolean cancelled;
-
         public Mutator(PlayerGameModeChangeEvent event) {
-            this.player = event.player;
+            super(event);
             this.newGameMode = event.newGameMode;
-
-            this.cancelled = event.cancelled;
         }
 
         /**
@@ -62,18 +57,8 @@ public record PlayerGameModeChangeEvent(@NotNull Player player, @NotNull GameMod
         }
 
         @Override
-        public boolean isCancelled() {
-            return cancelled;
-        }
-
-        @Override
-        public void setCancelled(boolean cancel) {
-            this.cancelled = cancel;
-        }
-
-        @Override
         public @NotNull PlayerGameModeChangeEvent mutated() {
-            return new PlayerGameModeChangeEvent(this.player, this.newGameMode, this.cancelled);
+            return new PlayerGameModeChangeEvent(this.originalEvent.player, this.newGameMode, this.isCancelled());
         }
     }
 }

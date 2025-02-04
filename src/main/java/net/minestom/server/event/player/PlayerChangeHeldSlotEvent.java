@@ -32,7 +32,7 @@ public record PlayerChangeHeldSlotEvent(@NotNull Player player, byte slot, boole
         return new Mutator(this);
     }
 
-    public static class Mutator extends EventMutatorCancellable.Simple<PlayerChangeHeldSlotEvent> {
+    public static final class Mutator extends EventMutatorCancellable.Simple<PlayerChangeHeldSlotEvent> {
         private byte slot;
 
         public Mutator(PlayerChangeHeldSlotEvent event) {

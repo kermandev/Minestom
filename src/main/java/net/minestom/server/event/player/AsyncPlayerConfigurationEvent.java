@@ -77,7 +77,7 @@ public record AsyncPlayerConfigurationEvent(@NotNull Player player, boolean firs
         return new Mutator(this);
     }
 
-    public static class Mutator implements EventMutator<AsyncPlayerConfigurationEvent> {
+    public static final class Mutator implements EventMutator<AsyncPlayerConfigurationEvent> {
         private final Player player;
         private final boolean isFirstConfig;
 
