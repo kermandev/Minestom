@@ -24,11 +24,9 @@ import java.util.function.Function;
  * Represents a group of items, blocks, fluids, entity types or function.
  * Immutable by design
  */
-public final value record Tag(NamespaceID name, Set<NamespaceID> values) implements ProtocolObject, Keyed {
-    private final NamespaceID name;
-    private final Set<NamespaceID> values;
+public final value record Tag(NamespaceID namespace, Set<NamespaceID> values) implements ProtocolObject, Keyed {
 
-    Tag {
+    public Tag {
         values = new HashSet<>(values);
     }
 
@@ -59,7 +57,7 @@ public final value record Tag(NamespaceID name, Set<NamespaceID> values) impleme
     }
 
     public @NotNull NamespaceID namespace() {
-        return name;
+        return namespace;
     }
 
     @Contract(pure = true)
@@ -78,12 +76,12 @@ public final value record Tag(NamespaceID name, Set<NamespaceID> values) impleme
      */
     @Deprecated
     public NamespaceID getName() {
-        return name;
+        return namespace;
     }
 
     @Override
     public String toString() {
-        return "#" + name.asString();
+        return "#" + namespace.asString();
     }
 
     public enum BasicType {
