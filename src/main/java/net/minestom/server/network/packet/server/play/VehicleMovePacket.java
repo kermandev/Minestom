@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 
 import static net.minestom.server.network.NetworkBuffer.POS;
 
-public record VehicleMovePacket(@NotNull Pos position) implements ServerPacket.Play {
+public value record VehicleMovePacket(@NotNull Pos position) implements ServerPacket.Play {
     public static final NetworkBuffer.Type<VehicleMovePacket> SERIALIZER = NetworkBufferTemplate.template(
             POS, VehicleMovePacket::position, VehicleMovePacket::new);
 }

@@ -6,7 +6,7 @@ import net.minestom.server.network.NetworkBufferTemplate;
 import net.minestom.server.utils.nbt.BinaryTagSerializer;
 import org.jetbrains.annotations.NotNull;
 
-public record Bee(@NotNull CustomData entityData, int ticksInHive, int minTicksInHive) {
+public value record Bee(@NotNull CustomData entityData, int ticksInHive, int minTicksInHive) {
 
     public static final NetworkBuffer.Type<Bee> NETWORK_TYPE = NetworkBufferTemplate.template(
             CustomData.NETWORK_TYPE, Bee::entityData,

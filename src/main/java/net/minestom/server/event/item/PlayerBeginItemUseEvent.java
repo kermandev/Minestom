@@ -16,7 +16,7 @@ import org.jetbrains.annotations.NotNull;
  *
  * <p>Setting the use duration to zero or cancelling the event will prevent consumption.</p>
  */
-public record PlayerBeginItemUseEvent(@NotNull Player player, @NotNull PlayerHand hand,
+public value record PlayerBeginItemUseEvent(@NotNull Player player, @NotNull PlayerHand hand,
                                       @NotNull ItemStack itemStack, @NotNull ItemAnimation animation,
                                       long itemUseDuration, boolean cancelled) implements PlayerInstanceEvent, ItemEvent, CancellableEvent<PlayerBeginItemUseEvent> {
 

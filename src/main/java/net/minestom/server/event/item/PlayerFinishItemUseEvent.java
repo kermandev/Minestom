@@ -15,7 +15,7 @@ import org.jetbrains.annotations.NotNull;
  *
  * <p>This includes cases like half eating a food, but also includes shooting a bow.</p>
  */
-public record PlayerFinishItemUseEvent(@NotNull Player player, @NotNull PlayerHand hand, @NotNull ItemStack itemStack, long useDuration, boolean riptideSpinAttack) implements PlayerInstanceEvent, ItemEvent, MutableEvent<PlayerFinishItemUseEvent> {
+public value record PlayerFinishItemUseEvent(@NotNull Player player, @NotNull PlayerHand hand, @NotNull ItemStack itemStack, long useDuration, boolean riptideSpinAttack) implements PlayerInstanceEvent, ItemEvent, MutableEvent<PlayerFinishItemUseEvent> {
 
     public PlayerFinishItemUseEvent(@NotNull Player player, @NotNull PlayerHand hand, @NotNull ItemStack itemStack, long useDuration) {
         this(player, hand, itemStack, useDuration, false);

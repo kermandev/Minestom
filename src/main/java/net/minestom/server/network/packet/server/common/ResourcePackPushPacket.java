@@ -15,7 +15,7 @@ import java.util.function.UnaryOperator;
 
 import static net.minestom.server.network.NetworkBuffer.COMPONENT;
 
-public record ResourcePackPushPacket(
+public value record ResourcePackPushPacket(
         @NotNull UUID id,
         @NotNull String url,
         @NotNull String hash,

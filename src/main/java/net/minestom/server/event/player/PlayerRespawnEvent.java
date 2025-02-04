@@ -11,7 +11,7 @@ import org.jetbrains.annotations.NotNull;
  * Called when {@link Player#respawn()} is executed (for custom respawn or as a result of
  * {@link net.minestom.server.network.packet.client.play.ClientStatusPacket}
  */
-public record PlayerRespawnEvent(@NotNull Player player, @NotNull Pos respawnPosition) implements PlayerEvent, MutableEvent<PlayerRespawnEvent> {
+public value record PlayerRespawnEvent(@NotNull Player player, @NotNull Pos respawnPosition) implements PlayerEvent, MutableEvent<PlayerRespawnEvent> {
 
     public PlayerRespawnEvent(@NotNull Player player) {
         this(player, player.getRespawnPoint());

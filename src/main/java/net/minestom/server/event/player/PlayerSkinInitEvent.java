@@ -11,7 +11,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Called at the player connection to initialize his skin.
  */
-public record PlayerSkinInitEvent(@NotNull Player player, @Nullable PlayerSkin skin) implements PlayerEvent, MutableEvent<PlayerSkinInitEvent> {
+public value record PlayerSkinInitEvent(@NotNull Player player, @Nullable PlayerSkin skin) implements PlayerEvent, MutableEvent<PlayerSkinInitEvent> {
 
     /**
      * Gets the spawning skin of the player.

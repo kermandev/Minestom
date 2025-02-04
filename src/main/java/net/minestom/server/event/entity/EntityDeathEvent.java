@@ -8,4 +8,4 @@ import org.jetbrains.annotations.NotNull;
  * @param entity
  */
 // TODO cause
-public record EntityDeathEvent(@NotNull Entity entity) implements EntityInstanceEvent {}
+public value record EntityDeathEvent(@NotNull Entity entity) implements EntityInstanceEvent {}

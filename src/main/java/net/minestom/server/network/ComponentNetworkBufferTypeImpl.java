@@ -15,7 +15,7 @@ import java.util.Locale;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-record ComponentNetworkBufferTypeImpl() implements NetworkBufferTypeImpl<Component> {
+value record ComponentNetworkBufferTypeImpl() implements NetworkBufferTypeImpl<Component> {
 
     @Override
     public void write(@NotNull NetworkBuffer buffer, @NotNull Component value) {

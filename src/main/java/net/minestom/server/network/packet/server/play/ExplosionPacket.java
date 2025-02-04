@@ -11,7 +11,7 @@ import org.jetbrains.annotations.Nullable;
 
 import static net.minestom.server.network.NetworkBuffer.VECTOR3D;
 
-public record ExplosionPacket(
+public value record ExplosionPacket(
         @NotNull Point center, @Nullable Point playerKnockback,
         @NotNull Particle particle, @NotNull SoundEvent sound
 ) implements ServerPacket.Play {

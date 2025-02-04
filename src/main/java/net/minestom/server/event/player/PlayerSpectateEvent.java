@@ -8,4 +8,4 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Called by the SpectateListener when a player starts spectating an entity.
  */
-public record PlayerSpectateEvent(@NotNull Player player, @NotNull Entity target) implements PlayerEvent {}
+public value record PlayerSpectateEvent(@NotNull Player player, @NotNull Entity target) implements PlayerEvent {}

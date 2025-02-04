@@ -9,7 +9,7 @@ import java.util.UUID;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-public record SpawnEntityPacket(int entityId, @NotNull UUID uuid, int type,
+public value record SpawnEntityPacket(int entityId, @NotNull UUID uuid, int type,
                                 @NotNull Pos position, float headRot, int data,
                                 short velocityX, short velocityY, short velocityZ) implements ServerPacket.Play {
     public static final NetworkBuffer.Type<SpawnEntityPacket> SERIALIZER = new NetworkBuffer.Type<>() {

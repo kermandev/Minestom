@@ -9,7 +9,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Represent an attribute modifier.
  */
-public record AttributeModifier(@NotNull NamespaceID id, double amount, @NotNull AttributeOperation operation) {
+public value record AttributeModifier(@NotNull NamespaceID id, double amount, @NotNull AttributeOperation operation) {
     public static final NetworkBuffer.Type<AttributeModifier> NETWORK_TYPE = new NetworkBuffer.Type<>() {
         @Override
         public void write(@NotNull NetworkBuffer buffer, AttributeModifier value) {

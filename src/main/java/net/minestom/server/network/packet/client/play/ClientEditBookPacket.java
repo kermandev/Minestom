@@ -11,7 +11,7 @@ import java.util.List;
 import static net.minestom.server.network.NetworkBuffer.STRING;
 import static net.minestom.server.network.NetworkBuffer.VAR_INT;
 
-public record ClientEditBookPacket(int slot, @NotNull List<String> pages,
+public value record ClientEditBookPacket(int slot, @NotNull List<String> pages,
                                    @Nullable String title) implements ClientPacket {
     public static final int MAX_PAGES = 100;
     public static final int MAX_TITLE_LENGTH = 32;

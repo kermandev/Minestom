@@ -14,7 +14,7 @@ import java.util.List;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-public record WrittenBookContent(@NotNull FilteredText<String> title, @NotNull String author, int generation,
+public value record WrittenBookContent(@NotNull FilteredText<String> title, @NotNull String author, int generation,
                                  @NotNull List<FilteredText<Component>> pages, boolean resolved) {
     public static final WrittenBookContent EMPTY = new WrittenBookContent(new FilteredText<>("", null), "", 0, List.of(), true);
 

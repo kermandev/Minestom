@@ -10,7 +10,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Collections;
 import java.util.List;
 
-public record EditBookEvent(@NotNull Player player, @NotNull ItemStack itemStack, @NotNull List<String> pages,
+public value record EditBookEvent(@NotNull Player player, @NotNull ItemStack itemStack, @NotNull List<String> pages,
                             @Nullable String title) implements PlayerInstanceEvent, ItemEvent {
 
     @Override

@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-public record ClientInteractEntityPacket(int targetId, @NotNull Type type, boolean sneaking) implements ClientPacket {
+public value record ClientInteractEntityPacket(int targetId, @NotNull Type type, boolean sneaking) implements ClientPacket {
 
     public static final NetworkBuffer.Type<ClientInteractEntityPacket> SERIALIZER = new NetworkBuffer.Type<>() {
         @Override
@@ -42,7 +42,7 @@ public record ClientInteractEntityPacket(int targetId, @NotNull Type type, boole
         int id();
     }
 
-    public record Interact(@NotNull PlayerHand hand) implements Type {
+    public value record Interact(@NotNull PlayerHand hand) implements Type {
         public static final NetworkBuffer.Type<Interact> SERIALIZER = NetworkBufferTemplate.template(
                 NetworkBuffer.Enum(PlayerHand.class), Interact::hand,
                 Interact::new
@@ -54,7 +54,7 @@ public record ClientInteractEntityPacket(int targetId, @NotNull Type type, boole
         }
     }
 
-    public record Attack() implements Type {
+    public value record Attack() implements Type {
         public static final NetworkBuffer.Type<Attack> SERIALIZER = NetworkBufferTemplate.template(Attack::new);
 
         @Override
@@ -63,7 +63,7 @@ public record ClientInteractEntityPacket(int targetId, @NotNull Type type, boole
         }
     }
 
-    public record InteractAt(float targetX, float targetY, float targetZ,
+    public value record InteractAt(float targetX, float targetY, float targetZ,
                              @NotNull PlayerHand hand) implements Type {
         public static final NetworkBuffer.Type<InteractAt> SERIALIZER = NetworkBufferTemplate.template(
                 FLOAT, InteractAt::targetX,

@@ -15,7 +15,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Called when a player tries placing a block.
  */
-public record PlayerBlockPlaceEvent(@NotNull Player player, @NotNull Block block,
+public value record PlayerBlockPlaceEvent(@NotNull Player player, @NotNull Block block,
                                     @NotNull BlockFace blockFace, @NotNull BlockVec blockPosition,
                                     @NotNull Point cursorPosition, @NotNull PlayerHand hand, boolean consumesBlock,
                                     boolean doBlockUpdates,

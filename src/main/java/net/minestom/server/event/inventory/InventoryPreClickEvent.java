@@ -14,7 +14,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Called before {@link InventoryClickEvent}, used to potentially cancel the click.
  */
-public record InventoryPreClickEvent(@Nullable AbstractInventory inventory, @NotNull Player player, int slot, @NotNull ClickType clickType, @NotNull ItemStack clickedItem, @NotNull ItemStack cursorItem, boolean cancelled) implements InventoryEvent, PlayerInstanceEvent, CancellableEvent<InventoryPreClickEvent> {
+public value record InventoryPreClickEvent(@Nullable AbstractInventory inventory, @NotNull Player player, int slot, @NotNull ClickType clickType, @NotNull ItemStack clickedItem, @NotNull ItemStack cursorItem, boolean cancelled) implements InventoryEvent, PlayerInstanceEvent, CancellableEvent<InventoryPreClickEvent> {
 
     public InventoryPreClickEvent(@Nullable AbstractInventory inventory,
                                   @NotNull Player player,

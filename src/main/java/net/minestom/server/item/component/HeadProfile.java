@@ -16,7 +16,7 @@ import java.util.UUID;
 import static net.minestom.server.network.NetworkBuffer.STRING;
 import static net.minestom.server.network.NetworkBuffer.UUID;
 
-public record HeadProfile(@Nullable String name, @Nullable UUID uuid, @NotNull List<Property> properties) {
+public value record HeadProfile(@Nullable String name, @Nullable UUID uuid, @NotNull List<Property> properties) {
     public static final HeadProfile EMPTY = new HeadProfile(null, null, List.of());
 
     public static final NetworkBuffer.Type<HeadProfile> NETWORK_TYPE = NetworkBufferTemplate.template(
@@ -55,7 +55,7 @@ public record HeadProfile(@Nullable String name, @Nullable UUID uuid, @NotNull L
         return null;
     }
 
-    public record Property(@NotNull String name, @NotNull String value, @Nullable String signature) {
+    public value record Property(@NotNull String name, @NotNull String value, @Nullable String signature) {
         public static final NetworkBuffer.Type<Property> NETWORK_TYPE = NetworkBufferTemplate.template(
                 STRING, Property::name,
                 STRING, Property::value,

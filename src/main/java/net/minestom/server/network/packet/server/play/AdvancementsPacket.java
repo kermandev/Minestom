@@ -18,7 +18,7 @@ import java.util.function.UnaryOperator;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-public record AdvancementsPacket(boolean reset, @NotNull List<AdvancementMapping> advancementMappings,
+public value record AdvancementsPacket(boolean reset, @NotNull List<AdvancementMapping> advancementMappings,
                                  @NotNull List<String> identifiersToRemove,
                                  @NotNull List<ProgressMapping> progressMappings) implements ServerPacket.Play, ServerPacket.ComponentHolding {
     public static final int MAX_ADVANCEMENTS = Short.MAX_VALUE;
@@ -65,7 +65,7 @@ public record AdvancementsPacket(boolean reset, @NotNull List<AdvancementMapping
     /**
      * AdvancementMapping maps the namespaced ID to the Advancement.
      */
-    public record AdvancementMapping(@NotNull String key,
+    public value record AdvancementMapping(@NotNull String key,
                                      @NotNull Advancement value) implements ComponentHolder<AdvancementMapping> {
         public static final NetworkBuffer.Type<AdvancementMapping> SERIALIZER = NetworkBufferTemplate.template(
                 STRING, AdvancementMapping::key,
@@ -84,7 +84,7 @@ public record AdvancementsPacket(boolean reset, @NotNull List<AdvancementMapping
         }
     }
 
-    public record Advancement(@Nullable String parentIdentifier, @Nullable DisplayData displayData,
+    public value record Advancement(@Nullable String parentIdentifier, @Nullable DisplayData displayData,
                               @NotNull List<Requirement> requirements,
                               boolean sendTelemetryData) implements ComponentHolder<Advancement> {
         public Advancement {
@@ -110,7 +110,7 @@ public record AdvancementsPacket(boolean reset, @NotNull List<AdvancementMapping
         }
     }
 
-    public record Requirement(@NotNull List<String> requirements) {
+    public value record Requirement(@NotNull List<String> requirements) {
         public static final NetworkBuffer.Type<Requirement> SERIALIZER = NetworkBufferTemplate.template(
                 STRING.list(MAX_ADVANCEMENTS), Requirement::requirements,
                 Requirement::new
@@ -121,7 +121,7 @@ public record AdvancementsPacket(boolean reset, @NotNull List<AdvancementMapping
         }
     }
 
-    public record DisplayData(@NotNull Component title, @NotNull Component description,
+    public value record DisplayData(@NotNull Component title, @NotNull Component description,
                               @NotNull ItemStack icon, @NotNull FrameType frameType,
                               int flags, @Nullable String backgroundTexture,
                               float x, float y) implements ComponentHolder<DisplayData> {
@@ -170,7 +170,7 @@ public record AdvancementsPacket(boolean reset, @NotNull List<AdvancementMapping
         }
     }
 
-    public record ProgressMapping(@NotNull String key, @NotNull AdvancementProgress progress) {
+    public value record ProgressMapping(@NotNull String key, @NotNull AdvancementProgress progress) {
         public static final NetworkBuffer.Type<ProgressMapping> SERIALIZER = NetworkBufferTemplate.template(
                 STRING, ProgressMapping::key,
                 AdvancementProgress.SERIALIZER, ProgressMapping::progress,
@@ -178,7 +178,7 @@ public record AdvancementsPacket(boolean reset, @NotNull List<AdvancementMapping
         );
     }
 
-    public record AdvancementProgress(@NotNull List<@NotNull Criteria> criteria) {
+    public value record AdvancementProgress(@NotNull List<@NotNull Criteria> criteria) {
         public static final NetworkBuffer.Type<AdvancementProgress> SERIALIZER = NetworkBufferTemplate.template(
                 Criteria.SERIALIZER.list(MAX_ADVANCEMENTS), AdvancementProgress::criteria,
                 AdvancementProgress::new
@@ -189,7 +189,7 @@ public record AdvancementsPacket(boolean reset, @NotNull List<AdvancementMapping
         }
     }
 
-    public record Criteria(@NotNull String criterionIdentifier, @NotNull CriterionProgress criterionProgress) {
+    public value record Criteria(@NotNull String criterionIdentifier, @NotNull CriterionProgress criterionProgress) {
         public static final NetworkBuffer.Type<Criteria> SERIALIZER = NetworkBufferTemplate.template(
                 STRING, Criteria::criterionIdentifier,
                 CriterionProgress.SERIALIZER, Criteria::criterionProgress,
@@ -197,7 +197,7 @@ public record AdvancementsPacket(boolean reset, @NotNull List<AdvancementMapping
         );
     }
 
-    public record CriterionProgress(@Nullable Long dateOfAchieving) {
+    public value record CriterionProgress(@Nullable Long dateOfAchieving) {
         public static final NetworkBuffer.Type<CriterionProgress> SERIALIZER = NetworkBufferTemplate.template(
                 LONG.optional(), CriterionProgress::dateOfAchieving,
                 CriterionProgress::new

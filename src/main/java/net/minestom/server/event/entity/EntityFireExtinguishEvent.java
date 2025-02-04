@@ -6,7 +6,7 @@ import net.minestom.server.event.trait.EntityInstanceEvent;
 import net.minestom.server.event.trait.mutation.EventMutatorCancellable;
 import org.jetbrains.annotations.NotNull;
 
-public record EntityFireExtinguishEvent(Entity entity, boolean natural, boolean cancelled) implements EntityInstanceEvent, CancellableEvent<EntityFireExtinguishEvent> {
+public value record EntityFireExtinguishEvent(Entity entity, boolean natural, boolean cancelled) implements EntityInstanceEvent, CancellableEvent<EntityFireExtinguishEvent> {
 
     public EntityFireExtinguishEvent(Entity entity, boolean natural) {
         this(entity, natural, false);

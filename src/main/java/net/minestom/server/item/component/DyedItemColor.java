@@ -10,7 +10,7 @@ import net.minestom.server.network.NetworkBufferTemplate;
 import net.minestom.server.utils.nbt.BinaryTagSerializer;
 import org.jetbrains.annotations.NotNull;
 
-public record DyedItemColor(@NotNull RGBLike color, boolean showInTooltip) {
+public value record DyedItemColor(@NotNull RGBLike color, boolean showInTooltip) {
     public static DyedItemColor LEATHER = new DyedItemColor(new Color(-6265536), true);
 
     public static final NetworkBuffer.Type<DyedItemColor> NETWORK_TYPE = NetworkBufferTemplate.template(

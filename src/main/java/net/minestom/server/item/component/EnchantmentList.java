@@ -14,7 +14,7 @@ import java.util.Map;
 
 import static net.kyori.adventure.nbt.StringBinaryTag.stringBinaryTag;
 
-public record EnchantmentList(@NotNull Map<DynamicRegistry.Key<Enchantment>, Integer> enchantments,
+public value record EnchantmentList(@NotNull Map<DynamicRegistry.Key<Enchantment>, Integer> enchantments,
                               boolean showInTooltip) {
     public static final EnchantmentList EMPTY = new EnchantmentList(Map.of(), true);
 

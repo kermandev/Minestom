@@ -10,7 +10,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Collection;
 import java.util.function.UnaryOperator;
 
-public record SetCursorItemPacket(@NotNull ItemStack itemStack) implements ServerPacket.Play, ServerPacket.ComponentHolding {
+public value record SetCursorItemPacket(@NotNull ItemStack itemStack) implements ServerPacket.Play, ServerPacket.ComponentHolding {
     public static final NetworkBuffer.Type<SetCursorItemPacket> SERIALIZER = NetworkBufferTemplate.template(
             ItemStack.NETWORK_TYPE, SetCursorItemPacket::itemStack,
             SetCursorItemPacket::new);

@@ -7,4 +7,4 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Called when an instance is registered
  */
-public record InstanceRegisterEvent(@NotNull Instance instance) implements InstanceEvent {}
+public value record InstanceRegisterEvent(@NotNull Instance instance) implements InstanceEvent {}

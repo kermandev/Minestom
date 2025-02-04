@@ -9,7 +9,7 @@ import org.jetbrains.annotations.NotNull;
 import static net.minestom.server.network.NetworkBuffer.BOOLEAN;
 import static net.minestom.server.network.NetworkBuffer.Enum;
 
-public record ClientChangeDifficultyPacket(@NotNull Difficulty difficulty, boolean locked) implements ClientPacket {
+public value record ClientChangeDifficultyPacket(@NotNull Difficulty difficulty, boolean locked) implements ClientPacket {
     public static final NetworkBuffer.Type<ClientChangeDifficultyPacket> SERIALIZER = NetworkBufferTemplate.template(
             Enum(Difficulty.class), ClientChangeDifficultyPacket::difficulty,
             BOOLEAN, ClientChangeDifficultyPacket::locked,

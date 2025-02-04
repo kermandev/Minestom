@@ -7,7 +7,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
-public record ChatTypeDecoration(
+public value record ChatTypeDecoration(
         @NotNull String translationKey,
         @NotNull List<Parameter> parameters,
         @NotNull Style style

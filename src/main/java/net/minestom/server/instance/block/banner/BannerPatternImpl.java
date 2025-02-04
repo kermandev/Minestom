@@ -8,7 +8,7 @@ import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-record BannerPatternImpl(
+value record BannerPatternImpl(
         @NotNull NamespaceID assetId,
         @NotNull String translationKey,
         @Nullable Registry.BannerPatternEntry registry

@@ -4,7 +4,7 @@ import net.minestom.server.utils.nbt.BinaryTagSerializer;
 import net.minestom.server.utils.nbt.BinaryTagTemplate;
 import org.jetbrains.annotations.NotNull;
 
-public record Music(
+public value record Music(
         @NotNull SoundEvent sound,
         int minDelay,
         int maxDelay,

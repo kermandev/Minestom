@@ -12,7 +12,7 @@ import java.util.List;
 import static net.minestom.server.network.NetworkBuffer.NBT;
 import static net.minestom.server.network.NetworkBuffer.STRING;
 
-public record RegistryDataPacket(
+public value record RegistryDataPacket(
         @NotNull String registryId,
         @NotNull List<Entry> entries
 ) implements ServerPacket.Configuration {
@@ -21,7 +21,7 @@ public record RegistryDataPacket(
             Entry.SERIALIZER.list(Integer.MAX_VALUE), RegistryDataPacket::entries,
             RegistryDataPacket::new);
 
-    public record Entry(
+    public value record Entry(
             @NotNull String id,
             @Nullable BinaryTag data
     ) {

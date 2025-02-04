@@ -8,7 +8,7 @@ import java.util.List;
 
 import static net.minestom.server.network.NetworkBuffer.STRING;
 
-public record ArgumentSignatures(@NotNull List<@NotNull Entry> entries) {
+public value record ArgumentSignatures(@NotNull List<@NotNull Entry> entries) {
     public static final int MAX_ENTRIES = 8;
 
     public ArgumentSignatures {
@@ -20,7 +20,7 @@ public record ArgumentSignatures(@NotNull List<@NotNull Entry> entries) {
             ArgumentSignatures::new
     );
 
-    public record Entry(@NotNull String name, @NotNull MessageSignature signature) {
+    public value record Entry(@NotNull String name, @NotNull MessageSignature signature) {
         public static final NetworkBuffer.Type<Entry> SERIALIZER = NetworkBufferTemplate.template(
                 STRING, Entry::name,
                 MessageSignature.SERIALIZER, Entry::signature,

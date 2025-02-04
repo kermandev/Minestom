@@ -12,7 +12,7 @@ import org.jetbrains.annotations.NotNull;
  * Called by an Instance when an entity is added to it.
  * Can be used attach data.
  */
-public record AddEntityToInstanceEvent(@NotNull Instance instance, @NotNull Entity entity, boolean cancelled) implements InstanceEvent, EntityEvent, CancellableEvent<AddEntityToInstanceEvent> {
+public value record AddEntityToInstanceEvent(@NotNull Instance instance, @NotNull Entity entity, boolean cancelled) implements InstanceEvent, EntityEvent, CancellableEvent<AddEntityToInstanceEvent> {
 
     public AddEntityToInstanceEvent(@NotNull Instance instance, @NotNull Entity entity) {
         this(instance, entity, false);

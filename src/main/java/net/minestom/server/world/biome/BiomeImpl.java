@@ -10,7 +10,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Locale;
 
-record BiomeImpl(
+value record BiomeImpl(
         float temperature,
         float downfall,
         @NotNull BiomeEffects effects,

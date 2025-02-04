@@ -10,7 +10,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Called when a {@link Player} interacts (right-click) with an {@link Entity}.
  */
-public record PlayerEntityInteractEvent(@NotNull Player player, @NotNull Entity target, @NotNull PlayerHand hand,
+public value record PlayerEntityInteractEvent(@NotNull Player player, @NotNull Entity target, @NotNull PlayerHand hand,
                                         @NotNull Point interactPosition) implements PlayerInstanceEvent {
 
     /**

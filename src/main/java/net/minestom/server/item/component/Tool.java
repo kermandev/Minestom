@@ -15,7 +15,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 import java.util.Objects;
 
-public record Tool(@NotNull List<Rule> rules, float defaultMiningSpeed, int damagePerBlock) {
+public value record Tool(@NotNull List<Rule> rules, float defaultMiningSpeed, int damagePerBlock) {
     public static final float DEFAULT_MINING_SPEED = 1.0f;
     public static final int DEFAULT_DAMAGE_PER_BLOCK = 1;
 
@@ -30,7 +30,7 @@ public record Tool(@NotNull List<Rule> rules, float defaultMiningSpeed, int dama
             "damage_per_block", BinaryTagSerializer.INT.optional(DEFAULT_DAMAGE_PER_BLOCK), Tool::damagePerBlock,
             Tool::new);
 
-    public record Rule(@NotNull BlockTypeFilter blocks, @Nullable Float speed, @Nullable Boolean correctForDrops) {
+    public value record Rule(@NotNull BlockTypeFilter blocks, @Nullable Float speed, @Nullable Boolean correctForDrops) {
 
         public static final NetworkBuffer.Type<Rule> NETWORK_TYPE = NetworkBufferTemplate.template(
                 BlockTypeFilter.NETWORK_TYPE, Rule::blocks,

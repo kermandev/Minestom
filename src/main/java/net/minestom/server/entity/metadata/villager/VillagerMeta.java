@@ -22,7 +22,7 @@ public class VillagerMeta extends AbstractVillagerMeta {
         metadata.set(MetadataDef.Villager.VARIANT, value);
     }
 
-    public record VillagerData(@NotNull VillagerType villagerType, @NotNull VillagerProfession villagerProfession, @NotNull Level level) { }
+    public value record VillagerData(@NotNull VillagerType villagerType, @NotNull VillagerProfession villagerProfession, @NotNull Level level) { }
 
     public enum Level {
         NOVICE,

@@ -18,7 +18,7 @@ import org.jetbrains.annotations.NotNull;
  * (could be because of high latency or a modified client) so cancelling {@link PlayerBlockBreakEvent} is also necessary.
  * Could be fixed in future Minestom version.
  */
-public record PlayerStartDiggingEvent(@NotNull Player player, @NotNull Block block, @NotNull BlockVec blockPosition,
+public value record PlayerStartDiggingEvent(@NotNull Player player, @NotNull Block block, @NotNull BlockVec blockPosition,
                                      @NotNull BlockFace blockFace, boolean cancelled) implements PlayerInstanceEvent, BlockEvent, CancellableEvent<PlayerStartDiggingEvent> {
 
 

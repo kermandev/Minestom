@@ -6,7 +6,7 @@ import net.minestom.server.utils.nbt.BinaryTagSerializer;
 import net.minestom.server.utils.nbt.BinaryTagTemplate;
 import org.jetbrains.annotations.NotNull;
 
-public record DamageResistant(@NotNull String tagKey) {
+public value record DamageResistant(@NotNull String tagKey) {
     public static final NetworkBuffer.Type<DamageResistant> NETWORK_TYPE = NetworkBufferTemplate.template(
             NetworkBuffer.STRING, DamageResistant::tagKey,
             DamageResistant::new);

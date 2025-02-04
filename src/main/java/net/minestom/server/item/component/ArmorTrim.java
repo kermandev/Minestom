@@ -9,7 +9,7 @@ import net.minestom.server.registry.DynamicRegistry;
 import net.minestom.server.utils.nbt.BinaryTagSerializer;
 import org.jetbrains.annotations.NotNull;
 
-public record ArmorTrim(@NotNull DynamicRegistry.Key<TrimMaterial> material,
+public value record ArmorTrim(@NotNull DynamicRegistry.Key<TrimMaterial> material,
                         @NotNull DynamicRegistry.Key<TrimPattern> pattern, boolean showInTooltip) {
 
     public static final NetworkBuffer.Type<ArmorTrim> NETWORK_TYPE = NetworkBufferTemplate.template(

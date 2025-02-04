@@ -9,7 +9,7 @@ import org.jetbrains.annotations.Nullable;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-public record ServerDataPacket(@NotNull Component motd, byte @Nullable [] iconBase64,
+public value record ServerDataPacket(@NotNull Component motd, byte @Nullable [] iconBase64,
                                boolean enforcesSecureChat) implements ServerPacket.Play {
     public static final NetworkBuffer.Type<ServerDataPacket> SERIALIZER = NetworkBufferTemplate.template(
             COMPONENT, ServerDataPacket::motd,

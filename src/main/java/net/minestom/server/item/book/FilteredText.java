@@ -8,7 +8,7 @@ import net.minestom.server.utils.nbt.BinaryTagSerializer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public record FilteredText<T>(@NotNull T text, @Nullable T filtered) {
+public value record FilteredText<T>(@NotNull T text, @Nullable T filtered) {
 
     public static @NotNull NetworkBuffer.Type<FilteredText<String>> STRING_NETWORK_TYPE = createNetworkType(NetworkBuffer.STRING);
     public static @NotNull BinaryTagSerializer<FilteredText<String>> STRING_NBT_TYPE = createNbtType(BinaryTagSerializer.STRING);

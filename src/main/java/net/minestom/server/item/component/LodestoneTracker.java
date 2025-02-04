@@ -9,7 +9,7 @@ import net.minestom.server.utils.nbt.BinaryTagSerializer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public record LodestoneTracker(@Nullable WorldPos target, boolean tracked) {
+public value record LodestoneTracker(@Nullable WorldPos target, boolean tracked) {
 
     public static final NetworkBuffer.Type<LodestoneTracker> NETWORK_TYPE = NetworkBufferTemplate.template(
             WorldPos.NETWORK_TYPE.optional(), LodestoneTracker::target,

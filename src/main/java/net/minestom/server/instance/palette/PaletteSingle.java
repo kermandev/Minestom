@@ -5,7 +5,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Palette containing a single value. Useful for both empty and full palettes.
  */
-record PaletteSingle(byte dim, int value) implements SpecializedPalette.Immutable {
+value record PaletteSingle(byte dim, int value) implements SpecializedPalette.Immutable {
     @Override
     public int get(int x, int y, int z) {
         return value;

@@ -11,7 +11,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Called when two {@link ItemEntity} are merging their {@link ItemStack} together to form a sole entity.
  */
-public record EntityItemMergeEvent(@NotNull ItemEntity entity, @NotNull ItemEntity merged, @NotNull ItemStack result, boolean cancelled) implements EntityInstanceEvent, CancellableEvent<EntityItemMergeEvent> {
+public value record EntityItemMergeEvent(@NotNull ItemEntity entity, @NotNull ItemEntity merged, @NotNull ItemStack result, boolean cancelled) implements EntityInstanceEvent, CancellableEvent<EntityItemMergeEvent> {
 
     public EntityItemMergeEvent(@NotNull ItemEntity source, @NotNull ItemEntity merged, @NotNull ItemStack result) {
         this(source, merged, result, false);

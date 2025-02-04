@@ -11,7 +11,7 @@ import java.util.UUID;
 import static net.minestom.server.network.NetworkBuffer.UUID;
 import static net.minestom.server.network.NetworkBuffer.VAR_INT;
 
-public record ClientResourcePackStatusPacket(
+public value record ClientResourcePackStatusPacket(
         @NotNull UUID id,
         @NotNull ResourcePackStatus status
 ) implements ClientPacket {

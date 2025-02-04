@@ -14,7 +14,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-public record BiomeEffects(
+public value record BiomeEffects(
         @NotNull RGBLike fogColor,
         @NotNull RGBLike skyColor,
         @NotNull RGBLike waterColor,
@@ -51,7 +51,7 @@ public record BiomeEffects(
         public static final BinaryTagSerializer<GrassColorModifier> NBT_TYPE = BinaryTagSerializer.fromEnumStringable(GrassColorModifier.class);
     }
 
-    public record Particle(float probability, net.minestom.server.particle.Particle particle) {
+    public value record Particle(float probability, net.minestom.server.particle.Particle particle) {
         public static final BinaryTagSerializer<Particle> NBT_TYPE = new BinaryTagSerializer<>() {
             @Override
             public @NotNull BinaryTag write(@NotNull Context context, @NotNull BiomeEffects.Particle value) {
@@ -63,7 +63,7 @@ public record BiomeEffects(
         };
     }
 
-    public record MoodSound(
+    public value record MoodSound(
             @NotNull SoundEvent sound,
             int tickDelay,
             int blockSearchExtent,
@@ -77,7 +77,7 @@ public record BiomeEffects(
                 MoodSound::new);
     }
 
-    public record AdditionsSound(
+    public value record AdditionsSound(
             @NotNull SoundEvent sound,
             double tickChance
     ) {
@@ -87,7 +87,7 @@ public record BiomeEffects(
                 AdditionsSound::new);
     }
 
-    public record WeightedMusic(@NotNull Music music, int wieght) {
+    public value record WeightedMusic(@NotNull Music music, int wieght) {
         public static final BinaryTagSerializer<WeightedMusic> NBT_TYPE = BinaryTagTemplate.object(
                 "data", Music.NBT_TYPE, WeightedMusic::music,
                 "weight", BinaryTagSerializer.INT, WeightedMusic::wieght,

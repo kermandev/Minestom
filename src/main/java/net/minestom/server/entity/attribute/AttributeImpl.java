@@ -5,7 +5,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
 
-record AttributeImpl(@NotNull Registry.AttributeEntry registry) implements Attribute {
+value record AttributeImpl(@NotNull Registry.AttributeEntry registry) implements Attribute {
     private static final Registry.Container<Attribute> CONTAINER = Registry.createStaticContainer(Registry.Resource.ATTRIBUTES,
             (namespace, properties) -> new AttributeImpl(Registry.attribute(namespace, properties)));
 

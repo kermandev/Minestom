@@ -14,7 +14,7 @@ import org.jetbrains.annotations.NotNull;
  * <p>
  * Executed by {@link Player#openInventory(Inventory)}.
  */
-public record InventoryOpenEvent(@NotNull AbstractInventory inventory, @NotNull Player player, boolean cancelled) implements InventoryEvent, PlayerInstanceEvent, CancellableEvent<InventoryOpenEvent> {
+public value record InventoryOpenEvent(@NotNull AbstractInventory inventory, @NotNull Player player, boolean cancelled) implements InventoryEvent, PlayerInstanceEvent, CancellableEvent<InventoryOpenEvent> {
 
     public InventoryOpenEvent(@NotNull AbstractInventory inventory, @NotNull Player player) {
         this(inventory, player, false);

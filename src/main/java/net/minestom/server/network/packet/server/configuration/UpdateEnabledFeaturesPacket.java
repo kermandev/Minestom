@@ -9,7 +9,7 @@ import java.util.List;
 
 import static net.minestom.server.network.NetworkBuffer.STRING;
 
-public record UpdateEnabledFeaturesPacket(@NotNull List<String> features) implements ServerPacket.Configuration {
+public value record UpdateEnabledFeaturesPacket(@NotNull List<String> features) implements ServerPacket.Configuration {
     public static final int MAX_FEATURES = 1024;
 
     public UpdateEnabledFeaturesPacket {

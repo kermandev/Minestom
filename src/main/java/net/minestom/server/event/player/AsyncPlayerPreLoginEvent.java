@@ -17,7 +17,7 @@ import java.util.concurrent.CompletableFuture;
  * Called before the player initialization, it can be used to kick the player before any connection
  * or to change his final username/uuid.
  */
-public record AsyncPlayerPreLoginEvent(@NotNull PlayerConnection connection,
+public value record AsyncPlayerPreLoginEvent(@NotNull PlayerConnection connection,
                                        @NotNull GameProfile gameProfile,
                                        @NotNull LoginPluginMessageProcessor pluginMessageProcessor) implements MutableEvent<AsyncPlayerPreLoginEvent> {
 

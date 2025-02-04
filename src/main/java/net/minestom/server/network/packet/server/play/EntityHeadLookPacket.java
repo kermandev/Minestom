@@ -7,7 +7,7 @@ import org.jetbrains.annotations.NotNull;
 import static net.minestom.server.network.NetworkBuffer.BYTE;
 import static net.minestom.server.network.NetworkBuffer.VAR_INT;
 
-public record EntityHeadLookPacket(int entityId, float yaw) implements ServerPacket.Play {
+public value record EntityHeadLookPacket(int entityId, float yaw) implements ServerPacket.Play {
     public static final NetworkBuffer.Type<EntityHeadLookPacket> SERIALIZER = new NetworkBuffer.Type<>() {
         @Override
         public void write(@NotNull NetworkBuffer buffer, EntityHeadLookPacket value) {

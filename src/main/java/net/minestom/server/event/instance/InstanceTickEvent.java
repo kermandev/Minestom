@@ -7,7 +7,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Called when an instance processes a tick.
  */
-public record InstanceTickEvent(@NotNull Instance instance, int duration) implements InstanceEvent {
+public value record InstanceTickEvent(@NotNull Instance instance, int duration) implements InstanceEvent {
 
     public InstanceTickEvent(@NotNull Instance instance, long time, long lastTickAge) {
         this(instance, (int) (time - lastTickAge));

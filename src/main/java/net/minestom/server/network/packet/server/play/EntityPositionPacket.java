@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-public record EntityPositionPacket(int entityId, short deltaX, short deltaY, short deltaZ, boolean onGround)
+public value record EntityPositionPacket(int entityId, short deltaX, short deltaY, short deltaZ, boolean onGround)
         implements ServerPacket.Play {
     public static final NetworkBuffer.Type<EntityPositionPacket> SERIALIZER = NetworkBufferTemplate.template(
             VAR_INT, EntityPositionPacket::entityId,

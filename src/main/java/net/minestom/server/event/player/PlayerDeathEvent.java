@@ -11,7 +11,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Called when a player die in {@link Player#kill()}.
  */
-public record PlayerDeathEvent(@NotNull Player player, @Nullable Component deathText, @Nullable Component chatMessage) implements PlayerInstanceEvent, MutableEvent<PlayerDeathEvent> {
+public value record PlayerDeathEvent(@NotNull Player player, @Nullable Component deathText, @Nullable Component chatMessage) implements PlayerInstanceEvent, MutableEvent<PlayerDeathEvent> {
 
     /**
      * Gets the text displayed in the death screen.

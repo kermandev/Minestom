@@ -8,7 +8,7 @@ import net.minestom.server.utils.Rotation;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-public record ClientUpdateStructureBlockPacket(Point location, Action action,
+public value record ClientUpdateStructureBlockPacket(Point location, Action action,
                                                Mode mode, String name,
                                                Point offset, Point size,
                                                Mirror mirror, Rotation rotation,

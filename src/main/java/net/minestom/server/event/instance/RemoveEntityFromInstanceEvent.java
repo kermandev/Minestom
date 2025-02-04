@@ -8,4 +8,4 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Called by an Instance when an entity is removed from it.
  */
-public record RemoveEntityFromInstanceEvent(@NotNull Instance instance, @NotNull Entity entity) implements EntityInstanceEvent {}
+public value record RemoveEntityFromInstanceEvent(@NotNull Instance instance, @NotNull Entity entity) implements EntityInstanceEvent {}

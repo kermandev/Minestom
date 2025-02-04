@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
-public record DeathProtection(@NotNull List<ConsumeEffect> deathEffects) {
+public value record DeathProtection(@NotNull List<ConsumeEffect> deathEffects) {
     public static final NetworkBuffer.Type<DeathProtection> NETWORK_TYPE = NetworkBufferTemplate.template(
             ConsumeEffect.NETWORK_TYPE.list(256), DeathProtection::deathEffects,
             DeathProtection::new);

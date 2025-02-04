@@ -9,4 +9,4 @@ import org.jetbrains.annotations.NotNull;
  *
  * @param entity the entity who is about to be removed
  */
-public record EntityDespawnEvent(@NotNull Entity entity) implements EntityInstanceEvent {}
+public value record EntityDespawnEvent(@NotNull Entity entity) implements EntityInstanceEvent {}

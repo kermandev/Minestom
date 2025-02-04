@@ -7,4 +7,4 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Called when a player starts sprinting.
  */
-public record PlayerStartSprintingEvent(@NotNull Player player) implements PlayerInstanceEvent {}
+public value record PlayerStartSprintingEvent(@NotNull Player player) implements PlayerInstanceEvent {}

@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-public record ClientGenerateStructurePacket(@NotNull Point blockPosition,
+public value record ClientGenerateStructurePacket(@NotNull Point blockPosition,
                                             int level, boolean keepJigsaws) implements ClientPacket {
     public static final NetworkBuffer.Type<ClientGenerateStructurePacket> SERIALIZER = NetworkBufferTemplate.template(
             BLOCK_POSITION, ClientGenerateStructurePacket::blockPosition,

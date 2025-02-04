@@ -7,7 +7,7 @@ import net.minestom.server.event.trait.PlayerInstanceEvent;
 import net.minestom.server.event.trait.mutation.EventMutatorCancellable;
 import org.jetbrains.annotations.NotNull;
 
-public record PickupExperienceEvent(@NotNull Player player, @NotNull ExperienceOrb experienceOrb, short experienceCount, boolean cancelled) implements PlayerInstanceEvent, CancellableEvent<PickupExperienceEvent> {
+public value record PickupExperienceEvent(@NotNull Player player, @NotNull ExperienceOrb experienceOrb, short experienceCount, boolean cancelled) implements PlayerInstanceEvent, CancellableEvent<PickupExperienceEvent> {
 
     public PickupExperienceEvent(@NotNull Player player, @NotNull ExperienceOrb experienceOrb) {
         this(player, experienceOrb, experienceOrb.getExperienceCount(), false);

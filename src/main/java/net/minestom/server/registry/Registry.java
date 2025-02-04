@@ -288,30 +288,30 @@ public final class Registry {
         }
     }
 
-    public static final value record BlockEntry(
-            NamespaceID namespace,
-            int id,
-            int stateId,
-            String translationKey,
-            double hardness,
-            double explosionResistance,
-            double friction,
-            double speedFactor,
-            double jumpFactor,
-            boolean air,
-            boolean solid,
-            boolean liquid,
-            boolean occludes,
-            boolean requiresTool,
-            int lightEmission,
-            boolean replaceable,
-            String blockEntity,
-            int blockEntityId,
-            Supplier<Material> materialSupplier,
-            Shape shape,
-            boolean redstoneConductor,
-            boolean signalSource,
-            Properties custom) implements Entry {
+    public static final value class BlockEntry implements Entry {
+        private final NamespaceID namespace;
+        private final int id;
+        private final int stateId;
+        private final String translationKey;
+        private final double hardness;
+        private final double explosionResistance;
+        private final double friction;
+        private final double speedFactor;
+        private final double jumpFactor;
+        private final boolean air;
+        private final boolean solid;
+        private final boolean liquid;
+        private final boolean occludes;
+        private final boolean requiresTool;
+        private final int lightEmission;
+        private final boolean replaceable;
+        private final String blockEntity;
+        private final int blockEntityId;
+        private final Supplier<Material> materialSupplier;
+        private final Shape shape;
+        private final boolean redstoneConductor;
+        private final boolean signalSource;
+        private final Properties custom;
 
         private BlockEntry(String namespace, Properties main, Properties custom) {
             this.custom = custom;
@@ -327,9 +327,11 @@ public final class Registry {
             this.air = main.getBoolean("air", false);
             this.solid = main.getBoolean("solid");
             this.liquid = main.getBoolean("liquid", false);
-            this.occludes = main.getBoolean("occludes", true);
+            final boolean occludes = main.getBoolean("occludes", true);
+            this.occludes = occludes;
             this.requiresTool = main.getBoolean("requiresTool", true);
-            this.lightEmission = main.getInt("lightEmission", 0);
+            final int lightEmission = main.getInt("lightEmission", 0);
+            this.lightEmission = lightEmission;
             this.replaceable = main.getBoolean("replaceable", false);
             {
                 Properties blockEntity = main.section("blockEntity");
@@ -348,7 +350,7 @@ public final class Registry {
             {
                 final String collision = main.getString("collisionShape");
                 final String occlusion = main.getString("occlusionShape");
-                this.shape = CollisionUtils.parseBlockShape(collision, occlusion, this);
+                this.shape = CollisionUtils.parseBlockShape(collision, occlusion, occludes, lightEmission);
             }
             this.redstoneConductor = main.getBoolean("redstoneConductor");
             this.signalSource = main.getBoolean("signalSource", false);
@@ -1012,7 +1014,7 @@ public final class Registry {
         }
     }
 
-    public value record JukeboxSongEntry(NamespaceID namespace, SoundEvent soundEvent, Component description,
+    public record JukeboxSongEntry(NamespaceID namespace, SoundEvent soundEvent, Component description,
                                    float lengthInSeconds, int comparatorOutput, Properties custom) implements Entry {
         public JukeboxSongEntry(String namespace, Properties main, Properties custom) {
             this(NamespaceID.from(namespace),
@@ -1024,7 +1026,7 @@ public final class Registry {
         }
     }
 
-    public value record InstrumentEntry(NamespaceID namespace, SoundEvent soundEvent, float useDuration, float range,
+    public record InstrumentEntry(NamespaceID namespace, SoundEvent soundEvent, float useDuration, float range,
                                   Component description, Properties custom) implements Entry {
         public InstrumentEntry(String namespace, Properties main, Properties custom) {
             this(NamespaceID.from(namespace),

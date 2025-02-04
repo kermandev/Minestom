@@ -7,4 +7,4 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Called when an instance is unregistered
  */
-public record InstanceUnregisterEvent(@NotNull Instance instance) implements InstanceEvent {}
+public value record InstanceUnregisterEvent(@NotNull Instance instance) implements InstanceEvent {}

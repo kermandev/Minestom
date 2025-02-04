@@ -13,7 +13,7 @@ import java.util.function.DoubleUnaryOperator;
  * it's usually better to accept a Point rather than a BlockVec to avoid
  * callers continually having to convert.
  */
-public record BlockVec(double x, double y, double z) implements Point {
+public value record BlockVec(double x, double y, double z) implements Point {
     public BlockVec {
         x = Math.floor(x);
         y = Math.floor(y);

@@ -11,7 +11,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Called when a {@link Player} stops digging a block before it is broken
  */
-public record PlayerCancelDiggingEvent(@NotNull Player player, @NotNull Block block, @NotNull BlockVec blockPosition) implements PlayerInstanceEvent, BlockEvent {
+public value record PlayerCancelDiggingEvent(@NotNull Player player, @NotNull Block block, @NotNull BlockVec blockPosition) implements PlayerInstanceEvent, BlockEvent {
     /**
      * Gets the block which was being dug.
      *

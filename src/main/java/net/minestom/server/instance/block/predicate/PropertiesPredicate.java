@@ -16,7 +16,7 @@ import java.util.function.Predicate;
 
 import static net.minestom.server.network.NetworkBuffer.STRING;
 
-public record PropertiesPredicate(@NotNull Map<String, ValuePredicate> properties) implements Predicate<Block> {
+public value record PropertiesPredicate(@NotNull Map<String, ValuePredicate> properties) implements Predicate<Block> {
 
     public static final NetworkBuffer.Type<PropertiesPredicate> NETWORK_TYPE = NetworkBufferTemplate.template(
             NetworkBuffer.STRING.mapValue(ValuePredicate.NETWORK_TYPE), PropertiesPredicate::properties,

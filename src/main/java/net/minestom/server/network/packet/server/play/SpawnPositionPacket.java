@@ -9,7 +9,7 @@ import org.jetbrains.annotations.NotNull;
 import static net.minestom.server.network.NetworkBuffer.BLOCK_POSITION;
 import static net.minestom.server.network.NetworkBuffer.FLOAT;
 
-public record SpawnPositionPacket(@NotNull Point position, float angle) implements ServerPacket.Play {
+public value record SpawnPositionPacket(@NotNull Point position, float angle) implements ServerPacket.Play {
     public static final NetworkBuffer.Type<SpawnPositionPacket> SERIALIZER = NetworkBufferTemplate.template(
             BLOCK_POSITION, SpawnPositionPacket::position,
             FLOAT, SpawnPositionPacket::angle,

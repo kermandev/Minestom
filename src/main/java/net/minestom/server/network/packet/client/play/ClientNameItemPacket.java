@@ -7,7 +7,7 @@ import org.jetbrains.annotations.NotNull;
 
 import static net.minestom.server.network.NetworkBuffer.STRING;
 
-public record ClientNameItemPacket(@NotNull String itemName) implements ClientPacket {
+public value record ClientNameItemPacket(@NotNull String itemName) implements ClientPacket {
     public static final NetworkBuffer.Type<ClientNameItemPacket> SERIALIZER = NetworkBufferTemplate.template(
             STRING, ClientNameItemPacket::itemName,
             ClientNameItemPacket::new);

@@ -7,7 +7,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
 
-public record CustomReportDetailsPacket(
+public value record CustomReportDetailsPacket(
         @NotNull Map<String, String> details
 ) implements ServerPacket.Configuration, ServerPacket.Play {
     private static final int MAX_DETAILS = 32;

@@ -9,7 +9,7 @@ import java.util.List;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-public record ChunkBiomesPacket(@NotNull List<@NotNull ChunkBiomeData> chunks) implements ServerPacket.Play {
+public value record ChunkBiomesPacket(@NotNull List<@NotNull ChunkBiomeData> chunks) implements ServerPacket.Play {
     public static final NetworkBuffer.Type<ChunkBiomesPacket> SERIALIZER = NetworkBufferTemplate.template(
             ChunkBiomeData.SERIALIZER.list(), ChunkBiomesPacket::chunks,
             ChunkBiomesPacket::new);
@@ -18,7 +18,7 @@ public record ChunkBiomesPacket(@NotNull List<@NotNull ChunkBiomeData> chunks) i
         chunks = List.copyOf(chunks);
     }
 
-    public record ChunkBiomeData(int chunkX, int chunkZ, byte[] data) {
+    public value record ChunkBiomeData(int chunkX, int chunkZ, byte[] data) {
         public static final NetworkBuffer.Type<ChunkBiomeData> SERIALIZER = new NetworkBuffer.Type<>() {
             @Override
             public void write(@NotNull NetworkBuffer buffer, ChunkBiomeData value) {

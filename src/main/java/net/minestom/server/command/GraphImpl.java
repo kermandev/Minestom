@@ -17,7 +17,7 @@ import java.util.function.Predicate;
 import static net.minestom.server.command.builder.arguments.ArgumentType.Literal;
 import static net.minestom.server.command.builder.arguments.ArgumentType.Word;
 
-record GraphImpl(NodeImpl root) implements Graph {
+value record GraphImpl(NodeImpl root) implements Graph {
     static GraphImpl fromCommand(Command command) {
         return new GraphImpl(NodeImpl.command(command));
     }

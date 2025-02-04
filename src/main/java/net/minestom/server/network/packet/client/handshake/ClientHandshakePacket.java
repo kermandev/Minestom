@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-public record ClientHandshakePacket(int protocolVersion, @NotNull String serverAddress,
+public value record ClientHandshakePacket(int protocolVersion, @NotNull String serverAddress,
                                     int serverPort, @NotNull Intent intent) implements ClientPacket {
 
     public ClientHandshakePacket {

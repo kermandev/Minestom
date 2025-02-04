@@ -7,7 +7,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Called when a player receive a new chunk data.
  */
-public record PlayerChunkLoadEvent(@NotNull Player player, int chunkX, int chunkZ) implements PlayerInstanceEvent {
+public value record PlayerChunkLoadEvent(@NotNull Player player, int chunkX, int chunkZ) implements PlayerInstanceEvent {
 
     /**
      * Gets the chunk X.

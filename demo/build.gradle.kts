@@ -12,6 +12,11 @@ dependencies {
 }
 
 tasks {
+    compileJava {
+        options.compilerArgs.add("--enable-preview")
+        //options.allCompilerArgs.add("--enable-preview")
+    }
+
     application {
         mainClass.set("net.minestom.demo.Main")
     }

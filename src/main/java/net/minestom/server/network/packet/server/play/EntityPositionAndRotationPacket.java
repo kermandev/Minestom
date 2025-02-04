@@ -7,7 +7,7 @@ import org.jetbrains.annotations.NotNull;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-public record EntityPositionAndRotationPacket(int entityId, short deltaX, short deltaY, short deltaZ,
+public value record EntityPositionAndRotationPacket(int entityId, short deltaX, short deltaY, short deltaZ,
                                               float yaw, float pitch, boolean onGround) implements ServerPacket.Play {
     public static final NetworkBuffer.Type<EntityPositionAndRotationPacket> SERIALIZER = new NetworkBuffer.Type<>() {
         @Override

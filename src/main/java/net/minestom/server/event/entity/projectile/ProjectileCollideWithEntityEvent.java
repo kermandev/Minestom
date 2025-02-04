@@ -5,7 +5,7 @@ import net.minestom.server.entity.Entity;
 import net.minestom.server.event.trait.mutation.EventMutatorCancellable;
 import org.jetbrains.annotations.NotNull;
 
-public record ProjectileCollideWithEntityEvent(
+public value record ProjectileCollideWithEntityEvent(
         @NotNull Entity projectile,
         @NotNull Pos collisionPosition,
         @NotNull Entity target,

@@ -7,7 +7,7 @@ import org.jetbrains.annotations.NotNull;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-public record NbtQueryResponsePacket(int transactionId, CompoundBinaryTag data) implements ServerPacket.Play {
+public value record NbtQueryResponsePacket(int transactionId, CompoundBinaryTag data) implements ServerPacket.Play {
     public static final NetworkBuffer.Type<NbtQueryResponsePacket> SERIALIZER = new Type<>() {
         @Override
         public void write(@NotNull NetworkBuffer buffer, NbtQueryResponsePacket value) {

@@ -11,7 +11,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
 
-record TrimMaterialImpl(
+value record TrimMaterialImpl(
         @NotNull String assetName,
         @NotNull Material ingredient,
         @NotNull Map<String, String> overrideArmorMaterials,

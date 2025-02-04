@@ -18,7 +18,7 @@ import org.jetbrains.annotations.NotNull;
  *
  * @param blocksItemUse Does this interaction block the normal item use? True for containers.
  */
-public record PlayerBlockInteractEvent(@NotNull Player player, @NotNull PlayerHand hand,
+public value record PlayerBlockInteractEvent(@NotNull Player player, @NotNull PlayerHand hand,
                                       @NotNull Block block, @NotNull BlockVec blockPosition, @NotNull Point cursorPosition,
                                       @NotNull BlockFace blockFace, boolean blocksItemUse, boolean cancelled) implements PlayerInstanceEvent, BlockEvent, CancellableEvent<PlayerBlockInteractEvent> {
 

@@ -9,7 +9,7 @@ import org.jetbrains.annotations.NotNull;
  * Called when a {@link Player} opens the advancement screens or switch the tab
  * and when he closes the screen.
  */
-public record AdvancementTabEvent(@NotNull Player player, @NotNull AdvancementAction action, @NotNull String tabId) implements PlayerInstanceEvent {
+public value record AdvancementTabEvent(@NotNull Player player, @NotNull AdvancementAction action, @NotNull String tabId) implements PlayerInstanceEvent {
 
     /**
      * Gets the action.

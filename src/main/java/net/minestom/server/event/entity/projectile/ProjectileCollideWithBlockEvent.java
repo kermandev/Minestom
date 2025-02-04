@@ -8,7 +8,7 @@ import net.minestom.server.event.trait.mutation.EventMutatorCancellable;
 import net.minestom.server.instance.block.Block;
 import org.jetbrains.annotations.NotNull;
 
-public record ProjectileCollideWithBlockEvent(
+public value record ProjectileCollideWithBlockEvent(
         @NotNull Entity projectile,
         @NotNull Pos collisionPosition,
         @NotNull Block block,

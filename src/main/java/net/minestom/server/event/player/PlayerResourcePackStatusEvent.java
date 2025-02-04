@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Called when a player warns the server of a resource pack status.
  */
-public record PlayerResourcePackStatusEvent(@NotNull Player player, @NotNull ResourcePackStatus status) implements PlayerEvent {
+public value record PlayerResourcePackStatusEvent(@NotNull Player player, @NotNull ResourcePackStatus status) implements PlayerEvent {
 
     /**
      * Gets the resource pack status.

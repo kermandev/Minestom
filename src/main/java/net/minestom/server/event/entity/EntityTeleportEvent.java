@@ -11,7 +11,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Called with {@link Entity#teleport(Pos)} and its overloads.
  */
-public record EntityTeleportEvent(@NotNull Entity entity, @NotNull Pos teleportPosition, @MagicConstant(flagsFromClass = RelativeFlags.class) int relativeFlags) implements EntityEvent {
+public value record EntityTeleportEvent(@NotNull Entity entity, @NotNull Pos teleportPosition, @MagicConstant(flagsFromClass = RelativeFlags.class) int relativeFlags) implements EntityEvent {
 
     /**
      * @return The {@link Entity} that teleported.

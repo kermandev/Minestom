@@ -11,7 +11,7 @@ import java.util.Objects;
 /**
  * An event called when a basic query is received and ready to be responded to.
  */
-public record BasicQueryEvent(@NotNull SocketAddress sender, int sessionID, @NotNull BasicQueryResponse response, boolean cancelled) implements QueryEvent<BasicQueryResponse, BasicQueryEvent> {
+public value record BasicQueryEvent(@NotNull SocketAddress sender, int sessionID, @NotNull BasicQueryResponse response, boolean cancelled) implements QueryEvent<BasicQueryResponse, BasicQueryEvent> {
 
     /**
      * Creates a new full query event.

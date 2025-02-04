@@ -10,7 +10,7 @@ import org.jetbrains.annotations.Nullable;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-public record UpdateScorePacket(
+public value record UpdateScorePacket(
         @NotNull String entityName,
         @NotNull String objectiveName,
         int score,

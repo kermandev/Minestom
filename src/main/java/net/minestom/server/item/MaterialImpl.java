@@ -5,7 +5,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
 
-record MaterialImpl(Registry.MaterialEntry registry) implements Material {
+value record MaterialImpl(Registry.MaterialEntry registry) implements Material {
     private static final Registry.Container<Material> CONTAINER = Registry.createStaticContainer(Registry.Resource.ITEMS,
             (namespace, properties) -> new MaterialImpl(Registry.material(namespace, properties)));
 

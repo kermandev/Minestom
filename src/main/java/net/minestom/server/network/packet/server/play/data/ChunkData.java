@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-public record ChunkData(@NotNull CompoundBinaryTag heightmaps, byte @NotNull [] data,
+public value record ChunkData(@NotNull CompoundBinaryTag heightmaps, byte @NotNull [] data,
                         @NotNull Map<Integer, Block> blockEntities) {
     public ChunkData {
         blockEntities = blockEntities.entrySet()

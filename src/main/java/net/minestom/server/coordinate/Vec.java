@@ -12,7 +12,7 @@ import java.util.function.DoubleUnaryOperator;
  * <p>
  * To become a value then primitive type.
  */
-public record Vec(double x, double y, double z) implements Point {
+public value record Vec(double x, double y, double z) implements Point {
     public static final Vec ZERO = new Vec(0);
     public static final Vec ONE = new Vec(1);
     public static final Vec SECTION = new Vec(16);

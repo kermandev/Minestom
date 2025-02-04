@@ -7,7 +7,7 @@ import org.jetbrains.annotations.UnknownNullability;
 
 import static net.minestom.server.network.NetworkBuffer.VAR_INT;
 
-public record MessageSignature(byte @NotNull [] signature) {
+public value record MessageSignature(byte @NotNull [] signature) {
     static final int SIGNATURE_BYTE_LENGTH = 256;
 
     public MessageSignature {
@@ -21,7 +21,7 @@ public record MessageSignature(byte @NotNull [] signature) {
             MessageSignature::new
     );
 
-    public record Packed(int id, @UnknownNullability MessageSignature fullSignature) {
+    public value record Packed(int id, @UnknownNullability MessageSignature fullSignature) {
         private Packed(@NotNull Packed packed) {
             this(packed.id, packed.fullSignature);
         }

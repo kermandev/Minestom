@@ -11,7 +11,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.List;
 import java.util.function.Predicate;
 
-public record BlockPredicates(@NotNull List<BlockPredicate> predicates, boolean showInTooltip) implements Predicate<Block> {
+public value record BlockPredicates(@NotNull List<BlockPredicate> predicates, boolean showInTooltip) implements Predicate<Block> {
     /**
      * Will never match any block.
      */

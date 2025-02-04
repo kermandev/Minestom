@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Called when a new instance is set for an entity.
  */
-public record EntitySpawnEvent(@NotNull Entity entity, @NotNull Instance spawnInstance) implements EntityInstanceEvent {
+public value record EntitySpawnEvent(@NotNull Entity entity, @NotNull Instance spawnInstance) implements EntityInstanceEvent {
 
     /**
      * Gets the entity who spawned in the instance.

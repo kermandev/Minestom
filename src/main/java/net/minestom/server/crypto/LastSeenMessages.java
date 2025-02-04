@@ -10,7 +10,7 @@ import java.util.List;
 import static net.minestom.server.network.NetworkBuffer.FixedBitSet;
 import static net.minestom.server.network.NetworkBuffer.VAR_INT;
 
-public record LastSeenMessages(@NotNull List<@NotNull MessageSignature> entries) {
+public value record LastSeenMessages(@NotNull List<@NotNull MessageSignature> entries) {
     public static final int MAX_ENTRIES = 20;
 
     public LastSeenMessages {
@@ -22,7 +22,7 @@ public record LastSeenMessages(@NotNull List<@NotNull MessageSignature> entries)
             LastSeenMessages::new
     );
 
-    public record Packed(@NotNull List<MessageSignature.@NotNull Packed> entries) {
+    public value record Packed(@NotNull List<MessageSignature.@NotNull Packed> entries) {
         public static final Packed EMPTY = new Packed(List.of());
 
         public static final NetworkBuffer.Type<Packed> SERIALIZER = NetworkBufferTemplate.template(
@@ -31,7 +31,7 @@ public record LastSeenMessages(@NotNull List<@NotNull MessageSignature> entries)
         );
     }
 
-    public record Update(int offset, @NotNull BitSet acknowledged) {
+    public value record Update(int offset, @NotNull BitSet acknowledged) {
         public static final NetworkBuffer.Type<Update> SERIALIZER = NetworkBufferTemplate.template(
                 VAR_INT, Update::offset,
                 FixedBitSet(20), Update::acknowledged,

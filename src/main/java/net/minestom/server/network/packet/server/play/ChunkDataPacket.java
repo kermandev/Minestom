@@ -9,7 +9,7 @@ import org.jetbrains.annotations.NotNull;
 
 import static net.minestom.server.network.NetworkBuffer.INT;
 
-public record ChunkDataPacket(int chunkX, int chunkZ,
+public value record ChunkDataPacket(int chunkX, int chunkZ,
                               @NotNull ChunkData chunkData,
                               @NotNull LightData lightData) implements ServerPacket.Play {
     public static final NetworkBuffer.Type<ChunkDataPacket> SERIALIZER = NetworkBufferTemplate.template(

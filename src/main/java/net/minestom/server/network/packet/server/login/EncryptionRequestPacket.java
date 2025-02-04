@@ -7,7 +7,7 @@ import org.jetbrains.annotations.NotNull;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-public record EncryptionRequestPacket(
+public value record EncryptionRequestPacket(
         @NotNull String serverId,
         byte @NotNull [] publicKey,
         byte @NotNull [] verifyToken,

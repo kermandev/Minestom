@@ -10,7 +10,7 @@ import java.util.UUID;
 
 import static net.minestom.server.network.NetworkBuffer.STRING;
 
-public record GameProfile(@NotNull UUID uuid, @NotNull String name,
+public value record GameProfile(@NotNull UUID uuid, @NotNull String name,
                           @NotNull List<@NotNull Property> properties) {
     public static final int MAX_PROPERTIES = 1024;
 
@@ -33,7 +33,7 @@ public record GameProfile(@NotNull UUID uuid, @NotNull String name,
             GameProfile::new
     );
 
-    public record Property(@NotNull String name, @NotNull String value, @Nullable String signature) {
+    public value record Property(@NotNull String name, @NotNull String value, @Nullable String signature) {
         public Property(@NotNull String name, @NotNull String value) {
             this(name, value, null);
         }

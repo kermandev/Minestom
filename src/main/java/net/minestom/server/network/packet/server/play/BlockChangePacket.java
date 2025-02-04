@@ -10,7 +10,7 @@ import org.jetbrains.annotations.NotNull;
 import static net.minestom.server.network.NetworkBuffer.BLOCK_POSITION;
 import static net.minestom.server.network.NetworkBuffer.VAR_INT;
 
-public record BlockChangePacket(@NotNull Point blockPosition, int blockStateId) implements ServerPacket.Play {
+public value record BlockChangePacket(@NotNull Point blockPosition, int blockStateId) implements ServerPacket.Play {
     public static final NetworkBuffer.Type<BlockChangePacket> SERIALIZER = NetworkBufferTemplate.template(
             BLOCK_POSITION, BlockChangePacket::blockPosition,
             VAR_INT, BlockChangePacket::blockStateId,

@@ -12,7 +12,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Called with {@link LivingEntity#damage(net.minestom.server.registry.DynamicRegistry.Key, float)}.
  */
-public record EntityDamageEvent(@NotNull LivingEntity entity, @NotNull Damage damage, @Nullable SoundEvent sound, boolean animate, boolean cancelled) implements EntityInstanceEvent, CancellableEvent<EntityDamageEvent> {
+public value record EntityDamageEvent(@NotNull LivingEntity entity, @NotNull Damage damage, @Nullable SoundEvent sound, boolean animate, boolean cancelled) implements EntityInstanceEvent, CancellableEvent<EntityDamageEvent> {
 
     public EntityDamageEvent(@NotNull LivingEntity entity, @NotNull Damage damage, @Nullable SoundEvent sound) {
         this(entity, damage, sound, true, false);

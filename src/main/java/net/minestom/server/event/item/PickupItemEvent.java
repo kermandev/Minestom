@@ -10,7 +10,7 @@ import net.minestom.server.event.trait.mutation.EventMutatorCancellable;
 import net.minestom.server.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
-public record PickupItemEvent(@NotNull LivingEntity livingEntity, @NotNull ItemEntity itemEntity, boolean cancelled) implements EntityInstanceEvent, ItemEvent, CancellableEvent<PickupItemEvent> {
+public value record PickupItemEvent(@NotNull LivingEntity livingEntity, @NotNull ItemEntity itemEntity, boolean cancelled) implements EntityInstanceEvent, ItemEvent, CancellableEvent<PickupItemEvent> {
 
     public PickupItemEvent(@NotNull LivingEntity livingEntity, @NotNull ItemEntity itemEntity) {
         this(livingEntity, itemEntity, false);

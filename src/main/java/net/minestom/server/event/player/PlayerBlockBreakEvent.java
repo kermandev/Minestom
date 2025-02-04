@@ -11,7 +11,7 @@ import net.minestom.server.instance.block.BlockFace;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
-public record PlayerBlockBreakEvent(@NotNull Player player,
+public value record PlayerBlockBreakEvent(@NotNull Player player,
                                     @NotNull Block block, @NotNull Block resultBlock, @NotNull BlockVec blockPosition,
                                     @NotNull BlockFace blockFace, boolean cancelled) implements PlayerInstanceEvent, BlockEvent, CancellableEvent<PlayerBlockBreakEvent> {
 

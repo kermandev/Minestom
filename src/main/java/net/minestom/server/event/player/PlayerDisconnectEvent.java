@@ -7,4 +7,4 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Called when a player disconnect.
  */
-public record PlayerDisconnectEvent(@NotNull Player player) implements PlayerInstanceEvent {}
+public value record PlayerDisconnectEvent(@NotNull Player player) implements PlayerInstanceEvent {}

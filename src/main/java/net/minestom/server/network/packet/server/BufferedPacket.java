@@ -10,7 +10,7 @@ import org.jetbrains.annotations.NotNull;
  * May contain multiple packets.
  */
 @ApiStatus.Internal
-public record BufferedPacket(@NotNull NetworkBuffer buffer,
+public value record BufferedPacket(@NotNull NetworkBuffer buffer,
                              long index, long length) implements SendablePacket {
     public BufferedPacket {
         buffer.readOnly();

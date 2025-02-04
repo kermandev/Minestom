@@ -472,7 +472,7 @@ public class Sidebar implements Scoreboard {
     }
 
 
-    public record NumberFormat(FormatType formatType, Component content) {
+    public value record NumberFormat(FormatType formatType, Component content) {
         private NumberFormat() {
             this(FormatType.BLANK, null);
         }

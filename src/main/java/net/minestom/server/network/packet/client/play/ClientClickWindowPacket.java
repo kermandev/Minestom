@@ -10,7 +10,7 @@ import java.util.List;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-public record ClientClickWindowPacket(int windowId, int stateId,
+public value record ClientClickWindowPacket(int windowId, int stateId,
                                       short slot, byte button, @NotNull ClickType clickType,
                                       @NotNull List<ChangedSlot> changedSlots,
                                       @NotNull ItemStack clickedItem) implements ClientPacket {
@@ -30,7 +30,7 @@ public record ClientClickWindowPacket(int windowId, int stateId,
         changedSlots = List.copyOf(changedSlots);
     }
 
-    public record ChangedSlot(short slot, @NotNull ItemStack item) {
+    public value record ChangedSlot(short slot, @NotNull ItemStack item) {
         public static final NetworkBuffer.Type<ChangedSlot> SERIALIZER = NetworkBufferTemplate.template(
                 SHORT, ChangedSlot::slot,
                 ItemStack.NETWORK_TYPE, ChangedSlot::item,

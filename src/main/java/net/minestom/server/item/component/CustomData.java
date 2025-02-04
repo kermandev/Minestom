@@ -8,7 +8,7 @@ import net.minestom.server.utils.nbt.BinaryTagSerializer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.UnknownNullability;
 
-public record CustomData(@NotNull CompoundBinaryTag nbt) implements TagReadable {
+public value record CustomData(@NotNull CompoundBinaryTag nbt) implements TagReadable {
     public static final CustomData EMPTY = new CustomData(CompoundBinaryTag.empty());
 
     public static final NetworkBuffer.Type<CustomData> NETWORK_TYPE = new NetworkBuffer.Type<>() {

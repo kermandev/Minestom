@@ -9,7 +9,7 @@ import net.minestom.server.utils.MathUtils;
 import static net.minestom.server.network.NetworkBuffer.SHORT;
 import static net.minestom.server.network.NetworkBuffer.VAR_INT;
 
-public record EntityVelocityPacket(int entityId, short velocityX, short velocityY,
+public value record EntityVelocityPacket(int entityId, short velocityX, short velocityY,
                                    short velocityZ) implements ServerPacket.Play {
     public static final NetworkBuffer.Type<EntityVelocityPacket> SERIALIZER = NetworkBufferTemplate.template(
             VAR_INT, EntityVelocityPacket::entityId,

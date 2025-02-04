@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Called when a chunk in an instance is unloaded.
  */
-public record InstanceChunkUnloadEvent(@NotNull Instance instance, @NotNull Chunk chunk) implements InstanceEvent {
+public value record InstanceChunkUnloadEvent(@NotNull Instance instance, @NotNull Chunk chunk) implements InstanceEvent {
 
     @Override
     public @NotNull Instance instance() {

@@ -17,7 +17,7 @@ import java.util.List;
 
 import static net.minestom.server.network.NetworkBuffer.BOOLEAN;
 
-public record AttributeList(@NotNull List<Modifier> modifiers, boolean showInTooltip) {
+public value record AttributeList(@NotNull List<Modifier> modifiers, boolean showInTooltip) {
     public static final AttributeList EMPTY = new AttributeList(List.of(), true);
 
     public static final NetworkBuffer.Type<AttributeList> NETWORK_TYPE = NetworkBufferTemplate.template(
@@ -53,7 +53,7 @@ public record AttributeList(@NotNull List<Modifier> modifiers, boolean showInToo
         }
     };
 
-    public record Modifier(@NotNull Attribute attribute, @NotNull AttributeModifier modifier,
+    public value record Modifier(@NotNull Attribute attribute, @NotNull AttributeModifier modifier,
                            @NotNull EquipmentSlotGroup slot) {
         public static final NetworkBuffer.Type<Modifier> NETWORK_TYPE = NetworkBufferTemplate.template(
                 Attribute.NETWORK_TYPE, Modifier::attribute,

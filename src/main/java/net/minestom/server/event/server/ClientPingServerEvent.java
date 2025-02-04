@@ -22,7 +22,7 @@ import java.time.Duration;
  *
  * @see ServerListPingEvent
  */
-public record ClientPingServerEvent(@NotNull PlayerConnection connection, long payload, @NotNull Duration delay, boolean cancelled) implements CancellableEvent<ClientPingServerEvent> {
+public value record ClientPingServerEvent(@NotNull PlayerConnection connection, long payload, @NotNull Duration delay, boolean cancelled) implements CancellableEvent<ClientPingServerEvent> {
     private static final Duration DEFAULT_DELAY = Duration.of(0, TimeUnit.MILLISECOND);
 
     /**

@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 import static net.minestom.server.network.NetworkBuffer.Enum;
 import static net.minestom.server.network.NetworkBuffer.VAR_INT;
 
-public record ClientEntityActionPacket(int playerId, @NotNull Action action,
+public value record ClientEntityActionPacket(int playerId, @NotNull Action action,
                                        int horseJumpBoost) implements ClientPacket {
     public static final NetworkBuffer.Type<ClientEntityActionPacket> SERIALIZER = NetworkBufferTemplate.template(
             VAR_INT, ClientEntityActionPacket::playerId,

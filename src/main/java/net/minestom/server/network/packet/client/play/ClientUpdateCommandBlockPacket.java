@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-public record ClientUpdateCommandBlockPacket(@NotNull Point blockPosition, @NotNull String command,
+public value record ClientUpdateCommandBlockPacket(@NotNull Point blockPosition, @NotNull String command,
                                              @NotNull Mode mode, byte flags) implements ClientPacket {
     public static final NetworkBuffer.Type<ClientUpdateCommandBlockPacket> SERIALIZER = NetworkBufferTemplate.template(
             BLOCK_POSITION, ClientUpdateCommandBlockPacket::blockPosition,

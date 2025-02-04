@@ -19,7 +19,7 @@ import static net.minestom.server.network.NetworkBuffer.*;
 /**
  * The packet creates or updates teams
  */
-public record TeamsPacket(String teamName, Action action) implements ServerPacket.Play, ServerPacket.ComponentHolding {
+public value record TeamsPacket(String teamName, Action action) implements ServerPacket.Play, ServerPacket.ComponentHolding {
     public static final int MAX_MEMBERS = 16384;
 
     public static final NetworkBuffer.Type<TeamsPacket> SERIALIZER = new NetworkBuffer.Type<>() {
@@ -70,7 +70,7 @@ public record TeamsPacket(String teamName, Action action) implements ServerPacke
         int id();
     }
 
-    public record CreateTeamAction(Component displayName, byte friendlyFlags,
+    public value record CreateTeamAction(Component displayName, byte friendlyFlags,
                                    NameTagVisibility nameTagVisibility, CollisionRule collisionRule,
                                    NamedTextColor teamColor, Component teamPrefix, Component teamSuffix,
                                    List<String> entities) implements Action, ComponentHolder<CreateTeamAction> {
@@ -125,7 +125,7 @@ public record TeamsPacket(String teamName, Action action) implements ServerPacke
         }
     }
 
-    public record RemoveTeamAction() implements Action {
+    public value record RemoveTeamAction() implements Action {
         public static final NetworkBuffer.Type<RemoveTeamAction> SERIALIZER = NetworkBufferTemplate.template(RemoveTeamAction::new);
 
         @Override
@@ -134,7 +134,7 @@ public record TeamsPacket(String teamName, Action action) implements ServerPacke
         }
     }
 
-    public record UpdateTeamAction(Component displayName, byte friendlyFlags,
+    public value record UpdateTeamAction(Component displayName, byte friendlyFlags,
                                    NameTagVisibility nameTagVisibility, CollisionRule collisionRule,
                                    NamedTextColor teamColor,
                                    Component teamPrefix,
@@ -185,7 +185,7 @@ public record TeamsPacket(String teamName, Action action) implements ServerPacke
         }
     }
 
-    public record AddEntitiesToTeamAction(@NotNull List<@NotNull String> entities) implements Action {
+    public value record AddEntitiesToTeamAction(@NotNull List<@NotNull String> entities) implements Action {
         public AddEntitiesToTeamAction {
             entities = List.copyOf(entities);
         }
@@ -205,7 +205,7 @@ public record TeamsPacket(String teamName, Action action) implements ServerPacke
         }
     }
 
-    public record RemoveEntitiesToTeamAction(@NotNull List<@NotNull String> entities) implements Action {
+    public value record RemoveEntitiesToTeamAction(@NotNull List<@NotNull String> entities) implements Action {
         public RemoveEntitiesToTeamAction {
             entities = List.copyOf(entities);
         }

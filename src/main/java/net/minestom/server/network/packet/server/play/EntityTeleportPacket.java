@@ -10,7 +10,7 @@ import org.jetbrains.annotations.NotNull;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-public record EntityTeleportPacket(
+public value record EntityTeleportPacket(
         int entityId, Pos position, Point delta,
         @MagicConstant(flagsFromClass = RelativeFlags.class) int flags,
         boolean onGround) implements ServerPacket.Play {

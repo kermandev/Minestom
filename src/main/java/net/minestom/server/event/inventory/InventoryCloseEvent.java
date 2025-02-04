@@ -13,7 +13,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Called when an {@link AbstractInventory} is closed by a player.
  */
-public record InventoryCloseEvent(@NotNull AbstractInventory inventory, @NotNull Player player, boolean fromClient, @Nullable Inventory newInventory) implements InventoryEvent, PlayerInstanceEvent, MutableEvent<InventoryCloseEvent> {
+public value record InventoryCloseEvent(@NotNull AbstractInventory inventory, @NotNull Player player, boolean fromClient, @Nullable Inventory newInventory) implements InventoryEvent, PlayerInstanceEvent, MutableEvent<InventoryCloseEvent> {
 
     public InventoryCloseEvent(@NotNull AbstractInventory inventory, @NotNull Player player, boolean fromClient) {
         this(inventory, player, fromClient, null);

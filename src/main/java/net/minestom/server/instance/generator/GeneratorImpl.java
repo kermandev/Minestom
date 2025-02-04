@@ -22,7 +22,7 @@ import static net.minestom.server.coordinate.CoordConversion.*;
 
 @ApiStatus.Internal
 public final class GeneratorImpl {
-    public record GenSection(Palette blocks, Palette biomes, Int2ObjectMap<Block> specials) {
+    public value record GenSection(Palette blocks, Palette biomes, Int2ObjectMap<Block> specials) {
         public GenSection(Palette blocks, Palette biomes) {
             this(blocks, biomes, new Int2ObjectOpenHashMap<>(0));
         }
@@ -168,7 +168,7 @@ public final class GeneratorImpl {
         }
     }
 
-    public record UnitImpl(DynamicRegistry<Biome> biomeRegistry, UnitModifier modifier, Point size,
+    public value record UnitImpl(DynamicRegistry<Biome> biomeRegistry, UnitModifier modifier, Point size,
                            Point absoluteStart, Point absoluteEnd,
                            List<GenerationUnit> divided,
                            List<UnitImpl> forks) implements GenerationUnit {
@@ -232,7 +232,7 @@ public final class GeneratorImpl {
         }
     }
 
-    public record SectionModifierImpl(DynamicRegistry<Biome> biomeRegistry, Point size, Point start, Point end,
+    public value record SectionModifierImpl(DynamicRegistry<Biome> biomeRegistry, Point size, Point start, Point end,
                                       GenSection genSection, boolean fork) implements GenericModifier {
 
         @Override
@@ -310,7 +310,7 @@ public final class GeneratorImpl {
         }
     }
 
-    public record AreaModifierImpl(Point size, Point start, Point end,
+    public value record AreaModifierImpl(Point size, Point start, Point end,
                                    int width, int height, int depth,
                                    List<GenerationUnit> sections) implements GenericModifier {
         @Override

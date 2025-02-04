@@ -54,7 +54,7 @@ public abstract class BlockPlacementRule {
         return DEFAULT_UPDATE_RANGE;
     }
 
-    public record PlacementState(
+    public value record PlacementState(
             @NotNull Block.Getter instance,
             @NotNull Block block,
             @Nullable BlockFace blockFace,
@@ -66,13 +66,13 @@ public abstract class BlockPlacementRule {
     ) {
     }
 
-    public record UpdateState(@NotNull Block.Getter instance,
+    public value record UpdateState(@NotNull Block.Getter instance,
                               @NotNull Point blockPosition,
                               @NotNull Block currentBlock,
                               @NotNull BlockFace fromFace) {
     }
 
-    public record Replacement(
+    public value record Replacement(
             @NotNull Block block,
             @NotNull BlockFace blockFace,
             @NotNull Point cursorPosition,

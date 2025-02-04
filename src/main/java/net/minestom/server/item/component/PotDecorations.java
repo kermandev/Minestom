@@ -7,7 +7,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
-public record PotDecorations(
+public value record PotDecorations(
         @NotNull Material back,
         @NotNull Material left,
         @NotNull Material right,

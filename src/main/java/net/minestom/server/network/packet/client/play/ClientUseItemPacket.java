@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-public record ClientUseItemPacket(@NotNull PlayerHand hand, int sequence, float yaw,
+public value record ClientUseItemPacket(@NotNull PlayerHand hand, int sequence, float yaw,
                                   float pitch) implements ClientPacket {
     public static final NetworkBuffer.Type<ClientUseItemPacket> SERIALIZER = NetworkBufferTemplate.template(
             Enum(PlayerHand.class), ClientUseItemPacket::hand,

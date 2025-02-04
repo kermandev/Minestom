@@ -8,7 +8,7 @@ import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-record DataComponentImpl<T>(
+value record DataComponentImpl<T>(
         int id,
         @NotNull NamespaceID namespace,
         @Nullable NetworkBuffer.Type<T> network,

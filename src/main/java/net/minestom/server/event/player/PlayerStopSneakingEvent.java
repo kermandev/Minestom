@@ -7,4 +7,4 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Called when a player stops sneaking.
  */
-public record PlayerStopSneakingEvent(@NotNull Player player) implements PlayerInstanceEvent {}
+public value record PlayerStopSneakingEvent(@NotNull Player player) implements PlayerInstanceEvent {}

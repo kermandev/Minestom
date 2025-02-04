@@ -10,7 +10,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.List;
 
-public record SuspiciousStewEffects(@NotNull List<Effect> effects) {
+public value record SuspiciousStewEffects(@NotNull List<Effect> effects) {
     public static final int DEFAULT_DURATION = 160;
     public static final SuspiciousStewEffects EMPTY = new SuspiciousStewEffects(List.of());
 
@@ -31,7 +31,7 @@ public record SuspiciousStewEffects(@NotNull List<Effect> effects) {
         return new SuspiciousStewEffects(newEffects);
     }
 
-    public record Effect(@NotNull PotionEffect id, int durationTicks) {
+    public value record Effect(@NotNull PotionEffect id, int durationTicks) {
 
         public static final NetworkBuffer.Type<Effect> NETWORK_TYPE = NetworkBufferTemplate.template(
                 PotionEffect.NETWORK_TYPE, Effect::id,

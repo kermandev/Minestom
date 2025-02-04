@@ -11,7 +11,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Called with {@link EntityProjectile#shoot(Point, double, double)}
  */
-public record EntityShootEvent(@NotNull Entity entity, @NotNull Entity projectile, @NotNull Point to, double power, double spread, boolean cancelled) implements EntityInstanceEvent, CancellableEvent<EntityShootEvent> {
+public value record EntityShootEvent(@NotNull Entity entity, @NotNull Entity projectile, @NotNull Point to, double power, double spread, boolean cancelled) implements EntityInstanceEvent, CancellableEvent<EntityShootEvent> {
 
     public EntityShootEvent(@NotNull Entity entity, @NotNull Entity projectile, @NotNull Point to, double power, double spread) {
         this(entity, projectile, to, power, spread, false);
