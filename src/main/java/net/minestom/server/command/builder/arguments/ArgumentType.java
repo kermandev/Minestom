@@ -11,6 +11,8 @@ import net.minestom.server.command.builder.arguments.relative.ArgumentRelativeBl
 import net.minestom.server.command.builder.arguments.relative.ArgumentRelativeVec2;
 import net.minestom.server.command.builder.arguments.relative.ArgumentRelativeVec3;
 import net.minestom.server.command.builder.parser.ArgumentParser;
+import net.minestom.server.entity.Entity;
+import net.minestom.server.entity.Player;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
@@ -182,8 +184,22 @@ public class ArgumentType {
     /**
      * @see ArgumentEntity
      */
-    public static ArgumentEntity Entity(@NotNull String id) {
-        return new ArgumentEntity(id);
+    public static ArgumentEntity<Entity> Entity(@NotNull String id) {
+        return new ArgumentEntity<>(Entity.class, id);
+    }
+
+    /**
+     * @see ArgumentEntity
+     */
+    public static ArgumentEntity<Player> Player(@NotNull String id) {
+        return new ArgumentEntity<>(Player.class, id);
+    }
+
+    /**
+     * @see ArgumentEntity
+     */
+    public static <T extends Entity> ArgumentEntity<T> Target(Class<T> entityClass, @NotNull String id) {
+        return new ArgumentEntity<>(entityClass, id);
     }
 
     /**
@@ -259,14 +275,5 @@ public class ArgumentType {
      */
     public static ArgumentLong Long(@NotNull String id) {
         return new ArgumentLong(id);
-    }
-
-    /**
-     * @see ArgumentEntity
-     * @deprecated use {@link #Entity(String)}
-     */
-    @Deprecated
-    public static ArgumentEntity Entities(@NotNull String id) {
-        return new ArgumentEntity(id);
     }
 }

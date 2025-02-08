@@ -1,14 +1,19 @@
 package net.minestom.server.command.builder.arguments.minecraft;
 
+import it.unimi.dsi.fastutil.objects.Object2BooleanMap;
 import it.unimi.dsi.fastutil.objects.Object2BooleanOpenHashMap;
 import net.minestom.server.command.ArgumentParserType;
 import net.minestom.server.command.CommandSender;
 import net.minestom.server.command.builder.arguments.Argument;
 import net.minestom.server.command.builder.exception.ArgumentSyntaxException;
+import net.minestom.server.coordinate.Point;
 import net.minestom.server.entity.*;
 import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.utils.Range;
 import net.minestom.server.utils.StringUtils;
+import net.minestom.server.utils.validate.Check;
+import org.jetbrains.annotations.ApiStatus;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -19,9 +24,12 @@ import java.util.regex.Pattern;
 
 /**
  * Represents the target selector argument.
- * https://minecraft.wiki/w/Target_selectors
+ * <a href="https://minecraft.wiki/w/Target_selectors">Target Selectors</a>
+ * <p>
+ * This argument is most commonly used with the entity tracker
+ * using the {@link CommandSender#selectEntityStream(EntitySelector)} or any combination required.
  */
-public class ArgumentEntity extends Argument<EntitySelector<Entity>> {
+public class ArgumentEntity<T extends Entity> extends Argument<EntitySelector<T>> {
 
     public static final int INVALID_SYNTAX = -2;
     public static final int ONLY_SINGLE_ENTITY_ERROR = -3;
@@ -48,55 +56,51 @@ public class ArgumentEntity extends Argument<EntitySelector<Entity>> {
             "scores", "tag", "team", "limit", "sort", "level", "gamemode",
             "x_rotation", "y_rotation", "type", "advancements", "predicate");
 
-    private boolean onlySingleEntity;
-    private boolean onlyPlayers;
 
-    public ArgumentEntity(String id) {
+    private final boolean onlySingleEntity;
+    private final boolean onlyPlayers;
+
+    /**
+     * See {@link net.minestom.server.command.builder.arguments.ArgumentType#Entity(String)}
+     *  {@link net.minestom.server.command.builder.arguments.ArgumentType#Player(String)}
+     *  {@link net.minestom.server.command.builder.arguments.ArgumentType#Target(Class, String)}
+     *  for usage.
+     *  <p>
+     *  This is considered the raw usage.
+     * @param entityClass The class of the most generic entity type you desire.
+     * @param id The id of the argument.
+     */
+    public ArgumentEntity(Class<T> entityClass, String id) {
         super(id, true);
+        
+        this.onlySingleEntity = false;
+        this.onlyPlayers = Player.class.isAssignableFrom(entityClass);
     }
 
-    public ArgumentEntity singleEntity(boolean singleEntity) {
-        this.onlySingleEntity = singleEntity;
-        return this;
-    }
+    // We might eventually enforce a class to be passed. Either way, this signature could change in the future.
+    @ApiStatus.Experimental
+    public ArgumentEntity(String id, boolean onlySingleEntity, boolean onlyPlayers) {
+        super(id, true);
 
-    public ArgumentEntity onlyPlayers(boolean onlyPlayers) {
+        this.onlySingleEntity = onlySingleEntity;
         this.onlyPlayers = onlyPlayers;
-        return this;
-    }
-
-    @NotNull
-    @Override
-    public EntitySelector<Entity> parse(@NotNull CommandSender sender, @NotNull String input) throws ArgumentSyntaxException {
-        return staticParse(sender, input, onlySingleEntity, onlyPlayers);
-    }
-
-    @Override
-    public ArgumentParserType parser() {
-        return ArgumentParserType.ENTITY;
-    }
-
-    @Override
-    public byte @Nullable [] nodeProperties() {
-        return NetworkBuffer.makeArray(buffer -> {
-            byte mask = 0;
-            if (this.isOnlySingleEntity()) {
-                mask |= 0x01;
-            }
-            if (this.isOnlyPlayers()) {
-                mask |= 0x02;
-            }
-            buffer.write(NetworkBuffer.BYTE, mask);
-        });
     }
 
     /**
-     * @deprecated use {@link Argument#parse(CommandSender, Argument)}
+     * Sets the argument to only select a single entity.
+     * <p>
+     * Used best with {@link CommandSender#selectEntityFirst(EntitySelector)}
+     *
+     * @return new argument instance.
      */
-    @Deprecated
+    @Contract(pure = true)
+    public ArgumentEntity<T> single() {
+        return new ArgumentEntity<>(this.getId(), true, onlyPlayers);
+    }
+
     @NotNull
-    public static EntitySelector<Entity> staticParse(@NotNull CommandSender sender, @NotNull String input,
-                                                     boolean onlySingleEntity, boolean onlyPlayers) throws ArgumentSyntaxException {
+    @Override
+    public EntitySelector<T> parse(@NotNull CommandSender sender, @NotNull String input) throws ArgumentSyntaxException {
         // Check for raw player name or UUID
         if (!input.contains(SELECTOR_PREFIX) && !input.contains(StringUtils.SPACE)) {
 
@@ -108,9 +112,8 @@ public class ArgumentEntity extends Argument<EntitySelector<Entity>> {
             }
 
             // Check if the input is a valid player name
-            if (USERNAME_PATTERN.matcher(input).matches()) {
-                EntitySelector<? extends Entity> selector = EntitySelector.<Player>selector(builder -> builder.predicateEquals(EntitySelectors.NAME, input));
-                return (EntitySelector<Entity>) selector;
+            if (USERNAME_PATTERN.matcher(input).matches() && onlyPlayers) {
+                return EntitySelector.selector(builder -> builder.predicateEquals(EntitySelectors.NAME, input));
             }
         }
 
@@ -135,7 +138,6 @@ public class ArgumentEntity extends Argument<EntitySelector<Entity>> {
         // Check if it should only select players and if the selector variable valid the condition
         if (onlyPlayers && !PLAYERS_ONLY_SELECTOR.contains(selectorVariable))
             throw new ArgumentSyntaxException("Argument requires only players", input, ONLY_PLAYERS_ERROR);
-
         return EntitySelector.selector(builder -> {
             appendTargetSelector(sender, builder, selectorVariable);
             // The selector is a single selector variable which verify all the conditions
@@ -147,9 +149,28 @@ public class ArgumentEntity extends Argument<EntitySelector<Entity>> {
         });
     }
 
-    private static void parseStructure(@NotNull CommandSender sender,
+    @Override
+    public ArgumentParserType parser() {
+        return ArgumentParserType.ENTITY;
+    }
+
+    @Override
+    public byte @Nullable [] nodeProperties() {
+        return NetworkBuffer.makeArray(buffer -> {
+            byte mask = 0;
+            if (this.isOnlySingleEntity()) {
+                mask |= 0x01;
+            }
+            if (this.isOnlyPlayers()) {
+                mask |= 0x02;
+            }
+            buffer.write(NetworkBuffer.BYTE, mask);
+        });
+    }
+
+    private void parseStructure(@NotNull CommandSender sender,
                                        @NotNull String input,
-                                       @NotNull EntitySelector.Builder<Entity> builder,
+                                       @NotNull EntitySelector.Builder<T> builder,
                                        @NotNull String structure) throws ArgumentSyntaxException {
         // The structure isn't opened or closed properly
         if (!structure.startsWith("[") || !structure.endsWith("]"))
@@ -178,8 +199,8 @@ public class ArgumentEntity extends Argument<EntitySelector<Entity>> {
         }
     }
 
-    private static int parseArgument(@NotNull CommandSender sender,
-                                     @NotNull EntitySelector.Builder<Entity> builder,
+    private int parseArgument(@NotNull CommandSender sender,
+                                     @NotNull EntitySelector.Builder<T> builder,
                                      @NotNull String argumentName,
                                      @NotNull String input,
                                      @NotNull String structureData, int beginIndex) throws ArgumentSyntaxException {
@@ -244,9 +265,10 @@ public class ArgumentEntity extends Argument<EntitySelector<Entity>> {
                 }
                 break;
             case "level":
+                if (!isOnlyPlayers()) break;
                 try {
                     final Range.Int level = Argument.parse(sender, new ArgumentIntRange(value));
-                    builder.predicate(EntitySelectors.LEVEL, (point, integer) -> level.inRange(integer));
+                    asPlayerBuilder(builder).predicate(EntitySelectors.LEVEL, (point, integer) -> level.inRange(integer));
                 } catch (ArgumentSyntaxException e) {
                     throw new ArgumentSyntaxException("Invalid level number", input, INVALID_ARGUMENT_VALUE);
                 }
@@ -256,12 +278,34 @@ public class ArgumentEntity extends Argument<EntitySelector<Entity>> {
                     final Range.Int distance = Argument.parse(sender, new ArgumentIntRange(value));
                     builder.predicate(EntitySelectors.POS, (point, pos) -> {
                         final double d = point.distance(pos);
+                        System.out.println(point);
                         return distance.inRange((int) d);
                     });
                 } catch (ArgumentSyntaxException e) {
-                    throw new ArgumentSyntaxException("Invalid level number", input, INVALID_ARGUMENT_VALUE);
+                    throw new ArgumentSyntaxException("Invalid distance number", input, INVALID_ARGUMENT_VALUE);
                 }
                 break;
+        }
+
+        if (isOnlyPlayers() && !gamemode.isEmpty()) {
+            asPlayerBuilder(builder).predicate(EntitySelectors.GAME_MODE, (point, currentGameMode) -> {
+                var isSet = gamemode.containsKey(currentGameMode);
+                var includes = gamemode.getBoolean(currentGameMode);
+                return !isSet || includes;
+            });
+        }
+
+        if (!type.isEmpty()) {
+            final boolean hasInversion = type.containsValue(false);
+            builder.predicate(EntitySelectors.TYPE, (point, entityType) -> {
+                // Case 1: Inverted & Not set -> true
+                if (hasInversion && !type.containsKey(entityType)) {
+                    return true;
+                }
+
+                // Case 2: See the value.
+                return type.getBoolean(entityType);
+            });
         }
 
         return finalIndex;
@@ -282,15 +326,16 @@ public class ArgumentEntity extends Argument<EntitySelector<Entity>> {
                 return String.format("Player<%s>", getId());
             }
             return String.format("Entity<%s>", getId());
+        } else {
+            if (onlyPlayers) {
+                return String.format("Players<%s>", getId());
+            }
+            return String.format("Entities<%s>", getId());
         }
-        if (onlyPlayers) {
-            return String.format("Players<%s>", getId());
-        }
-        return String.format("Entities<%s>", getId());
     }
 
-    private static void appendTargetSelector(@NotNull CommandSender sender,
-                                             EntitySelector.Builder<? extends Entity> builder,
+    private void appendTargetSelector(@NotNull CommandSender sender,
+                                             EntitySelector.Builder<T> builder,
                                              @NotNull String selectorVariable) {
         switch (selectorVariable) {
             case "@p" -> builder.target(EntitySelector.Target.NEAREST_PLAYER);
@@ -301,5 +346,11 @@ public class ArgumentEntity extends Argument<EntitySelector<Entity>> {
             case "@s" -> builder.predicateEquals(EntitySelectors.NAME, sender.identity().examinableName());
             default -> throw new IllegalStateException("Weird selector variable: " + selectorVariable);
         }
+    }
+
+    private EntitySelector.Builder<Player> asPlayerBuilder(EntitySelector.Builder<T> builder) {
+        Check.argCondition(onlyPlayers, "This argument is not player-only");
+        // noinspection unchecked
+        return (EntitySelector.Builder<Player>) builder;
     }
 }

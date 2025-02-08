@@ -22,8 +22,8 @@ public final class EntitySelectors {
     public static final Property<Entity, Pos> POS = property("coord", Entity::getPosition);
     public static final Property<Entity, EntityType> TYPE = property("entity_type", Entity::getEntityType);
     public static final Property<Player, GameMode> GAME_MODE = property("game_mode", Player::getGameMode);
-    public static final Property<Entity, Integer> LEVEL = property("experience", entity -> entity instanceof Player player ? player.getLevel() : 0);
-    public static final Property<Entity, Float> EXPERIENCE = property("experience", entity -> entity instanceof Player player ? player.getExp() : 0f);
+    public static final Property<Player, Integer> LEVEL = property("level", Player::getLevel);
+    public static final Property<Player, Float> EXPERIENCE = property("experience", Player::getExp);
 
     public static @NotNull EntitySelector<Entity> all() {
         return ALL;

@@ -1800,4 +1800,19 @@ public class Entity implements Viewable, Tickable, Schedulable, Snapshotable, Ev
         }
         return instance.getEntityTracker().selectEntity(selector, origin);
     }
+
+    @Override
+    public <R extends Entity> @NotNull Stream<@NotNull R> selectEntityStream(@NotNull EntitySelector<R> query) {
+        return selectEntityStream(query, getPosition());
+    }
+
+    @Override
+    public <R extends Entity> void selectEntityConsume(@NotNull EntitySelector<R> query, Consumer<R> consumer) {
+        selectEntityConsume(query, getPosition(), consumer);
+    }
+
+    @Override
+    public <R extends Entity> @Nullable R selectEntityFirst(@NotNull EntitySelector<R> query) {
+        return selectEntityFirst(query, getPosition());
+    }
 }

@@ -48,10 +48,10 @@ public class ArgumentParser {
         ARGUMENT_FUNCTION_MAP.put("intrange", ArgumentIntRange::new);
         ARGUMENT_FUNCTION_MAP.put("floatrange", ArgumentFloatRange::new);
 
-        ARGUMENT_FUNCTION_MAP.put("entity", s -> new ArgumentEntity(s).singleEntity(true));
-        ARGUMENT_FUNCTION_MAP.put("entities", ArgumentEntity::new);
-        ARGUMENT_FUNCTION_MAP.put("player", s -> new ArgumentEntity(s).singleEntity(true).onlyPlayers(true));
-        ARGUMENT_FUNCTION_MAP.put("players", s -> new ArgumentEntity(s).onlyPlayers(true));
+        ARGUMENT_FUNCTION_MAP.put("entity", s -> ArgumentType.Entity(s).single());
+        ARGUMENT_FUNCTION_MAP.put("entities", ArgumentType::Entity);
+        ARGUMENT_FUNCTION_MAP.put("player", s -> ArgumentType.Player(s).single());
+        ARGUMENT_FUNCTION_MAP.put("players", ArgumentType::Player);
 
         ARGUMENT_FUNCTION_MAP.put("itemstack", ArgumentItemStack::new);
         ARGUMENT_FUNCTION_MAP.put("component", ArgumentComponent::new);

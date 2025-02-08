@@ -42,9 +42,9 @@ public class ArgumentParserTest {
         assertParserEquals("RelativeVec2<example>", ArgumentType.RelativeVec2("example"));
         assertParserEquals("RelativeVec3<example>", ArgumentType.RelativeVec3("example"));
         assertParserEquals("Entities<example>", ArgumentType.Entity("example"));
-        assertParserEquals("Entity<example>", ArgumentType.Entity("example").singleEntity(true));
-        assertParserEquals("Players<example>", ArgumentType.Entity("example").onlyPlayers(true));
-        assertParserEquals("Player<example>", ArgumentType.Entity("example").onlyPlayers(true).singleEntity(true));
+        assertParserEquals("Entity<example>", ArgumentType.Entity("example").single());
+        assertParserEquals("Players<example>", ArgumentType.Player("example"));
+        assertParserEquals("Player<example>", ArgumentType.Player("example").single());
 
         // Test multiple argument functionality
         assertParserEquals("NBT<arg1> RelativeVec2<arg2>", ArgumentType.NBT("arg1"), ArgumentType.RelativeVec2("arg2"));
