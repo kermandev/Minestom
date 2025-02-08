@@ -152,12 +152,13 @@ final class EntityTrackerImpl implements EntityTracker {
                 }
             }
         };
-        stream = stream.filter(trackedEntity -> {
-            // TODO Gathers API goes here
-            final var unwrappedEntity = trackedEntity.<R>unwrapSafely();
-            if (unwrappedEntity == null) return false;
-            return selector.test(origin, unwrappedEntity);
-        });
+
+        {
+            // noinspection unchecked
+            stream = stream.filter(
+                    trackedEntity -> selector.test(origin, (R) trackedEntity.entity())
+            );
+        }
 
         switch (selector.sort()) {
             case ARBITRARY -> {
@@ -184,7 +185,9 @@ final class EntityTrackerImpl implements EntityTracker {
             stream = stream.limit(selector.limit());
         }
 
-        return stream.map(TrackedEntity::unwrap);
+        // We will pass the error back up the chain if it's wrong.
+        // noinspection unchecked
+        return (Stream<R>) stream.map(TrackedEntity::entity);
     }
 
     private TrackedEntity findNearest(Point origin, boolean player) {
@@ -209,24 +212,5 @@ final class EntityTrackerImpl implements EntityTracker {
                 });
     }
 
-    private record TrackedEntity(Entity entity, AtomicReference<Point> lastPosition) {
-        public <R extends Entity> @Nullable R unwrapSafely() {
-            try {
-                return (R) entity;
-            } catch (ClassCastException ignored) {
-            }
-            return null;
-        }
-
-        public <R extends Entity> @NotNull R unwrap() {
-            try {
-                return (R) entity;
-            } catch (ClassCastException error) {
-                MinecraftServer.getExceptionManager().handleException(error);
-                Check.fail(MessageFormat.format("Invalid unwrap during entity query for {}, are your conditions correct?", entity.getUuid()));
-            }
-            // We can never reach here.
-            return null;
-        }
-    }
+    private record TrackedEntity(Entity entity, AtomicReference<Point> lastPosition) {}
 }
