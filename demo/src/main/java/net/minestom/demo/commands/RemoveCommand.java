@@ -17,7 +17,7 @@ public class RemoveCommand extends Command {
     }
 
     static class RemoveEntities extends Command {
-        private final ArgumentEntity entity;
+        private final ArgumentEntity<Entity> entity;
 
         public RemoveEntities() {
             super("entities");

@@ -17,7 +17,7 @@ public class EntitySelectorCommand extends Command {
 
         setDefaultExecutor((sender, context) -> System.out.println("DEFAULT"));
 
-        ArgumentEntity argumentEntity = ArgumentType.Entity("entities").onlyPlayers(true);
+        var argumentEntity = ArgumentType.Entity("entities");
 
         setArgumentCallback((sender, exception) -> exception.printStackTrace(), argumentEntity);
 
@@ -28,6 +28,6 @@ public class EntitySelectorCommand extends Command {
     private void executor(CommandSender commandSender, CommandContext context) {
         EntitySelector<Entity> selector = context.get("entities");
         List<Entity> entities = commandSender.selectEntity(selector).toList();
-        System.out.println("found " + entities.size() + " entities");
+        commandSender.sendMessage("found " + entities.size() + " entities");
     }
 }

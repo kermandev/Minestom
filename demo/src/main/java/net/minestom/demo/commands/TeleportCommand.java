@@ -6,7 +6,10 @@ import net.minestom.server.command.CommandSender;
 import net.minestom.server.command.builder.Command;
 import net.minestom.server.command.builder.CommandContext;
 import net.minestom.server.command.builder.arguments.ArgumentType;
+import net.minestom.server.command.builder.condition.Conditions;
 import net.minestom.server.coordinate.Pos;
+import net.minestom.server.entity.EntitySelector;
+import net.minestom.server.entity.GameMode;
 import net.minestom.server.entity.Player;
 import net.minestom.server.utils.location.RelativeVec;
 
@@ -15,22 +18,24 @@ public class TeleportCommand extends Command {
     public TeleportCommand() {
         super("tp");
 
+        setCondition(Conditions::playerOnly);
         setDefaultExecutor((source, context) -> source.sendMessage(Component.text("Usage: /tp x y z")));
 
         var posArg = ArgumentType.RelativeVec3("pos");
-        var playerArg = ArgumentType.Word("player");
+        var playerArg = ArgumentType.Player("player");
 
         addSyntax(this::onPlayerTeleport, playerArg);
         addSyntax(this::onPositionTeleport, posArg);
     }
 
     private void onPlayerTeleport(CommandSender sender, CommandContext context) {
-        final String playerName = context.get("player");
-        Player pl = MinecraftServer.getConnectionManager().getOnlinePlayerByUsername(playerName);
-        if (sender instanceof Player player) {
-            player.teleport(pl.getPosition());
-        }
-        sender.sendMessage(Component.text("Teleported to player " + playerName));
+        final Player player = (Player) sender;
+        final EntitySelector<Player> selector = context.get("player");
+
+        final Player target = sender.selectEntityFirst(selector);
+        if (target == null) return;
+        player.teleport(target.getPosition());
+        sender.sendMessage(Component.text("Teleported to player ").append(target.getName()));
     }
 
     private void onPositionTeleport(CommandSender sender, CommandContext context) {

@@ -2,7 +2,7 @@ package net.minestom.demo.commands;
 
 import net.kyori.adventure.text.Component;
 import net.minestom.server.command.builder.Command;
-import net.minestom.server.entity.Entity;
+import net.minestom.server.entity.EntityCreature;
 import net.minestom.server.entity.EntitySelector;
 import net.minestom.server.entity.Player;
 import net.minestom.server.inventory.PlayerInventory;
@@ -21,8 +21,9 @@ public class GiveCommand extends Command {
         setDefaultExecutor((sender, context) ->
                 sender.sendMessage(Component.text("Usage: /give <target> <item> [<count>]")));
 
+        final var player = Player("target");
         addSyntax((sender, context) -> {
-            final EntitySelector<Entity> selector = context.get("target");
+            final EntitySelector<Player> selector = context.get(player);
             int count = context.get("count");
             count = Math.min(count, PlayerInventory.INVENTORY_SIZE * 64);
             ItemStack itemStack = context.get("item");
@@ -40,16 +41,12 @@ public class GiveCommand extends Command {
                 itemStacks.add(itemStack.withAmount(count));
             }
 
-            final List<Entity> targets = sender.selectEntity(selector).toList();
-            for (Entity target : targets) {
-                if (target instanceof Player player) {
-                    player.getInventory().addItemStacks(itemStacks, TransactionOption.ALL);
-                }
-            }
+            sender.selectEntity(selector, target ->
+                    target.getInventory().addItemStacks(itemStacks, TransactionOption.ALL)
+            );
 
             sender.sendMessage(Component.text("Items have been given successfully!"));
 
-        }, Entity("target").onlyPlayers(true), ItemStack("item"), Integer("count").setDefaultValue(() -> 1));
-
+        }, player, ItemStack("item"), Integer("count").setDefaultValue(() -> 1));
     }
 }

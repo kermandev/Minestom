@@ -36,7 +36,7 @@ public class GamemodeCommand extends Command {
                             .append(Component.text("!")), MessageType.SYSTEM);
         });
 
-        ArgumentEntity player = ArgumentType.Entity("targets").onlyPlayers(true);
+        var player = ArgumentType.Player("targets");
 
         //Upon invalid usage, print the correct usage of the command to the sender
         setDefaultExecutor((sender, context) -> {
@@ -73,7 +73,7 @@ public class GamemodeCommand extends Command {
                 return;
             }
 
-            EntitySelector<Entity> selector = context.get(player);
+            EntitySelector<Player> selector = context.get(player);
             GameMode mode = context.get(gamemode);
 
             //Set the gamemode for the targets
@@ -85,7 +85,7 @@ public class GamemodeCommand extends Command {
      * Sets the gamemode for the specified entities, and
      * notifies them (and the sender) in the chat.
      */
-    private void executeOthers(CommandSender sender, GameMode mode, List<Entity> entities) {
+    private void executeOthers(CommandSender sender, GameMode mode, List<Player> entities) {
         if (entities.size() == 0) {
             //If there are no players that could be modified, display an error message
             if (sender instanceof Player)

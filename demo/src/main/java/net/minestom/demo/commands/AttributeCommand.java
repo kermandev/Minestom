@@ -24,7 +24,7 @@ public class AttributeCommand extends Command {
     public AttributeCommand() {
         super("attribute");
 
-        ArgumentEntity target = ArgumentType.Entity("target").singleEntity(true);
+        ArgumentEntity<Entity> target = ArgumentType.Entity("target").single();
         ArgumentResource attribute = ArgumentType.Resource("attribute", "minecraft:attribute");
         ArgumentLiteral base = ArgumentType.Literal("base");
         ArgumentLiteral get = ArgumentType.Literal("get");
