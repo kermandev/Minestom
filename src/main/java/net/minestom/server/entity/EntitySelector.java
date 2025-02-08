@@ -59,6 +59,8 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
             predicate(property, (point, t) -> Objects.equals(t, value));
         }
 
+        void type(@NotNull Class<E> type);
+
         void type(@NotNull EntityType @NotNull ... types);
 
         void range(double radius);

@@ -46,6 +46,11 @@ record EntitySelectorImpl<E>(EntitySelector.Target target,
         }
 
         @Override
+        public void type(@NotNull Class<E> type) {
+            predicate(Property.class.cast(EntitySelectors.CLASS), (point, classType) -> type.isAssignableFrom((Class<?>) classType));
+        }
+
+        @Override
         public void type(@NotNull EntityType @NotNull ... types) {
             predicate(Property.class.cast(EntitySelectors.TYPE), (point, type) -> new HashSet<>(List.of(types)).contains(type));
         }

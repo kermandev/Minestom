@@ -16,6 +16,7 @@ public final class EntitySelectors {
     private static final EntitySelector<Player> PLAYERS = selector(s -> s.target(ALL_PLAYERS));
 
     // Properties
+    public static final Property<Entity, Class<? extends Entity>> CLASS = property("class", Entity::getClass);
     public static final Property<Entity, Integer> ID = property("id", Entity::getEntityId);
     public static final Property<Entity, UUID> UUID = property("uuid", Entity::getUuid);
     public static final Property<Entity, String> NAME = property("name", entity -> entity instanceof Player player ? player.getUsername() : null);
