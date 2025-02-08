@@ -41,7 +41,7 @@ public class GiveCommand extends Command {
                 itemStacks.add(itemStack.withAmount(count));
             }
 
-            sender.selectEntity(selector, target ->
+            sender.selectEntityConsume(selector, target ->
                     target.getInventory().addItemStacks(itemStacks, TransactionOption.ALL)
             );
 

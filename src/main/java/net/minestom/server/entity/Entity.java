@@ -1802,8 +1802,8 @@ public class Entity implements Viewable, Tickable, Schedulable, Snapshotable, Ev
     }
 
     @Override
-    public <R extends Entity> @NotNull Stream<@NotNull R> selectEntityStream(@NotNull EntitySelector<R> query) {
-        return selectEntityStream(query, getPosition());
+    public <R extends Entity> @NotNull Stream<@NotNull R> selectEntity(@NotNull EntitySelector<R> query) {
+        return selectEntity(query, getPosition());
     }
 
     @Override
