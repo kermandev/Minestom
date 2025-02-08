@@ -1,6 +1,5 @@
 package net.minestom.server.command.builder.arguments.minecraft;
 
-import it.unimi.dsi.fastutil.objects.Object2BooleanMap;
 import it.unimi.dsi.fastutil.objects.Object2BooleanOpenHashMap;
 import net.minestom.server.command.ArgumentParserType;
 import net.minestom.server.command.CommandSender;
@@ -27,7 +26,7 @@ import java.util.regex.Pattern;
  * <a href="https://minecraft.wiki/w/Target_selectors">Target Selectors</a>
  * <p>
  * This argument is most commonly used with the entity tracker
- * using the {@link CommandSender#selectEntityStream(EntitySelector)} or any combination required.
+ * using the {@link CommandSender#selectEntity(EntitySelector, Point)} or any combination required.
  */
 public class ArgumentEntity<T extends Entity> extends Argument<EntitySelector<T>> {
 
@@ -57,31 +56,34 @@ public class ArgumentEntity<T extends Entity> extends Argument<EntitySelector<T>
             "x_rotation", "y_rotation", "type", "advancements", "predicate");
 
 
+    private final Class<T> entityClass;
     private final boolean onlySingleEntity;
     private final boolean onlyPlayers;
 
     /**
      * See {@link net.minestom.server.command.builder.arguments.ArgumentType#Entity(String)}
      *  {@link net.minestom.server.command.builder.arguments.ArgumentType#Player(String)}
-     *  {@link net.minestom.server.command.builder.arguments.ArgumentType#Target(Class, String)}
+     *  {@link net.minestom.server.command.builder.arguments.ArgumentType#Entity(String, Class)}
      *  for usage.
      *  <p>
      *  This is considered the raw usage.
-     * @param entityClass The class of the most generic entity type you desire.
      * @param id The id of the argument.
+     * @param entityClass The class of the most generic entity types you desire.
      */
-    public ArgumentEntity(Class<T> entityClass, String id) {
+    public ArgumentEntity(@NotNull String id, Class<T> entityClass) {
         super(id, true);
-        
+
+        this.entityClass = entityClass;
         this.onlySingleEntity = false;
         this.onlyPlayers = Player.class.isAssignableFrom(entityClass);
     }
 
     // We might eventually enforce a class to be passed. Either way, this signature could change in the future.
     @ApiStatus.Experimental
-    public ArgumentEntity(String id, boolean onlySingleEntity, boolean onlyPlayers) {
+    public ArgumentEntity(@NotNull String id, Class<T> entityClass, boolean onlySingleEntity, boolean onlyPlayers) {
         super(id, true);
 
+        this.entityClass = entityClass;
         this.onlySingleEntity = onlySingleEntity;
         this.onlyPlayers = onlyPlayers;
     }
@@ -95,7 +97,7 @@ public class ArgumentEntity<T extends Entity> extends Argument<EntitySelector<T>
      */
     @Contract(pure = true)
     public ArgumentEntity<T> single() {
-        return new ArgumentEntity<>(this.getId(), true, onlyPlayers);
+        return new ArgumentEntity<>(this.getId(), entityClass, true, onlyPlayers);
     }
 
     @NotNull
@@ -345,6 +347,11 @@ public class ArgumentEntity<T extends Entity> extends Argument<EntitySelector<T>
             case "@e" -> builder.target(EntitySelector.Target.ALL_ENTITIES);
             case "@s" -> builder.predicateEquals(EntitySelectors.NAME, sender.identity().examinableName());
             default -> throw new IllegalStateException("Weird selector variable: " + selectorVariable);
+        }
+
+        // Append our type.
+        if (entityClass != Entity.class && entityClass != Player.class) {
+            builder.type(entityClass);
         }
     }
 

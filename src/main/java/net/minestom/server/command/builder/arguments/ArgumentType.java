@@ -185,21 +185,21 @@ public class ArgumentType {
      * @see ArgumentEntity
      */
     public static ArgumentEntity<Entity> Entity(@NotNull String id) {
-        return new ArgumentEntity<>(Entity.class, id);
+        return new ArgumentEntity<>(id, Entity.class);
+    }
+
+    /**
+     * @see ArgumentEntity
+     */
+    public static <T extends Entity> ArgumentEntity<T> Entity(@NotNull String id, @NotNull Class<T> entityClass) {
+        return new ArgumentEntity<>(id, entityClass);
     }
 
     /**
      * @see ArgumentEntity
      */
     public static ArgumentEntity<Player> Player(@NotNull String id) {
-        return new ArgumentEntity<>(Player.class, id);
-    }
-
-    /**
-     * @see ArgumentEntity
-     */
-    public static <T extends Entity> ArgumentEntity<T> Target(Class<T> entityClass, @NotNull String id) {
-        return new ArgumentEntity<>(entityClass, id);
+        return new ArgumentEntity<>(id, Player.class);
     }
 
     /**
