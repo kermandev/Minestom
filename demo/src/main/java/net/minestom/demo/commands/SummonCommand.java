@@ -16,6 +16,8 @@ import net.minestom.server.entity.*;
 import net.minestom.server.utils.location.RelativeVec;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Random;
+
 public class SummonCommand extends Command {
 
     private final ArgumentEntityType entity;
@@ -50,10 +52,11 @@ public class SummonCommand extends Command {
         final Vec pos = commandContext.get(this.pos).fromSender(commandSender);
         final int amount = commandContext.get(this.amount);
 
+        final Random random = new Random();
         for (int i = 0; i < amount; i++) {
             final Entity entity = entityClass.instantiate(entityType);
             //noinspection ConstantConditions - One couldn't possibly execute a command without being in an instance
-            entity.setInstance(((Player) commandSender).getInstance(), pos);
+            entity.setInstance(((Player) commandSender).getInstance(), pos.add(random.nextGaussian() * 64, 0, random.nextGaussian() * 64));
         }
     }
 

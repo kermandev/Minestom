@@ -3,10 +3,8 @@ package net.minestom.server.instance;
 import it.unimi.dsi.fastutil.ints.*;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
-import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
-import it.unimi.dsi.fastutil.objects.ObjectArraySet;
-import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
+import it.unimi.dsi.fastutil.longs.LongArrayList;
+import it.unimi.dsi.fastutil.objects.*;
 import net.minestom.server.ServerFlag;
 import net.minestom.server.coordinate.ChunkRange;
 import net.minestom.server.coordinate.CoordConversion;
@@ -28,6 +26,9 @@ final class EntityTrackerImpl implements EntityTracker {
 
     private static final EntitySelector<Entity> SELECTOR = EntitySelector.selector(EntitySelector.Target.entity(), builder -> builder.gather(EntitySelector.Gather.chunkRange(ServerFlag.ENTITY_VIEW_DISTANCE)));
 
+    // Class Cache TODO, probably not necessary.
+    private final Object2ObjectMap<Class<? extends Entity>, ObjectArrayList<Class<? extends Entity>>> inheritanceMapCache = new Object2ObjectLinkedOpenHashMap<>();
+
     // Indexes
     private final Object2ObjectLinkedOpenHashMap<Class<? extends Entity>, Int2ObjectMap<TrackedEntity>> classToIndex = new Object2ObjectLinkedOpenHashMap<>();
 
@@ -35,7 +36,7 @@ final class EntityTrackerImpl implements EntityTracker {
     private final Map<UUID, TrackedEntity> uuidIndex = new HashMap<>();
     //private final Int2ObjectMap<TrackedEntity> playerIdIndex = new Int2ObjectOpenHashMap<>();
 
-    // Spatial partitioning
+        // Spatial partitioning
     private final Long2ObjectMap<Set<Entity>> chunksEntities = new Long2ObjectOpenHashMap<>();
 
     @Override
@@ -152,29 +153,24 @@ final class EntityTrackerImpl implements EntityTracker {
                 yield entities != null ? entities.stream().map(entity -> correctIndex.get(entity.getEntityId())) : Stream.empty();
             }
             case EntitySelector.Gather.ChunkRange(int radius) -> {
-                final Set<Entity> entities = new ObjectArraySet<>();
+                final LongArrayList chunkIndexes = new LongArrayList();
                 ChunkRange.chunksInRange(origin.chunkX(), origin.chunkZ(), radius, (chunkX, chunkZ) -> {
                     final long index = CoordConversion.chunkIndex(chunkX, chunkZ);
-                    final Set<Entity> chunkEntities = chunksEntities.get(index);
-                    if (chunkEntities != null) {
-                        entities.addAll(chunkEntities);
+                    if (chunksEntities.containsKey(index)) {
+                        chunkIndexes.add(index);
                     }
                 });
-                yield entities.stream()
+
+                // TODO maybe put parrell streams behind a server flag? wont do anything in 99% of cases.
+                yield chunkIndexes.longParallelStream()
+                        .mapToObj(chunksEntities::get)
+                        .flatMap(Collection::stream)
                         .filter(entity -> selector.target().type().isAssignableFrom(entity.getClass()))
                         .map(entity -> correctIndex.get(entity.getEntityId()));
             }
             // Maybe `None` condition?
             case null -> correctIndex.values().stream();
         };
-
-        stream = stream.filter(trackedEntity -> {
-            if (trackedEntity == null) {
-                System.out.println("how");
-                throw new RuntimeException("how");
-            }
-            return true;
-        });
 
         {
             // noinspection unchecked
@@ -215,34 +211,50 @@ final class EntityTrackerImpl implements EntityTracker {
         return stream.map(TrackedEntity::entity).map(it-> (R) it);
     }
 
-    // TODO clean these functions up
     private void addEntityClass(TrackedEntity trackedEntity) {
-        Class<?> currentClass = trackedEntity.entity().getClass();
-        while (Entity.class.isAssignableFrom(currentClass)) {
-            var out = classToIndex.computeIfAbsent((Class<? extends Entity>) currentClass, ignored -> new Int2ObjectOpenHashMap<>());
-            out.put(trackedEntity.entity().getEntityId(), trackedEntity);
-            currentClass = currentClass.getSuperclass();
-        }
+        final var index = trackedEntity.entity().getClass();
+        final var inheritance = inheritanceMapCache.computeIfAbsent(index, this::computeCacheEntry);
+
+        inheritance.forEach(entityClass -> append(entityClass, trackedEntity));
+        append(index, trackedEntity);
+    }
+    private void append(Class<? extends Entity> currentClass, TrackedEntity trackedEntity) {
+        var out = classToIndex.computeIfAbsent(currentClass, ignored -> new Int2ObjectOpenHashMap<>());
+        out.put(trackedEntity.entity().getEntityId(), trackedEntity);
     }
 
     private TrackedEntity removeEntityClass(Entity entity) {
-        Class<?> currentClass = entity.getClass().getSuperclass();
+        final var index = entity.getClass();
+        final var id = entity.getEntityId();
+        final var inheritance = inheritanceMapCache.computeIfAbsent(index, this::computeCacheEntry);
+
+        inheritance.forEach(entityClass -> remove(entityClass, id));
+
+        // We skip the first to come back to return it.
+        return remove(index, id);
+    }
+
+    private TrackedEntity remove(Class<? extends Entity> index, int id) {
+        var out = classToIndex.get(index);
+        var entry = out.remove(id);
+        if (out.isEmpty()){
+            inheritanceMapCache.remove(index);
+            classToIndex.remove(index);
+        }
+        return entry;
+    }
+
+    private ObjectArrayList<Class<? extends Entity>> computeCacheEntry(Class<? extends Entity> entityClass) {
+        ObjectArrayList<Class<? extends Entity>> set = new ObjectArrayList<>();
+        // We will never store the current class, no reason to.
+        Class<?> currentClass = entityClass.getSuperclass();
         while (Entity.class.isAssignableFrom(currentClass)) {
-            var out = classToIndex.get(currentClass);
-            out.remove(entity.getEntityId());
-            if (out.isEmpty()){
-                classToIndex.remove(currentClass);
-            }
+            //noinspection unchecked
+            set.add((Class<? extends Entity>) currentClass);
             currentClass = currentClass.getSuperclass();
         }
-        // We skip the first to come back to return it.
-        var out = classToIndex.get(entity.getClass());
-        var entry = out.remove(entity.getEntityId());
-        if (out.isEmpty()){
-            classToIndex.remove(entity.getClass());
-        }
-
-        return entry;
+        set.trim();
+        return set;
     }
 
     private void difference(Point oldPoint, Point newPoint, @NotNull Update update) {
