@@ -10,10 +10,9 @@ public final class EntitySelectorTest {
     @Test
     public void playerQuery() {
         EntitySelector<Player> selectorPlayer = EntitySelector.selector(builder -> {
-            builder.requirePlayer();
+            builder.target(EntitySelection.player().limit(5));
             builder.predicate(NAME, (point, o) -> o.equals("TheMode"));
             builder.predicateEquals(TYPE, EntityType.PLAYER);
-            builder.limit(5);
         });
     }
 }

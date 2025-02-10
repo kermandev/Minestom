@@ -14,10 +14,7 @@ import net.minestom.server.adventure.AdventurePacketConvertor;
 import net.minestom.server.adventure.audience.PacketGroupingAudience;
 import net.minestom.server.coordinate.CoordConversion;
 import net.minestom.server.coordinate.Point;
-import net.minestom.server.entity.Entity;
-import net.minestom.server.entity.EntitySelector;
-import net.minestom.server.entity.EntitySelectors;
-import net.minestom.server.entity.Player;
+import net.minestom.server.entity.*;
 import net.minestom.server.event.EventDispatcher;
 import net.minestom.server.event.EventFilter;
 import net.minestom.server.event.EventHandler;
@@ -611,7 +608,7 @@ public abstract class Instance implements Block.Getter, Block.Setter,
      * @return the entity having the specified id, null if not found
      */
     public @Nullable Entity getEntityById(int id) {
-        return entityTracker.selectEntityFirst(EntitySelector.selector(EntitySelectors.ID, id));
+        return entityTracker.selectEntityFirst(EntitySelector.entity((builder) -> builder.gather(EntitySelector.Gather.only(id))));
     }
 
     /**
@@ -621,7 +618,7 @@ public abstract class Instance implements Block.Getter, Block.Setter,
      * @return the entity having the specified uuid, null if not found
      */
     public @Nullable Entity getEntityByUuid(UUID uuid) {
-        return entityTracker.selectEntityFirst(EntitySelector.selector(EntitySelectors.UUID, uuid));
+        return entityTracker.selectEntityFirst(EntitySelector.entity((builder) -> builder.gather(EntitySelector.Gather.onlyUuid(uuid))));
     }
 
     /**
@@ -658,7 +655,8 @@ public abstract class Instance implements Block.Getter, Block.Setter,
      * if {@code chunk} is unloaded, return an empty {@link HashSet}
      */
     public @NotNull Set<@NotNull Entity> getChunkEntities(Chunk chunk) {
-        final Stream<Entity> chunkEntities = entityTracker.selectEntity(EntitySelector.selector(builder -> builder.chunk(chunk.toPosition())));
+        final Stream<Entity> chunkEntities = entityTracker.selectEntity(EntitySelector.entity(builder ->
+                builder.gather(EntitySelector.Gather.chunk(chunk.getChunkX(), chunk.getChunkZ()))));
         return ObjectArraySet.ofUnchecked(chunkEntities.toArray(Entity[]::new));
     }
 
@@ -670,7 +668,7 @@ public abstract class Instance implements Block.Getter, Block.Setter,
      * @return entities that are not further than the specified distance from the transmitted position.
      */
     public @NotNull Collection<Entity> getNearbyEntities(@NotNull Point point, double range) {
-        return entityTracker.selectEntity(EntitySelector.selector(builder -> builder.range(range)), point).toList();
+        return entityTracker.selectEntity(EntitySelector.entity(builder -> builder.gather(EntitySelector.Gather.range(range))), point).toList();
     }
 
     @Override

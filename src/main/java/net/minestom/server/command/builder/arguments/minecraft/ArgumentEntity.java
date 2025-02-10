@@ -41,6 +41,7 @@ public class ArgumentEntity<T extends Entity> extends Argument<EntitySelector<T>
     private static final List<String> SELECTOR_VARIABLES = Arrays.asList("@p", "@r", "@a", "@e", "@s", "@n");
     private static final List<String> PLAYERS_ONLY_SELECTOR = Arrays.asList("@p", "@r", "@a", "@s");
     private static final List<String> SINGLE_ONLY_SELECTOR = Arrays.asList("@p", "@r", "@s", "@n");
+    private static final List<String> REQUIRES_PLAYER_UPGRADED_TYPE = Arrays.asList("@p", "@r");
     // List with all the valid arguments
     private static final List<String> VALID_ARGUMENTS = Arrays.asList(
             "x", "y", "z",
@@ -56,7 +57,7 @@ public class ArgumentEntity<T extends Entity> extends Argument<EntitySelector<T>
             "x_rotation", "y_rotation", "type", "advancements", "predicate");
 
 
-    private final Class<T> entityClass;
+    private final EntitySelector.Target<T> target;
     private final boolean onlySingleEntity;
     private final boolean onlyPlayers;
 
@@ -73,17 +74,35 @@ public class ArgumentEntity<T extends Entity> extends Argument<EntitySelector<T>
     public ArgumentEntity(@NotNull String id, Class<T> entityClass) {
         super(id, true);
 
-        this.entityClass = entityClass;
+        this.target = EntitySelector.Target.of(entityClass);
         this.onlySingleEntity = false;
         this.onlyPlayers = Player.class.isAssignableFrom(entityClass);
     }
 
-    // We might eventually enforce a class to be passed. Either way, this signature could change in the future.
-    @ApiStatus.Experimental
-    public ArgumentEntity(@NotNull String id, Class<T> entityClass, boolean onlySingleEntity, boolean onlyPlayers) {
+    /**
+     * See {@link net.minestom.server.command.builder.arguments.ArgumentType#Entity(String)}
+     *  {@link net.minestom.server.command.builder.arguments.ArgumentType#Player(String)}
+     *  {@link net.minestom.server.command.builder.arguments.ArgumentType#Entity(String, Class)}
+     *  for usage.
+     *  <p>
+     *  This is considered the raw usage.
+     * @param id The id of the argument.
+     * @param target The entity target you desire.
+     */
+    public ArgumentEntity(@NotNull String id, EntitySelector.Target<T> target) {
         super(id, true);
 
-        this.entityClass = entityClass;
+        this.target = target;
+        this.onlySingleEntity = false;
+        this.onlyPlayers = Player.class.isAssignableFrom(target.type());
+    }
+
+    // We might eventually enforce a class to be passed. Either way, this signature could change in the future.
+    @ApiStatus.Experimental
+    public ArgumentEntity(@NotNull String id, EntitySelector.Target<T> target, boolean onlySingleEntity, boolean onlyPlayers) {
+        super(id, true);
+
+        this.target = target;
         this.onlySingleEntity = onlySingleEntity;
         this.onlyPlayers = onlyPlayers;
     }
@@ -97,7 +116,7 @@ public class ArgumentEntity<T extends Entity> extends Argument<EntitySelector<T>
      */
     @Contract(pure = true)
     public ArgumentEntity<T> single() {
-        return new ArgumentEntity<>(this.getId(), entityClass, true, onlyPlayers);
+        return new ArgumentEntity<>(this.getId(), target, true, onlyPlayers);
     }
 
     @NotNull
@@ -109,13 +128,13 @@ public class ArgumentEntity<T extends Entity> extends Argument<EntitySelector<T>
             // Check if the input is a valid UUID
             try {
                 final UUID uuid = UUID.fromString(input);
-                return EntitySelector.selector(builder -> builder.predicateEquals(EntitySelectors.UUID, uuid));
+                return EntitySelector.selector(target, builder -> builder.gather(EntitySelector.Gather.onlyUuid(uuid)));
             } catch (IllegalArgumentException ignored) {
             }
 
             // Check if the input is a valid player name
             if (USERNAME_PATTERN.matcher(input).matches() && onlyPlayers) {
-                return EntitySelector.selector(builder -> builder.predicateEquals(EntitySelectors.NAME, input));
+                return EntitySelector.selector(target,builder -> builder.predicateEquals(EntitySelectors.NAME, input));
             }
         }
 
@@ -140,7 +159,11 @@ public class ArgumentEntity<T extends Entity> extends Argument<EntitySelector<T>
         // Check if it should only select players and if the selector variable valid the condition
         if (onlyPlayers && !PLAYERS_ONLY_SELECTOR.contains(selectorVariable))
             throw new ArgumentSyntaxException("Argument requires only players", input, ONLY_PLAYERS_ERROR);
-        return EntitySelector.selector(builder -> {
+
+        if (!onlyPlayers && REQUIRES_PLAYER_UPGRADED_TYPE.contains(selectorVariable) && !target.type().isAssignableFrom(Player.class))
+            throw new ArgumentSyntaxException("Argument requires player types.", input, ONLY_PLAYERS_ERROR);
+
+        return EntitySelector.selector(target,builder -> {
             appendTargetSelector(sender, builder, selectorVariable);
             // The selector is a single selector variable which verify all the conditions
             if (input.length() == 2)
@@ -340,23 +363,24 @@ public class ArgumentEntity<T extends Entity> extends Argument<EntitySelector<T>
                                              EntitySelector.Builder<T> builder,
                                              @NotNull String selectorVariable) {
         switch (selectorVariable) {
-            case "@p" -> builder.target(EntitySelector.Target.NEAREST_PLAYER);
-            case "@n" -> builder.target(EntitySelector.Target.NEAREST_ENTITY);
-            case "@r" -> builder.target(EntitySelector.Target.RANDOM_PLAYER);
-            case "@a" -> builder.target(EntitySelector.Target.ALL_PLAYERS);
-            case "@e" -> builder.target(EntitySelector.Target.ALL_ENTITIES);
-            case "@s" -> builder.predicateEquals(EntitySelectors.NAME, sender.identity().examinableName());
-            default -> throw new IllegalStateException("Weird selector variable: " + selectorVariable);
-        }
-
-        // Append our type.
-        if (entityClass != Entity.class && entityClass != Player.class) {
-            builder.type(entityClass);
+            case "@p", "@n" -> {
+                builder.sort(EntitySelector.Sort.NEAREST);
+                builder.limit(1);
+            }
+            case "@r" -> {
+                builder.sort(EntitySelector.Sort.RANDOM);
+                builder.limit(1);
+            }
+            case "@a", "@e" -> {
+                // Ignored as targets already use an all gatherer.
+            }
+            case "@s" -> builder.gather(EntitySelector.Gather.only((Entity) sender));
+            default -> throw new IllegalArgumentException("Weird selector variable: " + selectorVariable);
         }
     }
 
     private EntitySelector.Builder<Player> asPlayerBuilder(EntitySelector.Builder<T> builder) {
-        Check.argCondition(onlyPlayers, "This argument is not player-only");
+        Check.argCondition(isOnlyPlayers(), "This argument is not player-only");
         // noinspection unchecked
         return (EntitySelector.Builder<Player>) builder;
     }

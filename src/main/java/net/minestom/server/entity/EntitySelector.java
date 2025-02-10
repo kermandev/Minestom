@@ -8,6 +8,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
+import java.util.UUID;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -19,14 +20,30 @@ import java.util.stream.Stream;
  */
 public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits EntitySelectorImpl {
 
-    static <E> @NotNull EntitySelector<E> selector(@NotNull Consumer<@NotNull Builder<E>> consumer) {
-        EntitySelectorImpl.BuilderImpl<E> builder = new EntitySelectorImpl.BuilderImpl<>();
+    static <E> @NotNull EntitySelector<E> selector(Target<E> target) {
+        return new EntitySelectorImpl.BuilderImpl<>(target).build();
+    }
+
+    static <E> @NotNull EntitySelector<E> selector(Target<E> target, @NotNull Consumer<@NotNull Builder<E>> consumer) {
+        EntitySelectorImpl.BuilderImpl<E> builder = new EntitySelectorImpl.BuilderImpl<>(target);
         consumer.accept(builder);
         return builder.build();
     }
 
-    static <E, T> @NotNull EntitySelector<E> selector(@NotNull Property<E, T> property, T value) {
-        return selector(builder -> builder.predicateEquals(property, value));
+    static @NotNull EntitySelector<Entity> entity() {
+        return selector(Target.entity());
+    }
+
+    static @NotNull EntitySelector<Entity> entity(@NotNull Consumer<@NotNull Builder<Entity>> consumer) {
+        return selector(Target.entity(), consumer);
+    }
+
+    static @NotNull EntitySelector<Player> player() {
+        return selector(Target.player());
+    }
+
+    static @NotNull EntitySelector<Player> player(@NotNull Consumer<@NotNull Builder<Player>> consumer) {
+        return selector(Target.player(), consumer);
     }
 
     static <E, T> @NotNull Property<E, T> property(@NotNull String name, Function<E, T> function) {
@@ -40,18 +57,16 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
     @Override
     boolean test(Point origin, E entity);
 
-    @NotNull Target target();
+    @NotNull Target<E> target();
 
     @NotNull Sort sort();
+
+    @Nullable EntitySelector.Gather gather();
 
     int limit();
 
     interface Builder<E> {
-        void target(@NotNull Target target);
-
-        default void requirePlayer() {
-            target(Target.ALL_PLAYERS);
-        }
+        void target(@NotNull Target<E> target);
 
         <T> void predicate(@NotNull Property<? super E, T> property, @NotNull BiPredicate<Point, T> predicate);
 
@@ -59,31 +74,82 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
             predicate(property, (point, t) -> Objects.equals(t, value));
         }
 
-        void type(@NotNull Class<E> type);
-
-        void type(@NotNull EntityType @NotNull ... types);
-
-        void range(double radius);
-
-        void chunk(int chunkX, int chunkZ);
-
-        default void chunk(@NotNull Point chunkPosition) {
-            chunk(chunkPosition.chunkX(), chunkPosition.chunkZ());
-        }
-
-        void chunkRange(int radius);
+        void gather(Gather gather);
+//
+//        void type(@NotNull Class<E> type);
+//
+//        void type(@NotNull EntityType @NotNull ... types);
+//
+//        void range(double radius);
+//
+//        void chunk(int chunkX, int chunkZ);
+//
+//        default void chunk(@NotNull Point chunkPosition) {
+//            chunk(chunkPosition.chunkX(), chunkPosition.chunkZ());
+//        }
+        void limit(int limit);
+//
+//        void chunkRange(int radius);
 
         void sort(@NotNull Sort sort);
-
-        void limit(int limit);
     }
 
-    enum Target {
-        ALL_ENTITIES, ALL_PLAYERS,
-        NEAREST_ENTITY, NEAREST_PLAYER,
-        RANDOM_PLAYER,
+    sealed interface Target<T> permits EntitySelectorImpl.TargetImpl {
+        static Target<Player> player() {
+            return EntitySelectorImpl.TargetImpl.PLAYERS;
+        }
+
+        static Target<Entity> entity() {
+            return EntitySelectorImpl.TargetImpl.ENTITIES;
+        }
+
+        static <T> Target<T> of(Class<T> type) {
+            return new EntitySelectorImpl.TargetImpl<>(type);
+        }
+
+        Class<T> type();
     }
 
+    /**
+     * Data gathering predicates.
+     */
+    sealed interface Gather {
+        // Maybe we shouldn't implement only and that's for the user.
+        record Only(int entityId) implements Gather {}
+        record OnlyUuid(UUID entityUuid) implements Gather {}
+        record Range(double radius) implements Gather {}
+        record Chunk(int chunkX, int chunkZ) implements Gather {}
+
+        record ChunkRange(int radius) implements Gather {}
+
+        static Gather only(Entity entity) {
+            return only(entity.getEntityId());
+        }
+
+        static Gather only(int entityId) {
+            return new Only(entityId);
+        }
+
+        static Gather onlyUuid(UUID entityUuid) {
+            return new OnlyUuid(entityUuid);
+        }
+
+        static Gather range(double radius) {
+            return new Range(radius);
+        }
+
+        static Gather chunk(int chunkX, int chunkZ) {
+            return new Chunk(chunkX, chunkZ);
+        }
+
+        static Gather chunk(@NotNull Point chunkPosition) {
+            return chunk(chunkPosition.chunkX(), chunkPosition.chunkZ());
+        }
+        static Gather chunkRange(int radius) {
+            return new ChunkRange(radius);
+        }
+
+    }
     enum Sort {
         ARBITRARY, FURTHEST, NEAREST, RANDOM
     }

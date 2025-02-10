@@ -2,6 +2,7 @@ package net.minestom.demo;
 
 import net.kyori.adventure.sound.Sound;
 import net.kyori.adventure.text.Component;
+import net.minestom.demo.entity.TestItemEntity;
 import net.minestom.server.FeatureFlag;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.advancements.FrameType;
@@ -85,7 +86,7 @@ public class PlayerInit {
                 ItemStack droppedItem = event.getItemStack();
 
                 Pos playerPos = player.getPosition();
-                ItemEntity itemEntity = new ItemEntity(droppedItem);
+                ItemEntity itemEntity = new TestItemEntity(droppedItem);
                 itemEntity.setPickupDelay(Duration.of(500, TimeUnit.MILLISECOND));
                 itemEntity.setInstance(player.getInstance(), playerPos.withY(y -> y + 1.5));
                 Vec velocity = playerPos.direction().mul(6);

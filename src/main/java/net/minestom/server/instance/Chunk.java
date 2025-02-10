@@ -356,13 +356,9 @@ public abstract class Chunk implements Block.Getter, Block.Setter, Biome.Getter,
         }
 
         private void collectPlayers(EntityTracker tracker, Int2ObjectOpenHashMap<Player> map) {
-            tracker.selectEntityConsume(
-                    EntitySelector.selector(builder -> {
-                        builder.requirePlayer();
-                        builder.chunkRange(ServerFlag.CHUNK_VIEW_DISTANCE);
-                    }),
+            tracker.selectEntityConsume(EntitySelector.selector(EntitySelector.Target.player(),builder -> builder.gather(EntitySelector.Gather.chunkRange(ServerFlag.CHUNK_VIEW_DISTANCE))),
                     Chunk.this.toPosition(),
-                    player -> map.putIfAbsent(player.getEntityId(), (Player) player)
+                    player -> map.putIfAbsent(player.getEntityId(), player)
             );
         }
 

@@ -32,7 +32,7 @@ final class EntityView {
 
     public EntityView(Entity entity) {
         this.entity = entity;
-        this.viewableOption = new Option<>(true, Entity::autoViewEntities,
+        this.viewableOption = new Option<>(Player.class, Entity::autoViewEntities,
                 player -> {
                     // Add viewable
                     var lock1 = player.getEntityId() < entity.getEntityId() ? player : entity;
@@ -62,7 +62,7 @@ final class EntityView {
                     entity.updateOldViewer(player);
                 });
         // An entity viewing another entity is no-op, only players matter.
-        this.viewerOption = new Option<>(false, Entity::isAutoViewable,
+        this.viewerOption = new Option<>(Entity.class, Entity::isAutoViewable,
                 entity instanceof Player player ? e -> e.viewEngine.viewableOption.addition.accept(player) : null,
                 entity instanceof Player player ? e -> e.viewEngine.viewableOption.removal.accept(player) : null);
     }
@@ -131,7 +131,7 @@ final class EntityView {
         @SuppressWarnings("rawtypes")
         private static final AtomicIntegerFieldUpdater<EntityView.Option> UPDATER = AtomicIntegerFieldUpdater.newUpdater(EntityView.Option.class, "auto");
         // Entities that should be tracked from this option
-        private final boolean players;
+        private final EntitySelector.Target<T> target;
         // The condition that must be met for this option to be considered auto.
         private final Predicate<T> loopPredicate;
         // The consumers to be called when an entity is added/removed.
@@ -144,9 +144,9 @@ final class EntityView {
         // null if auto-viewable
         private Predicate<T> predicate = null;
 
-        public Option(boolean players, Predicate<T> loopPredicate,
+        public Option(Class<T> type, Predicate<T> loopPredicate,
                       Consumer<T> addition, Consumer<T> removal) {
-            this.players = players;
+            this.target = EntitySelector.Target.of(type);
             this.loopPredicate = loopPredicate;
             this.addition = addition;
             this.removal = removal;
@@ -238,10 +238,7 @@ final class EntityView {
             final Point point = trackedLocation.point();
 
             Int2ObjectOpenHashMap<T> entityMap = new Int2ObjectOpenHashMap<>(lastSize);
-            final EntitySelector<T> selector = EntitySelector.selector(builder -> {
-                if (players) builder.requirePlayer();
-                builder.chunkRange(RANGE);
-            });
+            final EntitySelector<T> selector = EntitySelector.selector(target, builder -> builder.gather(EntitySelector.Gather.chunkRange(RANGE)));
             instance.getEntityTracker().selectEntityConsume(selector, point,
                     (entity) -> entityMap.putIfAbsent(entity.getEntityId(), entity));
             this.lastSize = entityMap.size();

@@ -389,10 +389,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
         if (experiencePickupCooldown.isReady(time)) {
             experiencePickupCooldown.refreshLastUpdate(time);
             final Point loweredPosition = position.sub(0, .5, 0);
-            final EntitySelector<ExperienceOrb> orbSelector = EntitySelector.selector(builder -> {
-                builder.type(EntityType.EXPERIENCE_ORB);
-                builder.range(expandedBoundingBox.width());
-            });
+            final EntitySelector<ExperienceOrb> orbSelector = EntitySelector.selector(EntitySelector.Target.of(ExperienceOrb.class), builder -> builder.gather(EntitySelector.Gather.range(expandedBoundingBox.width())));
             this.selectEntityConsume(orbSelector, position, experienceOrb -> {
                 if (expandedBoundingBox.intersectEntity(loweredPosition, experienceOrb)) {
                     PickupExperienceEvent pickupExperienceEvent = new PickupExperienceEvent(this, experienceOrb);
@@ -513,7 +510,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
         ChunkRange.chunksInRange(respawnPosition, settings.effectiveViewDistance(), chunkAdder);
         chunksLoadedByClient = new Vec(respawnPosition.chunkX(), respawnPosition.chunkZ());
         // Client also needs all entities resent to them, since those are unloaded as well
-        this.selectEntityConsume(EntitySelector.selector(builder -> builder.chunkRange(settings.effectiveViewDistance())), respawnPosition,
+        this.selectEntityConsume(EntitySelector.entity(builder-> builder.gather(EntitySelector.Gather.chunkRange(settings.effectiveViewDistance()))), respawnPosition,
                 entity -> {
                     // Skip refreshing self with a new viewer
                     if (!entity.getUuid().equals(getUuid()) && entity.isViewer(this)) {

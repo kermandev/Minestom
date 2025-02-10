@@ -7,7 +7,7 @@ import net.minestom.server.entity.ai.goal.RandomLookAroundGoal;
 
 public class ZombieCreature extends EntityCreature {
 
-    public ZombieCreature() {
+    public ZombieCreature(EntityType type) {
         super(EntityType.ZOMBIE);
         addAIGroup(
                 new EntityAIGroupBuilder()
