@@ -161,8 +161,8 @@ final class EntityTrackerImpl implements EntityTracker {
                     }
                 });
 
-                // TODO maybe put parrell streams behind a server flag? wont do anything in 99% of cases.
-                yield chunkIndexes.longParallelStream()
+                // TODO maybe put parallel streams behind a server flag? wont do anything in 99% of cases.
+                yield chunkIndexes.longStream()
                         .mapToObj(chunksEntities::get)
                         .flatMap(Collection::stream)
                         .filter(entity -> selector.target().type().isAssignableFrom(entity.getClass()))

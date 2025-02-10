@@ -7,8 +7,10 @@ import net.minestom.server.Tickable;
 import net.minestom.server.Viewable;
 import net.minestom.server.coordinate.CoordConversion;
 import net.minestom.server.coordinate.Point;
+import net.minestom.server.coordinate.Pos;
 import net.minestom.server.coordinate.Vec;
 import net.minestom.server.entity.EntitySelector;
+import net.minestom.server.entity.EntitySelectors;
 import net.minestom.server.entity.Player;
 import net.minestom.server.instance.block.Block;
 import net.minestom.server.instance.block.BlockHandler;
@@ -356,10 +358,21 @@ public abstract class Chunk implements Block.Getter, Block.Setter, Biome.Getter,
         }
 
         private void collectPlayers(EntityTracker tracker, Int2ObjectOpenHashMap<Player> map) {
-            tracker.selectEntityConsume(EntitySelector.selector(EntitySelector.Target.player(),builder -> builder.gather(EntitySelector.Gather.chunkRange(ServerFlag.CHUNK_VIEW_DISTANCE))),
+           tracker.selectEntityConsume(EntitySelector.player(playerBuilder -> {
+               playerBuilder.predicate(EntitySelectors.POS, (origin, coord) -> {
+                   final int originChunkX = origin.chunkX();
+                   final int originChunkZ = origin.chunkZ();
+                   final int coordChunkX = coord.chunkX();
+                   final int coordChunkZ = coord.chunkZ();
+                   final int deltaX = Math.abs(originChunkX - coordChunkX);
+                   final int deltaZ = Math.abs(originChunkZ - coordChunkZ);
+                   return deltaX <= ServerFlag.CHUNK_VIEW_DISTANCE && deltaZ <= ServerFlag.CHUNK_VIEW_DISTANCE;
+               });
+           }), Chunk.this.toPosition(), player -> map.putIfAbsent(player.getEntityId(), player));
+            /*tracker.selectEntityConsume(EntitySelector.selector(EntitySelector.Target.player(),builder -> builder.gather(EntitySelector.Gather.chunkRange(ServerFlag.CHUNK_VIEW_DISTANCE))),
                     Chunk.this.toPosition(),
                     player -> map.putIfAbsent(player.getEntityId(), player)
-            );
+            );*/
         }
 
         final class SetImpl extends AbstractSet<Player> {

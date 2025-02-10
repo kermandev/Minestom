@@ -10,7 +10,6 @@ import net.minestom.server.command.builder.arguments.ArgumentType;
 import net.minestom.server.command.builder.arguments.minecraft.registry.ArgumentEntityType;
 import net.minestom.server.command.builder.arguments.number.ArgumentInteger;
 import net.minestom.server.command.builder.condition.Conditions;
-import net.minestom.server.coordinate.Pos;
 import net.minestom.server.coordinate.Vec;
 import net.minestom.server.entity.*;
 import net.minestom.server.utils.location.RelativeVec;
@@ -24,6 +23,7 @@ public class SummonCommand extends Command {
     private final Argument<RelativeVec> pos;
     private final Argument<EntityClass> entityClass;
     private final ArgumentInteger amount;
+    private final ArgumentInteger radius;
 
     public SummonCommand() {
         super("summon");
@@ -42,8 +42,11 @@ public class SummonCommand extends Command {
         amount = ArgumentType.Integer("amount");
         amount.setDefaultValue(1);
 
-        addSyntax(this::execute, entity, pos, entityClass, amount);
-        setDefaultExecutor((sender, context) -> sender.sendMessage("Usage: /summon <type> <x> <y> <z> <class> [amount]"));
+        radius = ArgumentType.Integer("radius");
+        radius.setDefaultValue(0);
+
+        addSyntax(this::execute, entity, pos, entityClass, amount, radius);
+        setDefaultExecutor((sender, context) -> sender.sendMessage("Usage: /summon <type> <x> <y> <z> <class> [amount] [radius]"));
     }
 
     private void execute(@NotNull CommandSender commandSender, @NotNull CommandContext commandContext) {
@@ -51,13 +54,22 @@ public class SummonCommand extends Command {
         final EntityType entityType = commandContext.get(this.entity);
         final Vec pos = commandContext.get(this.pos).fromSender(commandSender);
         final int amount = commandContext.get(this.amount);
+        final int radius = commandContext.get(this.radius);
 
         final Random random = new Random();
+
+        int spawnedGood = 0;
         for (int i = 0; i < amount; i++) {
             final Entity entity = entityClass.instantiate(entityType);
             //noinspection ConstantConditions - One couldn't possibly execute a command without being in an instance
-            entity.setInstance(((Player) commandSender).getInstance(), pos.add(random.nextGaussian() * 64, 0, random.nextGaussian() * 64));
+            try {
+                entity.setInstance(((Player) commandSender).getInstance(), pos.add(random.nextDouble() * 2 * radius - radius, 0, random.nextDouble() * 2 * radius - radius));
+                spawnedGood++;
+            } catch (Exception e) {
+                System.out.println("failed spawn for " + i);
+            }
         }
+        System.out.println("Done! with " + spawnedGood);
     }
 
     @SuppressWarnings("unused")
