@@ -1,10 +1,14 @@
 package net.minestom.server.instance;
 
-import it.unimi.dsi.fastutil.ints.*;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
-import it.unimi.dsi.fastutil.objects.*;
+import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.minestom.server.ServerFlag;
 import net.minestom.server.coordinate.ChunkRange;
 import net.minestom.server.coordinate.CoordConversion;
@@ -24,7 +28,7 @@ import java.util.stream.Stream;
 final class EntityTrackerImpl implements EntityTracker {
     private static final Logger LOGGER = LoggerFactory.getLogger(EntityTrackerImpl.class);
 
-    private static final EntitySelector<Entity> SELECTOR = EntitySelector.selector(EntitySelector.Target.entity(), builder -> builder.gather(EntitySelector.Gather.chunkRange(ServerFlag.ENTITY_VIEW_DISTANCE)));
+    private static final EntitySelector<Entity> SELECTOR = EntitySelector.entity(builder -> builder.gather(EntitySelector.Gather.chunkRange(ServerFlag.ENTITY_VIEW_DISTANCE)));
 
     // Class Cache TODO, probably not necessary.
     private final Object2ObjectMap<Class<? extends Entity>, ObjectArrayList<Class<? extends Entity>>> inheritanceMapCache = new Object2ObjectLinkedOpenHashMap<>();
@@ -161,7 +165,6 @@ final class EntityTrackerImpl implements EntityTracker {
                     }
                 });
 
-                // TODO maybe put parallel streams behind a server flag? wont do anything in 99% of cases.
                 yield chunkIndexes.longStream()
                         .mapToObj(chunksEntities::get)
                         .flatMap(Collection::stream)
@@ -207,8 +210,8 @@ final class EntityTrackerImpl implements EntityTracker {
         }
 
         // We will pass the error back up the chain if it's wrong.
-        // noinspection unchecked
-        return stream.map(TrackedEntity::entity).map(it-> (R) it);
+        return stream.map(TrackedEntity::entity)
+                .map(it -> selector.target().type().cast(it));
     }
 
     private void addEntityClass(TrackedEntity trackedEntity) {

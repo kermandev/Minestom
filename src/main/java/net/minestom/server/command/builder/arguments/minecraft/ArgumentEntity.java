@@ -301,11 +301,7 @@ public class ArgumentEntity<T extends Entity> extends Argument<EntitySelector<T>
             case "distance":
                 try {
                     final Range.Int distance = Argument.parse(sender, new ArgumentIntRange(value));
-                    builder.predicate(EntitySelectors.POS, (point, pos) -> {
-                        final double d = point.distance(pos);
-                        System.out.println(point);
-                        return distance.inRange((int) d);
-                    });
+                    builder.predicate(EntitySelectors.POS, (point, pos) -> distance.inRange((int) point.distance(pos)));
                 } catch (ArgumentSyntaxException e) {
                     throw new ArgumentSyntaxException("Invalid distance number", input, INVALID_ARGUMENT_VALUE);
                 }
