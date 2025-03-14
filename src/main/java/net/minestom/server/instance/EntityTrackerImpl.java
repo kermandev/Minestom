@@ -143,7 +143,7 @@ final class EntityTrackerImpl implements EntityTracker {
         final TargetEntry<Entity> entry = targetEntries[target.ordinal()];
         //noinspection unchecked
         var chunkEntities = (List<T>) entry.chunkEntities(CoordConversion.chunkIndex(chunkX, chunkZ));
-        return Collections.unmodifiableList(chunkEntities);
+        return chunkEntities != null ? Collections.unmodifiableList(chunkEntities) : Collections.emptyList();
     }
 
     @Override
@@ -273,17 +273,27 @@ final class EntityTrackerImpl implements EntityTracker {
             this.target = target;
         }
 
-        List<T> chunkEntities(long index) {
-            return chunkEntities.computeIfAbsent(index, i -> (List<T>) new CopyOnWriteArrayList());
+        @Nullable List<T> chunkEntities(long index) {
+            return chunkEntities.get(index);
         }
 
         void addToChunk(long index, T entity) {
-            chunkEntities(index).add(entity);
+            final var chunkEntities = this.chunkEntities(index);
+            if (chunkEntities != null) {
+                chunkEntities.add(entity);
+            } else {
+                final var list = new CopyOnWriteArrayList<T>();
+                list.add(entity);
+                this.chunkEntities.put(index, list);
+            }
         }
 
         void removeFromChunk(long index, T entity) {
-            List<T> entities = chunkEntities.get(index);
-            if (entities != null) entities.remove(entity);
+            var chunkEntities = this.chunkEntities(index);
+            if (chunkEntities != null) {
+                chunkEntities.remove(entity);
+                if (chunkEntities.isEmpty()) this.chunkEntities.remove(index);
+            }
         }
     }
 
