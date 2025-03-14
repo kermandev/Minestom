@@ -1,20 +1,20 @@
 package net.minestom.server.entity;
 
 import net.minestom.server.coordinate.Point;
-import org.jetbrains.annotations.ApiStatus;
+import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 
-record EntitySelectorImpl<E>(EntitySelector.Target<E> target,
+record EntitySelectorImpl<E>(@NotNull Target<? extends E> target,
                              @Nullable EntitySelector.Gather gather,
-                             EntitySelector.Sort sort,
+                             @Nullable EntitySelector.Sort sort,
                              int limit,
-                             List<BiPredicate<Point, E>> predicates) implements EntitySelector<E> {
+                             @Unmodifiable List<BiPredicate<Point, E>> predicates) implements EntitySelector<E> {
     public EntitySelectorImpl {
         predicates = List.copyOf(predicates);
     }
@@ -38,20 +38,19 @@ record EntitySelectorImpl<E>(EntitySelector.Target<E> target,
 
     static final class BuilderImpl<E> implements Builder<E> {
         // TODO fix type?
-        private Target<E> target;
+        private Target<? extends E> target;
         private Gather gather = null;
         private Sort sort = Sort.ARBITRARY;
-        private int limit = -1;
+        private int limit = 0;
 
         private final List<BiPredicate<Point, E>> predicates = new ArrayList<>();
 
-        @ApiStatus.Internal
-        BuilderImpl(Target<E> target) {
+        BuilderImpl(@NotNull Target<E> target) {
             this.target = target;
         }
 
         @Override
-        public void target(@NotNull Target<E> target) {
+        public void target(@NotNull Target<? extends E> target) {
             this.target = target;
         }
 
@@ -66,13 +65,35 @@ record EntitySelectorImpl<E>(EntitySelector.Target<E> target,
         }
 
         @Override
+        public void type(@NotNull EntityType @NotNull ... types) {
+            // No gather impl of this.
+            final var allowedTypes = new HashSet<>(List.of(types));
+            this.predicate(Property.class.cast(EntitySelectors.TYPE), (point, type) -> allowedTypes.contains(type));
+        }
+
+        @Override
         public void sort(@NotNull Sort sort) {
             this.sort = sort;
         }
 
         @Override
         public void limit(int limit) {
+            Check.argCondition(limit <= 0, "Limit must be greater than 0");
             this.limit = limit;
+        }
+
+        @Override
+        public <G extends E> Builder<G> reinterpret(Target<G> target) {
+            final var ourTarget = this.target; // Perform runtime check.
+            Check.argCondition(ourTarget.type().isAssignableFrom(target.type()), "The target type is not a subtype of " + target.type());
+            //noinspection unchecked
+            return (Builder<G>) this;
+        }
+
+        @Override
+        public <G extends E> Builder<G> reinterpret() {
+            //noinspection unchecked
+            return reinterpret((Target<G>) target);
         }
 
         EntitySelectorImpl<E> build() {

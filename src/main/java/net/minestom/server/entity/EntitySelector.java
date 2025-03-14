@@ -4,6 +4,8 @@ import net.minestom.server.coordinate.Point;
 import net.minestom.server.coordinate.Vec;
 import net.minestom.server.tag.Tag;
 import net.minestom.server.tag.TagReadable;
+import org.jetbrains.annotations.ApiStatus;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -46,6 +48,14 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
         return selector(Target.player(), consumer);
     }
 
+    static <G extends Player> @NotNull EntitySelector<G> player(@NotNull Target<G> target) {
+        return selector(target);
+    }
+
+    static <G extends Player> @NotNull EntitySelector<G> player(@NotNull Target<G> target, @NotNull Consumer<@NotNull Builder<G>> consumer) {
+        return selector(target, consumer);
+    }
+
     static <E, T> @NotNull Property<E, T> property(@NotNull String name, Function<E, T> function) {
         return new EntitySelectorImpl.PropertyImpl<>(name, function);
     }
@@ -57,7 +67,7 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
     @Override
     boolean test(Point origin, E entity);
 
-    @NotNull Target<E> target();
+    @NotNull Target<? extends E> target();
 
     @NotNull Sort sort();
 
@@ -65,8 +75,8 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
 
     int limit();
 
-    interface Builder<E> {
-        void target(@NotNull Target<E> target);
+    sealed interface Builder<E> permits EntitySelectorImpl.BuilderImpl {
+        void target(@NotNull Target<? extends E> target);
 
         <T> void predicate(@NotNull Property<? super E, T> property, @NotNull BiPredicate<Point, T> predicate);
 
@@ -75,23 +85,23 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
         }
 
         void gather(Gather gather);
-//
-//        void type(@NotNull Class<E> type);
-//
-//        void type(@NotNull EntityType @NotNull ... types);
-//
-//        void range(double radius);
-//
-//        void chunk(int chunkX, int chunkZ);
-//
-//        default void chunk(@NotNull Point chunkPosition) {
-//            chunk(chunkPosition.chunkX(), chunkPosition.chunkZ());
-//        }
+
+        void type(@NotNull EntityType @NotNull ... types);
+
+        /**
+         * Set the final limit for how large the stream is going to be.
+         * @param limit must be greater than 0
+         */
+        @Contract("_ -> fail")
         void limit(int limit);
-//
-//        void chunkRange(int radius);
 
         void sort(@NotNull Sort sort);
+
+        @ApiStatus.Experimental
+        <G extends E> Builder<G> reinterpret(Target<G> target);
+        
+        @ApiStatus.Experimental
+        <G extends E> Builder<G> reinterpret();
     }
 
     sealed interface Target<T> permits EntitySelectorImpl.TargetImpl {
@@ -119,7 +129,6 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
         record OnlyUuid(UUID entityUuid) implements Gather {}
         record Range(double radius) implements Gather {}
         record Chunk(int chunkX, int chunkZ) implements Gather {}
-
         record ChunkRange(int radius) implements Gather {}
 
         static Gather only(Entity entity) {

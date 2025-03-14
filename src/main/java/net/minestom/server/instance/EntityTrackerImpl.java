@@ -164,7 +164,7 @@ final class EntityTrackerImpl implements EntityTracker {
                         .filter(entity -> selector.target().type().isAssignableFrom(entity.entity().getClass())) : Stream.empty();
             }
             case EntitySelector.Gather.ChunkRange(int radius) -> {
-                final LongArrayList chunkIndexes = new LongArrayList();
+                final LongArrayList chunkIndexes = new LongArrayList(0);
                 ChunkRange.chunksInRange(origin.chunkX(), origin.chunkZ(), radius, (chunkX, chunkZ) -> {
                     final long index = CoordConversion.chunkIndex(chunkX, chunkZ);
                     if (chunksEntities.containsKey(index)) {
@@ -188,34 +188,33 @@ final class EntityTrackerImpl implements EntityTracker {
             );
         }
 
-        if (selector.limit() != 1) {
-            switch (selector.sort()) {
-                case ARBITRARY -> {
-                    // Do not sort
-                }
-                case FURTHEST -> stream = stream.sorted((a, b) -> {
-                    double distanceA = origin.distanceSquared(a.lastPosition().getPlain());
-                    double distanceB = origin.distanceSquared(b.lastPosition().getPlain());
-                    return Double.compare(distanceB, distanceA); // Sort descending by distance
-                });
-                case NEAREST -> stream = stream.sorted((a, b) -> {
-                    double distanceA = origin.distanceSquared(a.lastPosition().getPlain());
-                    double distanceB = origin.distanceSquared(b.lastPosition().getPlain());
-                    return Double.compare(distanceA, distanceB); // Sort ascending by distance
-                });
-                case RANDOM -> {
-                    var list = Arrays.asList(stream.toArray(TrackedEntity[]::new));
-                    Collections.shuffle(list);
-                    stream = list.stream();
-                }
+        // We must always sort because the limit takes the first few elements.
+        switch (selector.sort()) {
+            case ARBITRARY -> {
+                // Do not sort
+            }
+            case FURTHEST -> stream = stream.sorted((a, b) -> {
+                double distanceA = origin.distanceSquared(a.lastPosition().getPlain());
+                double distanceB = origin.distanceSquared(b.lastPosition().getPlain());
+                return Double.compare(distanceB, distanceA); // Sort descending by distance
+            });
+            case NEAREST -> stream = stream.sorted((a, b) -> {
+                double distanceA = origin.distanceSquared(a.lastPosition().getPlain());
+                double distanceB = origin.distanceSquared(b.lastPosition().getPlain());
+                return Double.compare(distanceA, distanceB); // Sort ascending by distance
+            });
+            case RANDOM -> {
+                var list = Arrays.asList(stream.toArray(TrackedEntity[]::new));
+                Collections.shuffle(list);
+                stream = list.stream();
             }
         }
 
-        if (selector.limit() != -1) {
+        if (selector.limit() != 0) {
             stream = stream.limit(selector.limit());
         }
 
-        // They have already been identified to cast to R; let's not manually do it.
+        // They have already been identified to cast to R. Lets make sure we can cast to it now.
         return stream.map(TrackedEntity::entity)
                 .map(it -> selector.target().type().cast(it));
     }
@@ -251,11 +250,15 @@ final class EntityTrackerImpl implements EntityTracker {
             classToIndex.remove(index);
 
             // Trim everything once we do this.
-            classToIndex.trim();
-            inheritanceMapCache.trim();
-            uuidIndex.trim();
+            trim();
         }
         return entry;
+    }
+
+    private void trim() {
+        classToIndex.trim();
+        inheritanceMapCache.trim();
+        uuidIndex.trim();
     }
 
     private ObjectArrayList<Class<? extends Entity>> computeCacheEntry(Class<? extends Entity> entityClass) {
