@@ -32,6 +32,12 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
         return builder.build();
     }
 
+    @ApiStatus.Experimental
+    static <E, G extends E> @NotNull EntitySelector<G> reinterpretSelector(Class<E> target, @NotNull Function<@NotNull Builder<E>, Builder<G>> function) {
+        EntitySelectorImpl.BuilderImpl<E> builder = new EntitySelectorImpl.BuilderImpl<>(target);
+        return ((EntitySelectorImpl.BuilderImpl<G>) function.apply(builder)).build();
+    }
+
     static @NotNull EntitySelector<Entity> entity() {
         return selector(Entity.class);
     }
@@ -131,6 +137,7 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
         static Gather chunk(@NotNull Point chunkPosition) {
             return chunk(chunkPosition.chunkX(), chunkPosition.chunkZ());
         }
+
         static Gather chunkRange(int radius) {
             return new ChunkRange(radius);
         }

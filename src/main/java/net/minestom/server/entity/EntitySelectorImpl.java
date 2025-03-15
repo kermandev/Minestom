@@ -44,6 +44,7 @@ record EntitySelectorImpl<E>(@NotNull Class<? extends E> target,
 
         @Override
         public void target(@NotNull Class<? extends E> target) {
+            Check.argCondition(!target.isAssignableFrom(this.target), "The target type `{0}` is not a subtype of {1}", target.getSimpleName(), this.target.getSimpleName());
             this.target = target;
         }
 
@@ -78,8 +79,6 @@ record EntitySelectorImpl<E>(@NotNull Class<? extends E> target,
 
         @Override
         public <G extends E> Builder<G> reinterpret(Class<G> target) {
-            final var ourTarget = this.target; // Perform runtime check.
-            Check.argCondition(!target.isAssignableFrom(ourTarget), "The target type is not a subtype of " + ourTarget.getSimpleName());
             this.target(target);
             //noinspection unchecked
             return (Builder<G>) this;
