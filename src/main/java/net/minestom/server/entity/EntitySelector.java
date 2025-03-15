@@ -114,30 +114,37 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
      * Data gathering predicates.
      */
     sealed interface Gather {
+        @Contract(pure = true)
         static Gather only(Entity entity) {
             return only(entity.getEntityId());
         }
 
+        @Contract(pure = true)
         static Gather only(int entityId) {
             return new Only(entityId);
         }
 
+        @Contract(pure = true)
         static Gather onlyUuid(UUID entityUuid) {
             return new OnlyUuid(entityUuid);
         }
 
+        @Contract(pure = true)
         static Gather range(double radius) {
             return new Range(radius);
         }
 
+        @Contract(pure = true)
         static Gather chunk(int chunkX, int chunkZ) {
             return new Chunk(chunkX, chunkZ);
         }
 
+        @Contract(pure = true)
         static Gather chunk(@NotNull Point chunkPosition) {
             return chunk(chunkPosition.chunkX(), chunkPosition.chunkZ());
         }
 
+        @Contract(pure = true)
         static Gather chunkRange(int radius) {
             return new ChunkRange(radius);
         }

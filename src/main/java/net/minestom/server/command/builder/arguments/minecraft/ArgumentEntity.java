@@ -353,8 +353,8 @@ public class ArgumentEntity<T extends Entity> extends Argument<EntitySelector<T>
                 // Ignored as targets already use an all gatherer.
             }
             case "@s" -> {
-                if (sender instanceof Entity) {
-                    builder.gather(EntitySelector.Gather.only((Entity) sender));
+                if (sender instanceof Entity entity) {
+                    builder.gather(EntitySelector.Gather.only(entity));
                 } else {
                     throw new IllegalArgumentException("Sender is not an entity");
                 }
