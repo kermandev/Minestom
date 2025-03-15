@@ -143,16 +143,20 @@ final class EntityTrackerImpl implements EntityTracker {
         final var correctIndex = classToIndex.get(selector.target());
         // If we have no entities of this type, we can simply just return.
         if (correctIndex == null || correctIndex.isEmpty()) return Stream.empty();
+        boolean requiresTypePredicate = selector.target() != Entity.class; // Probably should make this nicer
+
         Stream<TrackedEntity> stream = switch (selector.gather()) {
             case EntitySelector.Gather.Only(int entityId) -> {
+                requiresTypePredicate = false;
                 final TrackedEntity trackedEntity = correctIndex.get(entityId);
                 yield trackedEntity != null ? Stream.of(trackedEntity) : Stream.empty();
             }
             case EntitySelector.Gather.OnlyUuid(UUID entityUuid) -> {
                 final TrackedEntity trackedEntity = uuidIndex.get(entityUuid);
-                yield trackedEntity != null ? Stream.of(trackedEntity).filter(entity -> selector.target().isAssignableFrom(entity.entity().getClass())) : Stream.empty();
+                yield trackedEntity != null ? Stream.of(trackedEntity) : Stream.empty();
             }
             case EntitySelector.Gather.Range(double radius) -> {
+                requiresTypePredicate = false;
                 //TODO optimize for always inside chunk.
                 final var doubleRadius = radius * radius;
                 yield correctIndex.values().stream().filter(trackedEntity -> origin.distanceSquared(trackedEntity.lastPosition().getPlain()) < doubleRadius);
@@ -160,8 +164,7 @@ final class EntityTrackerImpl implements EntityTracker {
             case EntitySelector.Gather.Chunk(int chunkX, int chunkZ) -> {
                 final long index = CoordConversion.chunkIndex(chunkX, chunkZ);
                 final ObjectArrayList<TrackedEntity> entities = chunksEntities.get(index);
-                yield entities != null ? entities.stream()
-                        .filter(entity -> selector.target().isAssignableFrom(entity.entity().getClass())) : Stream.empty();
+                yield entities != null ? entities.stream() : Stream.empty();
             }
             case EntitySelector.Gather.ChunkRange(int radius) -> {
                 final LongArrayList chunkIndexes = new LongArrayList(0);
@@ -174,12 +177,18 @@ final class EntityTrackerImpl implements EntityTracker {
 
                 yield (ServerFlag.ENTITY_TRACKER_PARALLEL_CHUNK_STREAM ? chunkIndexes.longParallelStream() : chunkIndexes.longStream())
                         .mapToObj(chunksEntities::get)
-                        .flatMap(Collection::stream)
-                        .filter(entity -> selector.target().isAssignableFrom(entity.entity().getClass()));
+                        .flatMap(Collection::stream);
             }
             // Maybe `None` condition?
-            case null -> correctIndex.values().stream();
+            case null -> {
+                requiresTypePredicate = false;
+                yield correctIndex.values().stream();
+            }
         };
+
+        if (requiresTypePredicate) {
+            stream = stream.filter(entity -> selector.target().isAssignableFrom(entity.entity().getClass()));
+        }
 
         {
             // noinspection unchecked
