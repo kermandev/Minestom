@@ -40,6 +40,14 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
         return selector(Entity.class, consumer);
     }
 
+    static @NotNull EntitySelector<LivingEntity> living() {
+        return selector(LivingEntity.class);
+    }
+
+    static @NotNull EntitySelector<LivingEntity> living(@NotNull Consumer<@NotNull Builder<LivingEntity>> consumer) {
+        return selector(LivingEntity.class, consumer);
+    }
+
     static @NotNull EntitySelector<Player> player() {
         return selector(Player.class);
     }
@@ -100,13 +108,6 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
      * Data gathering predicates.
      */
     sealed interface Gather {
-        // Maybe we shouldn't implement only and that's for the user.
-        record Only(int entityId) implements Gather {}
-        record OnlyUuid(UUID entityUuid) implements Gather {}
-        record Range(double radius) implements Gather {}
-        record Chunk(int chunkX, int chunkZ) implements Gather {}
-        record ChunkRange(int radius) implements Gather {}
-
         static Gather only(Entity entity) {
             return only(entity.getEntityId());
         }
@@ -134,6 +135,16 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
             return new ChunkRange(radius);
         }
 
+        @ApiStatus.Internal
+        record Only(int entityId) implements Gather {}
+        @ApiStatus.Internal
+        record OnlyUuid(UUID entityUuid) implements Gather {}
+        @ApiStatus.Internal
+        record Range(double radius) implements Gather {}
+        @ApiStatus.Internal
+        record Chunk(int chunkX, int chunkZ) implements Gather {}
+        @ApiStatus.Internal
+        record ChunkRange(int radius) implements Gather {}
     }
     enum Sort {
         ARBITRARY, FURTHEST, NEAREST, RANDOM

@@ -61,7 +61,8 @@ record EntitySelectorImpl<E>(@NotNull Class<? extends E> target,
         public void type(@NotNull EntityType @NotNull ... types) {
             // No gather impl of this.
             final var allowedTypes = new HashSet<>(List.of(types));
-            this.predicate(Property.class.cast(EntitySelectors.TYPE), (point, type) -> allowedTypes.contains(type));
+            //noinspection unchecked
+            this.predicate((Property<E, EntityType>) EntitySelectors.TYPE, (point, type) -> allowedTypes.contains(type));
         }
 
         @Override
@@ -78,7 +79,8 @@ record EntitySelectorImpl<E>(@NotNull Class<? extends E> target,
         @Override
         public <G extends E> Builder<G> reinterpret(Class<G> target) {
             final var ourTarget = this.target; // Perform runtime check.
-            Check.argCondition(ourTarget.isAssignableFrom(target), "The target type is not a subtype of " + target);
+            Check.argCondition(!target.isAssignableFrom(ourTarget), "The target type is not a subtype of " + ourTarget.getSimpleName());
+            this.target(target);
             //noinspection unchecked
             return (Builder<G>) this;
         }
@@ -92,72 +94,5 @@ record EntitySelectorImpl<E>(@NotNull Class<? extends E> target,
         EntitySelectorImpl<E> build() {
             return new EntitySelectorImpl<>(target, gather, sort, limit, predicates);
         }
-
     }
-
-//    static final class BuilderImpl<E> implements Builder<E> {
-//        private Target target = Target.ALL;
-//        private Sort sort = Sort.ARBITRARY;
-//        private int limit = -1;
-//        private final List<BiPredicate<Point, E>> predicates = new ArrayList<>();
-//
-//        @Override
-//        public void target(@NotNull Target target) {
-//            this.target = target;
-//        }
-//
-//        @Override
-//        public <T> void predicate(@NotNull Property<? super E, T> property, @NotNull BiPredicate<Point, T> predicate) {
-//            this.predicates.add((point, entity) -> predicate.test(point, property.function().apply(entity)));
-//        }
-////
-////        @Override
-////        public void type(@NotNull Class<E> type) {
-////            predicate(Property.class.cast(EntitySelectors.CLASS), (point, classType) -> type.isAssignableFrom((Class<?>) classType));
-////        }
-//
-//        @Override
-//        public void type(@NotNull EntityType @NotNull ... types) {
-//            predicate(Property.class.cast(EntitySelectors.TYPE), (point, type) -> new HashSet<>(List.of(types)).contains(type));
-//        }
-//
-//        @Override
-//        public void range(double radius) {
-//            this.<Pos>predicate(Property.class.cast(EntitySelectors.POS),
-//                    (origin, coord) -> origin.distance(coord) <= radius);
-//        }
-//
-//        @Override
-//        public void chunk(int chunkX, int chunkZ) {
-//            this.<Pos>predicate(Property.class.cast(EntitySelectors.POS),
-//                    (origin, coord) -> coord.chunkX() == chunkX && coord.chunkZ() == chunkZ);
-//        }
-//
-//        @Override
-//        public void chunkRange(int radius) {
-//            this.<Pos>predicate(Property.class.cast(EntitySelectors.POS), (origin, coord) -> {
-//                final int originChunkX = origin.chunkX();
-//                final int originChunkZ = origin.chunkZ();
-//                final int coordChunkX = coord.chunkX();
-//                final int coordChunkZ = coord.chunkZ();
-//                final int deltaX = Math.abs(originChunkX - coordChunkX);
-//                final int deltaZ = Math.abs(originChunkZ - coordChunkZ);
-//                return deltaX <= radius && deltaZ <= radius;
-//            });
-//        }
-//
-//        @Override
-//        public void sort(@NotNull Sort sort) {
-//            this.sort = sort;
-//        }
-//
-//        @Override
-//        public void limit(int limit) {
-//            this.limit = limit;
-//        }
-//
-//        EntitySelectorImpl<E> build() {
-//            return new EntitySelectorImpl<>(target, sort, limit, predicates);
-//        }
-//    }
 }
