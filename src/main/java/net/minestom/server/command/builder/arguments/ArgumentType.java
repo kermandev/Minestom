@@ -12,6 +12,7 @@ import net.minestom.server.command.builder.arguments.relative.ArgumentRelativeVe
 import net.minestom.server.command.builder.arguments.relative.ArgumentRelativeVec3;
 import net.minestom.server.command.builder.parser.ArgumentParser;
 import net.minestom.server.entity.Entity;
+import net.minestom.server.entity.LivingEntity;
 import net.minestom.server.entity.Player;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
@@ -193,6 +194,13 @@ public class ArgumentType {
      */
     public static <T extends Entity> ArgumentEntity<T> Entity(@NotNull String id, @NotNull Class<T> entityClass) {
         return new ArgumentEntity<>(id, entityClass);
+    }
+
+    /**
+     * @see ArgumentEntity
+     */
+    public static ArgumentEntity<LivingEntity> Living(@NotNull String id) {
+        return new ArgumentEntity<>(id, LivingEntity.class);
     }
 
     /**
