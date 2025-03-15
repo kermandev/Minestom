@@ -16,6 +16,7 @@ import net.minestom.server.utils.location.RelativeVec;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 public class SummonCommand extends Command {
 
@@ -58,6 +59,8 @@ public class SummonCommand extends Command {
 
         final Random random = new Random();
 
+        final var startTime = System.nanoTime();
+
         int spawnedGood = 0;
         for (int i = 0; i < amount; i++) {
             final Entity entity = entityClass.instantiate(entityType);
@@ -69,7 +72,10 @@ public class SummonCommand extends Command {
                 System.out.println("failed spawn for " + i);
             }
         }
-        System.out.println("Done! with " + spawnedGood);
+        final var spawnTime = System.nanoTime() - startTime;
+
+        System.out.println("Done! with " + spawnedGood + " and took " + TimeUnit.NANOSECONDS.toMillis(spawnTime) + " ms");
+        commandSender.sendMessage("Spawned " + spawnedGood + " good and took " + TimeUnit.NANOSECONDS.toMillis(spawnTime) + " ms");
     }
 
     @SuppressWarnings("unused")

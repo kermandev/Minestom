@@ -31,6 +31,8 @@ public class Main {
 
     public static void main(String[] args) {
         System.setProperty("minestom.experiment.pose-updates", "true");
+        System.setProperty("minestom.entity-tracker.parallel-chunk-stream", "true");
+
 
         MinecraftServer.setCompressionThreshold(0);
 
