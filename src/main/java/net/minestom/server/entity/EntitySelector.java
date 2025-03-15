@@ -48,14 +48,6 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
         return selector(Player.class, consumer);
     }
 
-    static <G extends Player> @NotNull EntitySelector<G> player(@NotNull Class<G> target) {
-        return selector(target);
-    }
-
-    static <G extends Player> @NotNull EntitySelector<G> player(@NotNull Class<G> target, @NotNull Consumer<@NotNull Builder<G>> consumer) {
-        return selector(target, consumer);
-    }
-
     static <E, T> @NotNull Property<E, T> property(@NotNull String name, Function<E, T> function) {
         return new EntitySelectorImpl.PropertyImpl<>(name, function);
     }
