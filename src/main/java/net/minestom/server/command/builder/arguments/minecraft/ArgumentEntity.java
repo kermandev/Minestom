@@ -364,7 +364,7 @@ public class ArgumentEntity<T extends Entity> extends Argument<EntitySelector<T>
     }
 
     private EntitySelector.Builder<Player> asPlayerBuilder(EntitySelector.Builder<T> builder) {
-        Check.argCondition(isOnlyPlayers(), "This argument is not player-only");
+        Check.stateCondition(!isOnlyPlayers(), "This argument is not player-only");
         // noinspection unchecked
         return (EntitySelector.Builder<Player>) builder;
     }
