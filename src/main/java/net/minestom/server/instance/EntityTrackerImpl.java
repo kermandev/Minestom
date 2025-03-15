@@ -140,7 +140,7 @@ final class EntityTrackerImpl implements EntityTracker {
 
     @Override
     public synchronized <R extends Entity> @NotNull Stream<@NotNull R> selectEntity(@NotNull EntitySelector<R> selector, @NotNull Point origin) {
-        final var correctIndex = classToIndex.get(selector.target().type());
+        final var correctIndex = classToIndex.get(selector.target());
         // If we have no entities of this type, we can simply just return.
         if (correctIndex == null || correctIndex.isEmpty()) return Stream.empty();
         Stream<TrackedEntity> stream = switch (selector.gather()) {
@@ -150,7 +150,7 @@ final class EntityTrackerImpl implements EntityTracker {
             }
             case EntitySelector.Gather.OnlyUuid(UUID entityUuid) -> {
                 final TrackedEntity trackedEntity = uuidIndex.get(entityUuid);
-                yield trackedEntity != null ? Stream.of(trackedEntity).filter(entity -> selector.target().type().isAssignableFrom(entity.entity().getClass())) : Stream.empty();
+                yield trackedEntity != null ? Stream.of(trackedEntity).filter(entity -> selector.target().isAssignableFrom(entity.entity().getClass())) : Stream.empty();
             }
             case EntitySelector.Gather.Range(double radius) -> {
                 //TODO optimize for always inside chunk.
@@ -161,7 +161,7 @@ final class EntityTrackerImpl implements EntityTracker {
                 final long index = CoordConversion.chunkIndex(chunkX, chunkZ);
                 final ObjectArrayList<TrackedEntity> entities = chunksEntities.get(index);
                 yield entities != null ? entities.stream()
-                        .filter(entity -> selector.target().type().isAssignableFrom(entity.entity().getClass())) : Stream.empty();
+                        .filter(entity -> selector.target().isAssignableFrom(entity.entity().getClass())) : Stream.empty();
             }
             case EntitySelector.Gather.ChunkRange(int radius) -> {
                 final LongArrayList chunkIndexes = new LongArrayList(0);
@@ -175,7 +175,7 @@ final class EntityTrackerImpl implements EntityTracker {
                 yield (ServerFlag.ENTITY_TRACKER_PARALLEL_CHUNK_STREAM ? chunkIndexes.longParallelStream() : chunkIndexes.longStream())
                         .mapToObj(chunksEntities::get)
                         .flatMap(Collection::stream)
-                        .filter(entity -> selector.target().type().isAssignableFrom(entity.entity().getClass()));
+                        .filter(entity -> selector.target().isAssignableFrom(entity.entity().getClass()));
             }
             // Maybe `None` condition?
             case null -> correctIndex.values().stream();
@@ -216,7 +216,7 @@ final class EntityTrackerImpl implements EntityTracker {
 
         // They have already been identified to cast to R. Lets make sure we can cast to it now.
         return stream.map(TrackedEntity::entity)
-                .map(it -> selector.target().type().cast(it));
+                .map(it -> selector.target().cast(it));
     }
 
     private void addEntityClass(TrackedEntity trackedEntity) {

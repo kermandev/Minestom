@@ -57,7 +57,7 @@ public class ArgumentEntity<T extends Entity> extends Argument<EntitySelector<T>
             "x_rotation", "y_rotation", "type", "advancements", "predicate");
 
 
-    private final EntitySelector.Target<T> target;
+    private final Class<T> target;
     private final boolean onlySingleEntity;
     private final boolean onlyPlayers;
 
@@ -74,32 +74,14 @@ public class ArgumentEntity<T extends Entity> extends Argument<EntitySelector<T>
     public ArgumentEntity(@NotNull String id, Class<T> entityClass) {
         super(id, true);
 
-        this.target = EntitySelector.Target.of(entityClass);
+        this.target = entityClass;
         this.onlySingleEntity = false;
         this.onlyPlayers = Player.class.isAssignableFrom(entityClass);
     }
 
-    /**
-     * See {@link net.minestom.server.command.builder.arguments.ArgumentType#Entity(String)}
-     *  {@link net.minestom.server.command.builder.arguments.ArgumentType#Player(String)}
-     *  {@link net.minestom.server.command.builder.arguments.ArgumentType#Entity(String, Class)}
-     *  for usage.
-     *  <p>
-     *  This is considered the raw usage.
-     * @param id The id of the argument.
-     * @param target The entity target you desire.
-     */
-    public ArgumentEntity(@NotNull String id, EntitySelector.Target<T> target) {
-        super(id, true);
-
-        this.target = target;
-        this.onlySingleEntity = false;
-        this.onlyPlayers = Player.class.isAssignableFrom(target.type());
-    }
-
     // We might eventually enforce a class to be passed. Either way, this signature could change in the future.
     @ApiStatus.Experimental
-    public ArgumentEntity(@NotNull String id, EntitySelector.Target<T> target, boolean onlySingleEntity, boolean onlyPlayers) {
+    public ArgumentEntity(@NotNull String id, Class<T> target, boolean onlySingleEntity, boolean onlyPlayers) {
         super(id, true);
 
         this.target = target;

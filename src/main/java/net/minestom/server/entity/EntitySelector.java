@@ -22,37 +22,37 @@ import java.util.stream.Stream;
  */
 public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits EntitySelectorImpl {
 
-    static <E> @NotNull EntitySelector<E> selector(Target<E> target) {
+    static <E> @NotNull EntitySelector<E> selector(Class<E> target) {
         return new EntitySelectorImpl.BuilderImpl<>(target).build();
     }
 
-    static <E> @NotNull EntitySelector<E> selector(Target<E> target, @NotNull Consumer<@NotNull Builder<E>> consumer) {
+    static <E> @NotNull EntitySelector<E> selector(Class<E> target, @NotNull Consumer<@NotNull Builder<E>> consumer) {
         EntitySelectorImpl.BuilderImpl<E> builder = new EntitySelectorImpl.BuilderImpl<>(target);
         consumer.accept(builder);
         return builder.build();
     }
 
     static @NotNull EntitySelector<Entity> entity() {
-        return selector(Target.entity());
+        return selector(Entity.class);
     }
 
     static @NotNull EntitySelector<Entity> entity(@NotNull Consumer<@NotNull Builder<Entity>> consumer) {
-        return selector(Target.entity(), consumer);
+        return selector(Entity.class, consumer);
     }
 
     static @NotNull EntitySelector<Player> player() {
-        return selector(Target.player());
+        return selector(Player.class);
     }
 
     static @NotNull EntitySelector<Player> player(@NotNull Consumer<@NotNull Builder<Player>> consumer) {
-        return selector(Target.player(), consumer);
+        return selector(Player.class, consumer);
     }
 
-    static <G extends Player> @NotNull EntitySelector<G> player(@NotNull Target<G> target) {
+    static <G extends Player> @NotNull EntitySelector<G> player(@NotNull Class<G> target) {
         return selector(target);
     }
 
-    static <G extends Player> @NotNull EntitySelector<G> player(@NotNull Target<G> target, @NotNull Consumer<@NotNull Builder<G>> consumer) {
+    static <G extends Player> @NotNull EntitySelector<G> player(@NotNull Class<G> target, @NotNull Consumer<@NotNull Builder<G>> consumer) {
         return selector(target, consumer);
     }
 
@@ -67,7 +67,7 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
     @Override
     boolean test(Point origin, E entity);
 
-    @NotNull Target<? extends E> target();
+    @NotNull Class<? extends E> target();
 
     @NotNull Sort sort();
 
@@ -76,7 +76,7 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
     int limit();
 
     sealed interface Builder<E> permits EntitySelectorImpl.BuilderImpl {
-        void target(@NotNull Target<? extends E> target);
+        void target(@NotNull Class<? extends E> target);
 
         <T> void predicate(@NotNull Property<? super E, T> property, @NotNull BiPredicate<Point, T> predicate);
 
@@ -98,26 +98,10 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
         void sort(@NotNull Sort sort);
 
         @ApiStatus.Experimental
-        <G extends E> Builder<G> reinterpret(Target<G> target);
+        <G extends E> Builder<G> reinterpret(Class<G> target);
         
         @ApiStatus.Experimental
         <G extends E> Builder<G> reinterpret();
-    }
-
-    sealed interface Target<T> permits EntitySelectorImpl.TargetImpl {
-        static Target<Player> player() {
-            return EntitySelectorImpl.TargetImpl.PLAYERS;
-        }
-
-        static Target<Entity> entity() {
-            return EntitySelectorImpl.TargetImpl.ENTITIES;
-        }
-
-        static <T> Target<T> of(Class<T> type) {
-            return new EntitySelectorImpl.TargetImpl<>(type);
-        }
-
-        Class<T> type();
     }
 
     /**

@@ -389,7 +389,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
         if (experiencePickupCooldown.isReady(time)) {
             experiencePickupCooldown.refreshLastUpdate(time);
             final Point loweredPosition = position.sub(0, .5, 0);
-            final EntitySelector<ExperienceOrb> orbSelector = EntitySelector.selector(EntitySelector.Target.of(ExperienceOrb.class), builder -> builder.gather(EntitySelector.Gather.range(expandedBoundingBox.width())));
+            final EntitySelector<ExperienceOrb> orbSelector = EntitySelector.selector(ExperienceOrb.class, builder -> builder.gather(EntitySelector.Gather.range(expandedBoundingBox.width())));
             this.selectEntityConsume(orbSelector, position, experienceOrb -> {
                 if (expandedBoundingBox.intersectEntity(loweredPosition, experienceOrb)) {
                     PickupExperienceEvent pickupExperienceEvent = new PickupExperienceEvent(this, experienceOrb);

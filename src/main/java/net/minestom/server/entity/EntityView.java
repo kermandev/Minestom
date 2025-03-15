@@ -131,7 +131,7 @@ final class EntityView {
         @SuppressWarnings("rawtypes")
         private static final AtomicIntegerFieldUpdater<EntityView.Option> UPDATER = AtomicIntegerFieldUpdater.newUpdater(EntityView.Option.class, "auto");
         // Entities that should be tracked from this option
-        private final EntitySelector.Target<T> target;
+        private final Class<T> target;
         // The condition that must be met for this option to be considered auto.
         private final Predicate<T> loopPredicate;
         // The consumers to be called when an entity is added/removed.
@@ -146,7 +146,7 @@ final class EntityView {
 
         public Option(Class<T> type, Predicate<T> loopPredicate,
                       Consumer<T> addition, Consumer<T> removal) {
-            this.target = EntitySelector.Target.of(type);
+            this.target = type;
             this.loopPredicate = loopPredicate;
             this.addition = addition;
             this.removal = removal;

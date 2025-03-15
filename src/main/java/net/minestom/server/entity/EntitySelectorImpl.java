@@ -10,7 +10,7 @@ import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 
-record EntitySelectorImpl<E>(@NotNull Target<? extends E> target,
+record EntitySelectorImpl<E>(@NotNull Class<? extends E> target,
                              @Nullable EntitySelector.Gather gather,
                              @Nullable EntitySelector.Sort sort,
                              int limit,
@@ -30,26 +30,20 @@ record EntitySelectorImpl<E>(@NotNull Target<? extends E> target,
     record PropertyImpl<E, T>(String name, Function<E, T> function) implements EntitySelector.Property<E, T> {
     }
 
-    record TargetImpl<T>(Class<T> type) implements Target<T> {
-        // We have these to prevent usage.
-        final static Target<Player> PLAYERS = Target.of(Player.class);
-        final static Target<Entity> ENTITIES = Target.of(Entity.class);
-    }
-
     static final class BuilderImpl<E> implements Builder<E> {
-        private Target<? extends E> target;
+        private Class<? extends E> target;
         private Gather gather = null;
         private Sort sort = Sort.ARBITRARY;
         private int limit = 0;
 
         private final List<BiPredicate<Point, E>> predicates = new ArrayList<>();
 
-        BuilderImpl(@NotNull Target<E> target) {
+        BuilderImpl(@NotNull Class<E> target) {
             this.target = target;
         }
 
         @Override
-        public void target(@NotNull Target<? extends E> target) {
+        public void target(@NotNull Class<? extends E> target) {
             this.target = target;
         }
 
@@ -82,9 +76,9 @@ record EntitySelectorImpl<E>(@NotNull Target<? extends E> target,
         }
 
         @Override
-        public <G extends E> Builder<G> reinterpret(Target<G> target) {
+        public <G extends E> Builder<G> reinterpret(Class<G> target) {
             final var ourTarget = this.target; // Perform runtime check.
-            Check.argCondition(ourTarget.type().isAssignableFrom(target.type()), "The target type is not a subtype of " + target.type());
+            Check.argCondition(ourTarget.isAssignableFrom(target), "The target type is not a subtype of " + target);
             //noinspection unchecked
             return (Builder<G>) this;
         }
@@ -92,7 +86,7 @@ record EntitySelectorImpl<E>(@NotNull Target<? extends E> target,
         @Override
         public <G extends E> Builder<G> reinterpret() {
             //noinspection unchecked
-            return reinterpret((Target<G>) target);
+            return reinterpret((Class<G>) target);
         }
 
         EntitySelectorImpl<E> build() {
