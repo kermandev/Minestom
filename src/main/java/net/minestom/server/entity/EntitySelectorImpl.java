@@ -37,7 +37,6 @@ record EntitySelectorImpl<E>(@NotNull Target<? extends E> target,
     }
 
     static final class BuilderImpl<E> implements Builder<E> {
-        // TODO fix type?
         private Target<? extends E> target;
         private Gather gather = null;
         private Sort sort = Sort.ARBITRARY;

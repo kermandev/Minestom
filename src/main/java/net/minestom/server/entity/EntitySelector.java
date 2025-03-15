@@ -71,7 +71,7 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
 
     @NotNull Sort sort();
 
-    @Nullable EntitySelector.Gather gather();
+    @Nullable Gather gather();
 
     int limit();
 

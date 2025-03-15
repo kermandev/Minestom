@@ -160,7 +160,7 @@ public class ArgumentEntity<T extends Entity> extends Argument<EntitySelector<T>
         if (onlyPlayers && !PLAYERS_ONLY_SELECTOR.contains(selectorVariable))
             throw new ArgumentSyntaxException("Argument requires only players", input, ONLY_PLAYERS_ERROR);
 
-        if (!onlyPlayers && REQUIRES_PLAYER_UPGRADED_TYPE.contains(selectorVariable) && !target.type().isAssignableFrom(Player.class))
+        if (!onlyPlayers && REQUIRES_PLAYER_UPGRADED_TYPE.contains(selectorVariable))
             throw new ArgumentSyntaxException("Argument requires player types.", input, ONLY_PLAYERS_ERROR);
 
         return EntitySelector.selector(target,builder -> {
@@ -370,7 +370,13 @@ public class ArgumentEntity<T extends Entity> extends Argument<EntitySelector<T>
             case "@a", "@e" -> {
                 // Ignored as targets already use an all gatherer.
             }
-            case "@s" -> builder.gather(EntitySelector.Gather.only((Entity) sender));
+            case "@s" -> {
+                if (sender instanceof Entity) {
+                    builder.gather(EntitySelector.Gather.only((Entity) sender));
+                } else {
+                    throw new IllegalArgumentException("Sender is not an entity");
+                }
+            }
             default -> throw new IllegalArgumentException("Weird selector variable: " + selectorVariable);
         }
     }
