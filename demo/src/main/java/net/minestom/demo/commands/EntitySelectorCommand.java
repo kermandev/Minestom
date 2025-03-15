@@ -5,10 +5,7 @@ import net.minestom.server.command.CommandSender;
 import net.minestom.server.command.builder.Command;
 import net.minestom.server.command.builder.CommandContext;
 import net.minestom.server.command.builder.arguments.ArgumentType;
-import net.minestom.server.entity.Entity;
-import net.minestom.server.entity.EntityCreature;
-import net.minestom.server.entity.EntitySelector;
-import net.minestom.server.entity.Player;
+import net.minestom.server.entity.*;
 
 import java.util.List;
 
@@ -22,12 +19,14 @@ public class EntitySelectorCommand extends Command {
         var argumentEntity = ArgumentType.Entity("entities");
         var argumentPlayer = ArgumentType.Player("players");
         var targetZombie = ArgumentType.Entity("targets", ZombieCreature.class);
+        var target = ArgumentType.Entity("targets", Entity.class);
 
         setArgumentCallback((sender, exception) -> exception.printStackTrace(), argumentEntity);
 
         addSyntax(this::executor, argumentEntity);
         addSyntax(this::playerExecutor, ArgumentType.Literal("player"), argumentPlayer);
         addSyntax(this::targetExecutor, ArgumentType.Literal("target"), targetZombie);
+        addSyntax(this::killExecutor, ArgumentType.Literal("kill"), target);
     }
 
     private void executor(CommandSender commandSender, CommandContext context) {
@@ -47,5 +46,21 @@ public class EntitySelectorCommand extends Command {
         List<ZombieCreature> entities = commandSender.selectEntity(selector).toList();
         commandSender.sendMessage("found " + entities.size() + " target");
         entities.forEach(EntityCreature::kill);
+    }
+
+    private void killExecutor(CommandSender commandSender, CommandContext context) {
+        EntitySelector<Entity> selector = context.get("targets");
+        List<Entity> entities = commandSender.selectEntity(selector).toList();
+        commandSender.sendMessage("found " + entities.size() + " target");
+        entities.forEach((entity) -> {
+            if (entity instanceof Player) {
+                return;
+            }
+            if (entity instanceof LivingEntity livingEntity) {
+                livingEntity.kill();
+            } else {
+                entity.remove();
+            }
+        });
     }
 }
