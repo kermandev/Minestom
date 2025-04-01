@@ -1,12 +1,12 @@
 package net.minestom.server.collision;
 
+import net.kyori.adventure.key.Key;
 import net.minestom.server.coordinate.Point;
 import net.minestom.server.coordinate.Pos;
 import net.minestom.server.coordinate.Vec;
 import net.minestom.server.instance.block.Block;
 import net.minestom.server.instance.block.BlockHandler;
 import net.minestom.server.utils.Direction;
-import net.minestom.server.utils.NamespaceID;
 import net.minestom.testing.Env;
 import net.minestom.testing.EnvTest;
 import org.jetbrains.annotations.NotNull;
@@ -51,8 +51,8 @@ class PlayerBlockTouchTickIntegrationTest {
             }
 
             @Override
-            public @NotNull NamespaceID getNamespaceId() {
-                return NamespaceID.from("minestom:test");
+            public @NotNull Key getKey() {
+                return Key.key("minestom:test");
             }
         };
         var customBlock = Block.STONE.withHandler(handler);
@@ -102,8 +102,8 @@ class PlayerBlockTouchTickIntegrationTest {
             }
 
             @Override
-            public @NotNull NamespaceID getNamespaceId() {
-                return NamespaceID.from("minestom:test");
+            public @NotNull Key getKey() {
+                return Key.key("minestom:test");
             }
         };
         var customBlock = Block.STONE.withHandler(handler);
@@ -154,8 +154,8 @@ class PlayerBlockTouchTickIntegrationTest {
             }
 
             @Override
-            public @NotNull NamespaceID getNamespaceId() {
-                return NamespaceID.from("minestom:test");
+            public @NotNull Key getKey() {
+                return Key.key("minestom:test");
             }
         };
         var customBlock = Block.STONE.withHandler(handler);
@@ -206,8 +206,8 @@ class PlayerBlockTouchTickIntegrationTest {
             }
 
             @Override
-            public @NotNull NamespaceID getNamespaceId() {
-                return NamespaceID.from("minestom:test");
+            public @NotNull Key getKey() {
+                return Key.key("minestom:test");
             }
         };
         var customBlock = Block.STONE.withHandler(handler);
@@ -258,8 +258,8 @@ class PlayerBlockTouchTickIntegrationTest {
             }
 
             @Override
-            public @NotNull NamespaceID getNamespaceId() {
-                return NamespaceID.from("minestom:test");
+            public @NotNull Key getKey() {
+                return Key.key("minestom:test");
             }
         };
         var customBlock = Block.STONE.withHandler(handler);
@@ -298,8 +298,8 @@ class PlayerBlockTouchTickIntegrationTest {
             }
 
             @Override
-            public @NotNull NamespaceID getNamespaceId() {
-                return NamespaceID.from("minestom:test");
+            public @NotNull Key getKey() {
+                return Key.key("minestom:test");
             }
         };
         instance.setBlock(0, 42, 0, Block.STONE.withHandler(handler));

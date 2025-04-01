@@ -156,8 +156,8 @@ class EntityBlockTouchTickIntegrationTest {
             }
 
             @Override
-            public @NotNull NamespaceID getNamespaceId() {
-                return NamespaceID.from("minestom:test");
+            public @NotNull Key getKey() {
+                return Key.key("minestom:test");
             }
         };
         var customBlock = Block.STONE.withHandler(handler);

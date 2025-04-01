@@ -1,12 +1,12 @@
 package net.minestom.server.instance.block.handler;
 
+import net.kyori.adventure.key.Key;
 import net.minestom.server.coordinate.BlockVec;
 import net.minestom.server.entity.PlayerHand;
 import net.minestom.server.instance.block.Block;
 import net.minestom.server.instance.block.BlockFace;
 import net.minestom.server.instance.block.BlockHandler;
 import net.minestom.server.network.packet.client.play.ClientPlayerBlockPlacementPacket;
-import net.minestom.server.utils.NamespaceID;
 import net.minestom.testing.Env;
 import net.minestom.testing.EnvTest;
 import org.jetbrains.annotations.NotNull;
@@ -32,8 +32,8 @@ class BlockHandlerIntegrationTest {
             }
 
             @Override
-            public @NotNull NamespaceID getNamespaceId() {
-                return NamespaceID.from("minestom:test");
+            public @NotNull Key getKey() {
+                return Key.key("minestom:test");
             }
         };
 
@@ -52,8 +52,8 @@ class BlockHandlerIntegrationTest {
             }
 
             @Override
-            public @NotNull NamespaceID getNamespaceId() {
-                return NamespaceID.from("minestom:test");
+            public @NotNull Key getKey() {
+                return Key.key("minestom:test");
             }
         };
 
@@ -76,8 +76,8 @@ class BlockHandlerIntegrationTest {
             }
 
             @Override
-            public @NotNull NamespaceID getNamespaceId() {
-                return NamespaceID.from("minestom:test");
+            public @NotNull Key getKey() {
+                return Key.key("minestom:test");
             }
         };
 
@@ -103,8 +103,8 @@ class BlockHandlerIntegrationTest {
             }
 
             @Override
-            public @NotNull NamespaceID getNamespaceId() {
-                return NamespaceID.from("minestom:test");
+            public @NotNull Key getKey() {
+                return Key.key("minestom:test");
             }
 
             @Override

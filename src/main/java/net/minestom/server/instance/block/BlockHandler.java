@@ -332,7 +332,7 @@ public interface BlockHandler {
     }
 
     /**
-     * Handler used for loaded blocks with unknown namespace
+     * Handler used for loaded blocks with unknown namespace/key
      * in order to do not lose the information while saving, and for runtime debugging purpose.
      */
     @ApiStatus.Internal
@@ -352,8 +352,8 @@ public interface BlockHandler {
             return key;
         }
 
-        public static @NotNull BlockHandler get(@NotNull String namespace) {
-            return DUMMY_CACHE.computeIfAbsent(namespace, Dummy::new);
+        public static @NotNull BlockHandler get(@NotNull String key) {
+            return DUMMY_CACHE.computeIfAbsent(key, Dummy::new);
         }
     }
 
