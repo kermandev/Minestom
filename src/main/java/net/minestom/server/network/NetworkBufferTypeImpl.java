@@ -311,17 +311,37 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    record StringType() implements NetworkBufferTypeImpl<String> {
+    record StringType(Type<byte[]> codec) implements NetworkBufferTypeImpl<String> {
         @Override
         public void write(@NotNull NetworkBuffer buffer, String value) {
             final byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
-            buffer.write(BYTE_ARRAY, bytes);
+            buffer.write(codec, bytes);
         }
 
         @Override
         public String read(@NotNull NetworkBuffer buffer) {
-            final byte[] bytes = buffer.read(BYTE_ARRAY);
+            final byte[] bytes = buffer.read(codec);
             return new String(bytes, StandardCharsets.UTF_8);
+        }
+    }
+
+    record LimitedByteArrayType(int maxLength) implements NetworkBufferTypeImpl<byte[]> {
+        @Override
+        public void write(@NotNull NetworkBuffer buffer, byte[] value) {
+            final int length = value.length;
+            Check.argCondition(length >= maxLength, "String is too long (length: {0}, max: {1})", length, maxLength);
+            buffer.write(VAR_INT, length);
+            buffer.write(RAW_BYTES, value);
+        }
+
+        @Override
+        public byte[] read(@NotNull NetworkBuffer buffer) {
+            final int length = buffer.read(VAR_INT);
+            if (length == 0) return new byte[0];
+            final long remaining = buffer.readableBytes();
+            Check.argCondition(length > remaining, "String is too long (length: {0}, readable: {1})", length, remaining);
+            Check.argCondition(length >= maxLength, "String is too long (length: {0}, max: {1})", length, maxLength);
+            return buffer.read(FixedRawBytes(length));
         }
     }
 

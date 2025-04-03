@@ -14,7 +14,7 @@ public record EncryptionRequestPacket(
         boolean shouldAuthenticate
 ) implements ServerPacket.Login {
     public static final NetworkBuffer.Type<EncryptionRequestPacket> SERIALIZER = NetworkBufferTemplate.template(
-            STRING, EncryptionRequestPacket::serverId,
+            LimitedString(20), EncryptionRequestPacket::serverId,
             BYTE_ARRAY, EncryptionRequestPacket::publicKey,
             BYTE_ARRAY, EncryptionRequestPacket::verifyToken,
             BOOLEAN, EncryptionRequestPacket::shouldAuthenticate,

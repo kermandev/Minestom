@@ -13,6 +13,8 @@ import net.minestom.server.registry.Registries;
 import net.minestom.server.utils.Direction;
 import net.minestom.server.utils.Unit;
 import net.minestom.server.utils.crypto.KeyUtils;
+import net.minestom.server.utils.validate.Check;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.UnknownNullability;
@@ -44,7 +46,9 @@ public sealed interface NetworkBuffer permits NetworkBufferImpl {
     Type<Integer> VAR_INT_3 = new NetworkBufferTypeImpl.VarInt3Type();
     Type<Long> VAR_LONG = new NetworkBufferTypeImpl.VarLongType();
     Type<byte[]> RAW_BYTES = new NetworkBufferTypeImpl.RawBytesType(-1);
-    Type<String> STRING = new NetworkBufferTypeImpl.StringType();
+    Type<byte[]> BYTE_ARRAY = new NetworkBufferTypeImpl.ByteArrayType();
+    Type<String> STRING = LimitedString(Short.MAX_VALUE);
+    Type<String> STRING_UNBOUNDED = new NetworkBufferTypeImpl.StringType(BYTE_ARRAY);
     Type<Key> KEY = STRING.transform(Key::key, Key::asString);
     Type<String> STRING_TERMINATED = new NetworkBufferTypeImpl.StringTerminatedType();
     Type<String> STRING_IO_UTF8 = new NetworkBufferTypeImpl.IOUTF8StringType();
@@ -57,7 +61,6 @@ public sealed interface NetworkBuffer permits NetworkBufferImpl {
     Type<UUID> UUID = new NetworkBufferTypeImpl.UUIDType();
     Type<Pos> POS = new NetworkBufferTypeImpl.PosType();
 
-    Type<byte[]> BYTE_ARRAY = new NetworkBufferTypeImpl.ByteArrayType();
     Type<long[]> LONG_ARRAY = new NetworkBufferTypeImpl.LongArrayType();
     Type<int[]> VAR_INT_ARRAY = new NetworkBufferTypeImpl.VarIntArrayType();
     Type<long[]> VAR_LONG_ARRAY = new NetworkBufferTypeImpl.VarLongArrayType();
@@ -100,6 +103,16 @@ public sealed interface NetworkBuffer permits NetworkBufferImpl {
 
     static @NotNull Type<byte[]> FixedRawBytes(int length) {
         return new NetworkBufferTypeImpl.RawBytesType(length);
+    }
+
+    static @NotNull Type<byte[]> LimitedBytesArray(int maxLength) {
+        return new NetworkBufferTypeImpl.LimitedByteArrayType(maxLength);
+    }
+
+    static @NotNull Type<String> LimitedString(int maxLength) {
+        // The Protocol specification states that the maximum length of a string is 32767 bytes
+        Check.argCondition(maxLength > Short.MAX_VALUE, "BoundedString maxLength cannot exceed {0}!", Short.MAX_VALUE);
+        return new NetworkBufferTypeImpl.StringType(LimitedBytesArray(maxLength));
     }
 
     static <T> @NotNull Type<T> Lazy(@NotNull Supplier<@NotNull Type<T>> supplier) {

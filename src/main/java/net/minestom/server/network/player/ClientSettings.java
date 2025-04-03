@@ -25,7 +25,7 @@ public record ClientSettings(Locale locale, byte viewDistance,
             ParticleSetting.ALL
     );
 
-    private static final NetworkBuffer.Type<Locale> LOCALE_SERIALIZER = STRING.transform(
+    private static final NetworkBuffer.Type<Locale> LOCALE_SERIALIZER = LimitedString(16).transform(
             s -> {
                 final String locale = s.replace("_", "-");
                 return Locale.forLanguageTag(locale);

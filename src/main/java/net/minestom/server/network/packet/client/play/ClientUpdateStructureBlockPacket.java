@@ -26,7 +26,7 @@ public record ClientUpdateStructureBlockPacket(
             VECTOR3B, ClientUpdateStructureBlockPacket::size,
             Enum(Mirror.class), ClientUpdateStructureBlockPacket::mirror,
             VAR_INT.transform(ClientUpdateStructureBlockPacket::fromRestrictedRotation, ClientUpdateStructureBlockPacket::toRestrictedRotation), ClientUpdateStructureBlockPacket::rotation,
-            STRING, ClientUpdateStructureBlockPacket::metadata,
+            LimitedString(128), ClientUpdateStructureBlockPacket::metadata,
             FLOAT, ClientUpdateStructureBlockPacket::integrity,
             LONG, ClientUpdateStructureBlockPacket::seed,
             BYTE, ClientUpdateStructureBlockPacket::flags,

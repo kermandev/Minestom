@@ -2,6 +2,7 @@ package net.minestom.server.network.packet.client.play;
 
 import net.minestom.server.coordinate.Point;
 import net.minestom.server.network.NetworkBuffer;
+import net.minestom.server.network.NetworkBufferTemplate;
 import net.minestom.server.network.packet.client.ClientPacket;
 import org.jetbrains.annotations.NotNull;
 
@@ -26,25 +27,29 @@ public record ClientUpdateSignPacket(
         }
     }
 
-    public static final NetworkBuffer.Type<ClientUpdateSignPacket> SERIALIZER = new NetworkBuffer.Type<>() {
+    // TODO fixed list type
+    private static final NetworkBuffer.Type<List<String>> LINES_SERIALIZER = new NetworkBuffer.Type<>() {
+        private static final Type<String> SIGN_LINE = LimitedString(384);
+
         @Override
-        public void write(@NotNull NetworkBuffer buffer, @NotNull ClientUpdateSignPacket value) {
-            buffer.write(BLOCK_POSITION, value.blockPosition);
-            buffer.write(BOOLEAN, value.isFrontText);
-            buffer.write(STRING, value.lines.get(0));
-            buffer.write(STRING, value.lines.get(1));
-            buffer.write(STRING, value.lines.get(2));
-            buffer.write(STRING, value.lines.get(3));
+        public void write(@NotNull NetworkBuffer buffer, List<String> value) {
+            buffer.write(SIGN_LINE, value.get(0));
+            buffer.write(SIGN_LINE, value.get(1));
+            buffer.write(SIGN_LINE, value.get(2));
+            buffer.write(SIGN_LINE, value.get(3));
         }
 
         @Override
-        public @NotNull ClientUpdateSignPacket read(@NotNull NetworkBuffer buffer) {
-            return new ClientUpdateSignPacket(buffer.read(BLOCK_POSITION), buffer.read(BOOLEAN), readLines(buffer));
+        public List<String> read(@NotNull NetworkBuffer buffer) {
+            return List.of(buffer.read(SIGN_LINE), buffer.read(SIGN_LINE),
+                    buffer.read(SIGN_LINE), buffer.read(SIGN_LINE));
         }
     };
 
-    private static List<String> readLines(@NotNull NetworkBuffer reader) {
-        return List.of(reader.read(STRING), reader.read(STRING),
-                reader.read(STRING), reader.read(STRING));
-    }
+    public static final NetworkBuffer.Type<ClientUpdateSignPacket> SERIALIZER = NetworkBufferTemplate.template(
+            BLOCK_POSITION, ClientUpdateSignPacket::blockPosition,
+            BOOLEAN, ClientUpdateSignPacket::isFrontText,
+            LINES_SERIALIZER, ClientUpdateSignPacket::lines,
+            ClientUpdateSignPacket::new
+    );
 }

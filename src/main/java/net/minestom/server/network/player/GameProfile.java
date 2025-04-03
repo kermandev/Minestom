@@ -8,6 +8,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 import java.util.UUID;
 
+import static net.minestom.server.network.NetworkBuffer.LimitedString;
 import static net.minestom.server.network.NetworkBuffer.STRING;
 
 public record GameProfile(@NotNull UUID uuid, @NotNull String name,
@@ -39,9 +40,9 @@ public record GameProfile(@NotNull UUID uuid, @NotNull String name,
         }
 
         public static final NetworkBuffer.Type<Property> SERIALIZER = NetworkBufferTemplate.template(
-                STRING, Property::name,
+                LimitedString(64), Property::name,
                 STRING, Property::value,
-                STRING.optional(), Property::signature,
+                LimitedString(1024).optional(), Property::signature,
                 Property::new
         );
     }

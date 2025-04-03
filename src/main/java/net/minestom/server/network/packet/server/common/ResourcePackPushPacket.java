@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.UnaryOperator;
 
-import static net.minestom.server.network.NetworkBuffer.COMPONENT;
+import static net.minestom.server.network.NetworkBuffer.*;
 
 public record ResourcePackPushPacket(
         @NotNull UUID id,
@@ -23,10 +23,10 @@ public record ResourcePackPushPacket(
         @Nullable Component prompt
 ) implements ServerPacket.Configuration, ServerPacket.Play, ServerPacket.ComponentHolding {
     public static final NetworkBuffer.Type<ResourcePackPushPacket> SERIALIZER = NetworkBufferTemplate.template(
-            NetworkBuffer.UUID, ResourcePackPushPacket::id,
-            NetworkBuffer.STRING, ResourcePackPushPacket::url,
-            NetworkBuffer.STRING, ResourcePackPushPacket::hash,
-            NetworkBuffer.BOOLEAN, ResourcePackPushPacket::forced,
+            UUID, ResourcePackPushPacket::id,
+            STRING, ResourcePackPushPacket::url,
+            LimitedString(40), ResourcePackPushPacket::hash,
+            BOOLEAN, ResourcePackPushPacket::forced,
             COMPONENT.optional(), ResourcePackPushPacket::prompt,
             ResourcePackPushPacket::new);
 

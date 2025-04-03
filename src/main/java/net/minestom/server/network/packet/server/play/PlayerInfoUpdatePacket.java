@@ -102,7 +102,7 @@ public record PlayerInfoUpdatePacket(
                     for (Action action : actions) {
                         switch (action) {
                             case ADD_PLAYER -> {
-                                username = buffer.read(STRING);
+                                username = buffer.read(LimitedString(16));
                                 properties = buffer.read(Property.SERIALIZER.list(GameProfile.MAX_PROPERTIES));
                             }
                             case INITIALIZE_CHAT -> chatSession = ChatSession.SERIALIZER.read(buffer);
@@ -125,9 +125,9 @@ public record PlayerInfoUpdatePacket(
         }
 
         public static final NetworkBuffer.Type<Property> SERIALIZER = NetworkBufferTemplate.template(
-                STRING, Property::name,
+                LimitedString(64), Property::name,
                 STRING, Property::value,
-                STRING.optional(), Property::signature,
+                LimitedString(1024).optional(), Property::signature,
                 Property::new);
     }
 

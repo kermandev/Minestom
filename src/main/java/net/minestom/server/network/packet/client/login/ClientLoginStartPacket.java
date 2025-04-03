@@ -7,13 +7,12 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;
 
-import static net.minestom.server.network.NetworkBuffer.STRING;
-import static net.minestom.server.network.NetworkBuffer.UUID;
+import static net.minestom.server.network.NetworkBuffer.*;
 
 public record ClientLoginStartPacket(@NotNull String username,
                                      @NotNull UUID profileId) implements ClientPacket {
     public static final NetworkBuffer.Type<ClientLoginStartPacket> SERIALIZER = NetworkBufferTemplate.template(
-            STRING, ClientLoginStartPacket::username,
+            LimitedString(16), ClientLoginStartPacket::username,
             UUID, ClientLoginStartPacket::profileId,
             ClientLoginStartPacket::new);
 

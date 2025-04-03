@@ -5,6 +5,7 @@ import net.minestom.server.network.NetworkBufferTemplate;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.UnknownNullability;
 
+import static net.minestom.server.network.NetworkBuffer.FixedRawBytes;
 import static net.minestom.server.network.NetworkBuffer.VAR_INT;
 
 public record MessageSignature(byte @NotNull [] signature) {
@@ -17,7 +18,7 @@ public record MessageSignature(byte @NotNull [] signature) {
     }
 
     public static final NetworkBuffer.Type<MessageSignature> SERIALIZER = NetworkBufferTemplate.template(
-            NetworkBuffer.RAW_BYTES, MessageSignature::signature,
+            FixedRawBytes(256), MessageSignature::signature,
             MessageSignature::new
     );
 

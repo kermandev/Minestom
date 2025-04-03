@@ -8,8 +8,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-import static net.minestom.server.network.NetworkBuffer.STRING;
-import static net.minestom.server.network.NetworkBuffer.VAR_INT;
+import static net.minestom.server.network.NetworkBuffer.*;
 
 public record ClientEditBookPacket(int slot, @NotNull List<String> pages,
                                    @Nullable String title) implements ClientPacket {
@@ -19,8 +18,8 @@ public record ClientEditBookPacket(int slot, @NotNull List<String> pages,
 
     public static final NetworkBuffer.Type<ClientEditBookPacket> SERIALIZER = NetworkBufferTemplate.template(
             VAR_INT, ClientEditBookPacket::slot,
-            STRING.list(MAX_PAGES), ClientEditBookPacket::pages,
-            STRING.optional(), ClientEditBookPacket::title,
+            LimitedString(MAX_PAGE_LENGTH).list(MAX_PAGES), ClientEditBookPacket::pages,
+            LimitedString(MAX_TITLE_LENGTH).optional(), ClientEditBookPacket::title,
             ClientEditBookPacket::new);
 
     public ClientEditBookPacket {

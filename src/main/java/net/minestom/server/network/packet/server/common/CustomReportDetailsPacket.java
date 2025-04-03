@@ -7,13 +7,16 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
 
+import static net.minestom.server.network.NetworkBuffer.LimitedString;
+import static net.minestom.server.network.NetworkBuffer.STRING;
+
 public record CustomReportDetailsPacket(
         @NotNull Map<String, String> details
 ) implements ServerPacket.Configuration, ServerPacket.Play {
     private static final int MAX_DETAILS = 32;
 
     public static final NetworkBuffer.Type<CustomReportDetailsPacket> SERIALIZER = NetworkBufferTemplate.template(
-            NetworkBuffer.STRING.mapValue(NetworkBuffer.STRING, MAX_DETAILS), CustomReportDetailsPacket::details,
+            LimitedString(128).mapValue(LimitedString(4096), MAX_DETAILS), CustomReportDetailsPacket::details,
             CustomReportDetailsPacket::new
     );
 
