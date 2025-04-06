@@ -14,7 +14,6 @@ import net.minestom.server.utils.Direction;
 import net.minestom.server.utils.Unit;
 import net.minestom.server.utils.crypto.KeyUtils;
 import net.minestom.server.utils.validate.Check;
-import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.UnknownNullability;
@@ -22,7 +21,7 @@ import org.jetbrains.annotations.UnknownNullability;
 import javax.crypto.Cipher;
 import java.io.IOException;
 import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.WritableByteChannel;
 import java.security.PublicKey;
 import java.time.Instant;
 import java.util.*;
@@ -175,7 +174,7 @@ public sealed interface NetworkBuffer permits NetworkBufferImpl {
 
     int readChannel(ReadableByteChannel channel) throws IOException;
 
-    boolean writeChannel(SocketChannel channel) throws IOException;
+    boolean writeChannel(WritableByteChannel channel) throws IOException;
 
     void cipher(Cipher cipher, long start, long length);
 

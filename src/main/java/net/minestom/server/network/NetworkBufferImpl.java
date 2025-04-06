@@ -20,7 +20,7 @@ import java.lang.ref.Cleaner;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.WritableByteChannel;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
@@ -267,7 +267,7 @@ final class NetworkBufferImpl implements NetworkBuffer {
     }
 
     @Override
-    public boolean writeChannel(SocketChannel channel) throws IOException {
+    public boolean writeChannel(WritableByteChannel channel) throws IOException {
         assertDummy();
         final long readableBytes = readableBytes();
         if (readableBytes == 0) return true; // Nothing to write
