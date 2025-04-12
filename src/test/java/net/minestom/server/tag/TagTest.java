@@ -1,10 +1,13 @@
 package net.minestom.server.tag;
 
 import net.kyori.adventure.nbt.CompoundBinaryTag;
+import net.kyori.adventure.nbt.TagStringIO;
 import net.kyori.adventure.nbt.TagStringIOExt;
 import net.minestom.server.item.ItemStack;
 import net.minestom.server.item.Material;
 import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -54,10 +57,10 @@ public class TagTest {
     }
 
     @Test
-    public void snbt() {
+    public void snbt() throws IOException {
         var compound = CompoundBinaryTag.builder().putInt("key", 5).build();
         var reader = TagHandler.fromCompound(compound);
-        assertEquals(TagStringIOExt.writeTag(reader.asCompound()), TagStringIOExt.writeTag(compound), "SNBT is not the same");
+        assertEquals(TagStringIO.get().asString(reader.asCompound()), TagStringIO.get().asString(compound), "SNBT is not the same");
     }
 
     @Test

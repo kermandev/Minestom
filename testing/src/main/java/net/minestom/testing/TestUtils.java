@@ -1,6 +1,7 @@
 package net.minestom.testing;
 
 import net.kyori.adventure.nbt.BinaryTag;
+import net.kyori.adventure.nbt.TagStringIO;
 import net.kyori.adventure.nbt.TagStringIOExt;
 
 import java.io.IOException;
@@ -34,7 +35,7 @@ public final class TestUtils {
 
     public static void assertEqualsSNBT(String snbt, BinaryTag compound) {
         try {
-            final var converted = TagStringIOExt.readTag(snbt);
+            final var converted = TagStringIO.get().asBinaryTag(snbt);
             assertEquals(converted, compound);
         } catch (IOException e) {
             fail(e);

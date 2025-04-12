@@ -2,6 +2,7 @@ package net.minestom.server.instance;
 
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.nbt.CompoundBinaryTag;
+import net.kyori.adventure.nbt.TagStringIO;
 import net.kyori.adventure.nbt.TagStringIOExt;
 import net.minestom.server.coordinate.Pos;
 import net.minestom.server.coordinate.Vec;
@@ -73,7 +74,7 @@ public class InstanceBlockPacketIntegrationTest {
         final Block block;
         final CompoundBinaryTag data;
         try {
-            data = (CompoundBinaryTag) TagStringIOExt.readTag("{\"GlowingText\":0B,\"Color\":\"black\",\"Text1\":\"{\\\"text\\\":\\\"wawsd\\\"}\"," +
+            data = TagStringIO.get().asCompound("{\"GlowingText\":0B,\"Color\":\"black\",\"Text1\":\"{\\\"text\\\":\\\"wawsd\\\"}\"," +
                     "\"Text2\":\"{\\\"text\\\":\\\"\\\"}\",\"Text3\":\"{\\\"text\\\":\\\"\\\"}\",\"Text4\":\"{\\\"text\\\":\\\"\\\"}\"}");
             block = Block.OAK_SIGN.withHandler(signHandler).withNbt(data);
         } catch (Exception ex) {

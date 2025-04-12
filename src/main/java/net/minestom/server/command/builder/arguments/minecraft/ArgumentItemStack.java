@@ -3,6 +3,7 @@ package net.minestom.server.command.builder.arguments.minecraft;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.nbt.BinaryTag;
 import net.kyori.adventure.nbt.CompoundBinaryTag;
+import net.kyori.adventure.nbt.TagStringIO;
 import net.kyori.adventure.nbt.TagStringIOExt;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.codec.Result;
@@ -151,11 +152,11 @@ public class ArgumentItemStack extends Argument<ItemStack> {
 
         public @NotNull BinaryTag readTag() {
             try {
-                var result = TagStringIOExt.readTagEmbedded(input.substring(index));
-                this.input = result.getValue();
+                var result = TagStringIO.get().asBinaryTagEmbedded(input.substring(index));
+                this.input = result.remainder();
                 this.index = 0;
 
-                return result.getKey();
+                return result.tag();
             } catch (IOException e) {
                 throw new ArgumentSyntaxException("Invalid NBT", input, INVALID_NBT);
             }
