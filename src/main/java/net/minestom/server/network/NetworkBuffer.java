@@ -198,7 +198,7 @@ public sealed interface NetworkBuffer permits NetworkBufferIO, NetworkBufferImpl
      * @return the view
      */
     @ApiStatus.Experimental
-    default NetworkBufferIO asIO() {
+    default NetworkBufferIO io() {
         return (NetworkBufferIO) this;
     }
 
