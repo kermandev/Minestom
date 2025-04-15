@@ -676,7 +676,7 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
     record TypedNbtType<T>(@NotNull Codec<T> nbtType) implements NetworkBufferTypeImpl<T> {
         @Override
         public void write(@NotNull NetworkBuffer buffer, T value) {
-            final Registries registries = impl(buffer).registries;
+            final Registries registries = buffer.registries();
             Check.stateCondition(registries == null, "Buffer does not have registries");
             final Result<BinaryTag> result = nbtType.encode(new RegistryTranscoder<>(Transcoder.NBT, registries), value);
             switch (result) {
@@ -687,7 +687,7 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
 
         @Override
         public T read(@NotNull NetworkBuffer buffer) {
-            final Registries registries = impl(buffer).registries;
+            final Registries registries = buffer.registries();
             Check.stateCondition(registries == null, "Buffer does not have registries");
             final Result<T> result = nbtType.decode(new RegistryTranscoder<>(Transcoder.NBT, registries), buffer.read(NBT));
             return switch (result) {
@@ -810,7 +810,7 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
     ) implements NetworkBufferTypeImpl<DynamicRegistry.Key<T>> {
         @Override
         public void write(@NotNull NetworkBuffer buffer, DynamicRegistry.Key<T> value) {
-            final Registries registries = impl(buffer).registries;
+            final Registries registries = buffer.registries();
             Check.stateCondition(registries == null, "Buffer does not have registries");
             final DynamicRegistry<T> registry = selector.apply(registries);
             // "Holder" references can either be a registry entry or the entire object itself. The id is zero if the
@@ -823,7 +823,7 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
 
         @Override
         public DynamicRegistry.Key<T> read(@NotNull NetworkBuffer buffer) {
-            final Registries registries = impl(buffer).registries;
+            final Registries registries = buffer.registries();
             Check.stateCondition(registries == null, "Buffer does not have registries");
             DynamicRegistry<T> registry = selector.apply(registries);
             // See note above about holder references.

@@ -37,8 +37,8 @@ final class NetworkBufferImpl implements NetworkBuffer, NetworkBufferLayouts, Ne
     private final @NotNull BinaryTagWriter nbtWriter;
     private final @NotNull BinaryTagReader nbtReader;
 
-    final @Nullable AutoResize autoResize;
-    final @Nullable Registries registries;
+    private final @Nullable AutoResize autoResize;
+    private final @Nullable Registries registries;
 
     private long readIndex, writeIndex;
 
