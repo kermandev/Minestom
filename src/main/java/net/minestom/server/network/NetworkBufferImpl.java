@@ -14,19 +14,15 @@ import java.io.IOException;
 import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
 import java.io.EOFException;
-import java.io.DataOutputStream;
-import java.io.OutputStream;
-import java.io.DataInputStream;
-import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.WritableByteChannel;
 import java.util.function.Consumer;
 import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
 import java.util.zip.Inflater;
 
-final class NetworkBufferImpl implements NetworkBuffer, NetworkBufferLayouts {
+final class NetworkBufferImpl implements NetworkBuffer, NetworkBufferLayouts, NetworkBufferIO {
     private static final ObjectPool<Deflater> DEFLATER_POOL = ObjectPool.pool(Deflater::new);
     private static final ObjectPool<Inflater> INFLATER_POOL = ObjectPool.pool(Inflater::new);
 
@@ -34,7 +30,7 @@ final class NetworkBufferImpl implements NetworkBuffer, NetworkBufferLayouts {
     private static final long DUMMY_CAPACITY = Long.MAX_VALUE;
 
     // Nullable for dummy buffers.
-    private final @Nullable Arena arena;
+    private final Arena arena;
     private MemorySegment segment;
 
     // Stable value candidate
@@ -102,6 +98,7 @@ final class NetworkBufferImpl implements NetworkBuffer, NetworkBufferLayouts {
         MemorySegment.copy(this.segment, srcOffset, MemorySegment.ofArray(dest), destOffset, length);
     }
 
+    @Override
     public byte @NotNull [] extractBytes(@NotNull Consumer<@NotNull NetworkBuffer> extractor) {
         assertDummy();
         final long startingPosition = readIndex();
@@ -115,24 +112,28 @@ final class NetworkBufferImpl implements NetworkBuffer, NetworkBufferLayouts {
         copyTo(startingPosition, output, 0, output.length);
         return output;
     }
-
+    @Override
     public @NotNull NetworkBuffer clear() {
         return index(0, 0);
     }
 
+    @Override
     public long writeIndex() {
         return writeIndex;
     }
 
+    @Override
     public long readIndex() {
         return readIndex;
     }
 
+    @Override
     public @NotNull NetworkBuffer writeIndex(long writeIndex) {
         this.writeIndex = writeIndex;
         return this;
     }
 
+    @Override
     public @NotNull NetworkBuffer readIndex(long readIndex) {
         this.readIndex = readIndex;
         return this;
@@ -145,6 +146,7 @@ final class NetworkBufferImpl implements NetworkBuffer, NetworkBufferLayouts {
         return this;
     }
 
+    @Override
     public long advanceWrite(long length) {
         final long oldWriteIndex = writeIndex;
         writeIndex = oldWriteIndex + length;
@@ -221,10 +223,7 @@ final class NetworkBufferImpl implements NetworkBuffer, NetworkBufferLayouts {
         assertDummy();
         assertReadOnly();
         if (readIndex == 0) return;
-
-        final var readOnlySegment = this.segment.asReadOnly();
-
-        MemorySegment.copy(readOnlySegment, readIndex, this.segment, 0, readableBytes());
+        MemorySegment.copy(this.segment, readIndex, this.segment, 0, readableBytes());
 
         writeIndex -= readIndex;
         readIndex = 0;
@@ -234,10 +233,9 @@ final class NetworkBufferImpl implements NetworkBuffer, NetworkBufferLayouts {
     public void trim() {
         assertDummy();
         assertReadOnly();
-        if (readableBytes() == capacity()) return;
-
-        final var newCapacity = readableBytes();
-        this.segment = this.segment.asSlice(readIndex, newCapacity);
+        final var readableBytes = readableBytes();
+        if (readableBytes == capacity()) return;
+        this.segment = this.segment.asSlice(readIndex, readableBytes);
 
         writeIndex -= readIndex;
         readIndex = 0;
@@ -250,6 +248,7 @@ final class NetworkBufferImpl implements NetworkBuffer, NetworkBufferLayouts {
         final var newReadIndex = Math.max(readIndex - index, 0);
         final var newWriteIndex = Math.max(writeIndex - index, 0);
 
+        // We won't use the same arena so this arena can get deallocated.
         final var newBuffer = new NetworkBufferImpl(Arena.ofAuto(), length, newReadIndex, newWriteIndex, autoResize, registries);
         assert !newBuffer.isDummy() && newBuffer.segment != null : "Dummy active for a newly created buffer";
 
@@ -267,6 +266,7 @@ final class NetworkBufferImpl implements NetworkBuffer, NetworkBufferLayouts {
         final var newWriteIndex = Math.max(writeIndex() - writeIndex, 0);
         final var sliceSegment = this.segment.asSlice(index, length);
 
+        // This region will live as long as the backing segment is alive, no reason to create another arena.
         return new NetworkBufferImpl(arena, sliceSegment, newReadIndex, newWriteIndex, autoResize, registries);
     }
 
@@ -281,7 +281,7 @@ final class NetworkBufferImpl implements NetworkBuffer, NetworkBufferLayouts {
     }
 
     @Override
-    public boolean writeChannel(SocketChannel channel) throws IOException {
+    public boolean writeChannel(WritableByteChannel channel) throws IOException {
         assertDummy();
         final long readableBytes = readableBytes();
         if (readableBytes == 0) return true; // Nothing to write
@@ -435,6 +435,18 @@ final class NetworkBufferImpl implements NetworkBuffer, NetworkBufferLayouts {
         return segment.get(JAVA_DOUBLE, index);
     }
 
+    // Warning this is writing a null terminated string
+    void _putString(long index, String value) {
+        if (isDummy()) return;
+        segment.setString(index, value);
+    }
+
+    // Warning this is reading a null terminated string
+    String _getString(long index) {
+        assertDummy();
+        return segment.getString(index);
+    }
+
     static NetworkBuffer wrap(byte @NotNull [] bytes, long readIndex, long writeIndex, @Nullable Registries registries) {
         var buffer = new Builder(bytes.length).registry(registries).build();
         buffer.writeAt(0, NetworkBuffer.RAW_BYTES, bytes);
@@ -514,29 +526,14 @@ final class NetworkBufferImpl implements NetworkBuffer, NetworkBufferLayouts {
 
     BinaryTagWriter nbtWriter() {
         if (this.nbtWriter == null) {
-            this.nbtWriter = new BinaryTagWriter(new DataOutputStream(new OutputStream() {
-                @Override
-                public void write(int b) {
-                    NetworkBufferImpl.this.write(BYTE, (byte) b);
-                }
-            }));
+            this.nbtWriter = new BinaryTagWriter(this);
         }
         return this.nbtWriter;
     }
 
     BinaryTagReader nbtReader() {
         if (nbtReader == null) {
-            this.nbtReader = new BinaryTagReader(new DataInputStream(new InputStream() {
-                @Override
-                public int read() {
-                    return NetworkBufferImpl.this.read(BYTE) & 0xFF;
-                }
-
-                @Override
-                public int available() {
-                    return (int) NetworkBufferImpl.this.readableBytes();
-                }
-            }));
+            this.nbtReader = new BinaryTagReader(this);
         }
         return nbtReader;
     }
