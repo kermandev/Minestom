@@ -33,10 +33,6 @@ final class NetworkBufferImpl implements NetworkBuffer, NetworkBufferLayouts, Ne
     private final Arena arena;
     private MemorySegment segment;
 
-    // NBT
-    private final @NotNull BinaryTagWriter nbtWriter;
-    private final @NotNull BinaryTagReader nbtReader;
-
     private final @Nullable AutoResize autoResize;
     private final @Nullable Registries registries;
 
@@ -49,8 +45,6 @@ final class NetworkBufferImpl implements NetworkBuffer, NetworkBufferLayouts, Ne
         this.writeIndex = writeIndex;
         this.autoResize = autoResize;
         this.registries = registries;
-        this.nbtWriter = new BinaryTagWriter(this);
-        this.nbtReader = new BinaryTagReader(this);
     }
 
     NetworkBufferImpl(@Nullable Arena arena, long capacity, long readIndex, long writeIndex, @Nullable AutoResize autoResize, @Nullable Registries registries) {
@@ -524,13 +518,5 @@ final class NetworkBufferImpl implements NetworkBuffer, NetworkBufferLayouts, Ne
 
     static NetworkBufferImpl impl(NetworkBuffer buffer) {
         return (NetworkBufferImpl) buffer;
-    }
-
-    @NotNull BinaryTagWriter nbtWriter() {
-        return this.nbtWriter;
-    }
-
-    @NotNull BinaryTagReader nbtReader() {
-        return this.nbtReader;
     }
 }
