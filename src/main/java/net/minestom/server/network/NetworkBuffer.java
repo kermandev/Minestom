@@ -13,10 +13,11 @@ import net.minestom.server.registry.Registries;
 import net.minestom.server.utils.Direction;
 import net.minestom.server.utils.Unit;
 import net.minestom.server.utils.crypto.KeyUtils;
+import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.*;
 
 import javax.crypto.Cipher;
-import java.io.IOException;
+import java.io.*;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.security.PublicKey;
@@ -27,7 +28,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.zip.DataFormatException;
 
-public sealed interface NetworkBuffer permits NetworkBufferIO, NetworkBufferImpl {
+public sealed interface NetworkBuffer permits NetworkBufferImpl {
     Type<Unit> UNIT = new NetworkBufferTypeImpl.UnitType();
     Type<Boolean> BOOLEAN = new NetworkBufferTypeImpl.BooleanType();
     Type<Byte> BYTE = new NetworkBufferTypeImpl.ByteType();
@@ -190,18 +191,6 @@ public sealed interface NetworkBuffer permits NetworkBufferIO, NetworkBufferImpl
 
     @Nullable Registries registries();
 
-    /**
-     * Warning: Experimental API
-     * The {@link NetworkBufferIO} view of this {@link NetworkBuffer}
-     * <p>
-     * Not intended for use, this method can be removed at any point if its no longer required for interoperability.
-     * @return the view
-     */
-    @ApiStatus.Experimental
-    default NetworkBufferIO io() {
-        return (NetworkBufferIO) this;
-    }
-
     interface Type<T> {
         void write(@NotNull NetworkBuffer buffer, T value);
 
@@ -332,5 +321,50 @@ public sealed interface NetworkBuffer permits NetworkBufferIO, NetworkBufferImpl
 
     static boolean equals(NetworkBuffer buffer1, NetworkBuffer buffer2) {
         return NetworkBufferImpl.equals(buffer1, buffer2);
+    }
+
+    /**
+     * Self-contained interface
+     * that extends {@link DataInput} and {@link DataOutput} for mostly reading/writing binary tags.
+     * <p>
+     * This interface is separate from {@link NetworkBuffer}
+     * because we don't want DataInput and DataOutput to be part of the public API.
+     * You should use {@link NetworkBuffer} instead if possible.
+     * <p>
+     * @implNote The backing implementation of this interface is {@link NetworkBufferIOViewImpl}.
+     * This holds the actual {@link NetworkBuffer} and implements the methods of this interface.
+     */
+    sealed interface IOView extends DataInput, DataOutput permits NetworkBufferIOViewImpl {
+        /**
+         * Creates a new {@link IOView} for the given {@link NetworkBuffer}.
+         * @param buffer the buffer to read from and write to
+         * @return the view of the buffer
+         * @implNote The backing buffer is used for index tracking.
+         * No offsets can be applied, Use a {@link NetworkBuffer#slice(long, long)} for that
+         */
+        @ApiStatus.Experimental
+        static @NotNull IOView of(@NotNull NetworkBuffer buffer) {
+            Check.notNull(buffer, "buffer cannot be null");
+            return new NetworkBufferIOViewImpl(buffer);
+        }
+
+        /**
+         * Creates a new {@link InputStream} for this {@link NetworkBuffer}.
+         * @return the view of the buffer as an input stream
+         */
+        @NotNull InputStream inputStream();
+
+        /**
+         * Creates a new {@link OutputStream} for this {@link NetworkBuffer}.
+         * @return the view of the buffer as an output stream
+         */
+        @NotNull OutputStream outputStream();
+
+        /**
+         * @throws UnsupportedOperationException not implemented.
+         */
+        @Override
+        @Deprecated
+        String readLine() throws IOException;
     }
 }

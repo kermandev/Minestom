@@ -12,6 +12,7 @@ import javax.crypto.Cipher;
 import javax.crypto.ShortBufferException;
 import java.io.IOException;
 import java.lang.foreign.Arena;
+import java.lang.foreign.MemoryLayout;
 import java.lang.foreign.MemorySegment;
 import java.io.EOFException;
 import java.nio.ByteBuffer;
@@ -22,7 +23,7 @@ import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
 import java.util.zip.Inflater;
 
-final class NetworkBufferImpl implements NetworkBuffer, NetworkBufferLayouts, NetworkBufferIO {
+final class NetworkBufferImpl implements NetworkBuffer, NetworkBufferLayouts {
     private static final ObjectPool<Deflater> DEFLATER_POOL = ObjectPool.pool(Deflater::new);
     private static final ObjectPool<Inflater> INFLATER_POOL = ObjectPool.pool(Inflater::new);
 

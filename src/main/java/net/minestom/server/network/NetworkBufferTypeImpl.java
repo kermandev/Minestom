@@ -349,7 +349,7 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
     record NbtType() implements NetworkBufferTypeImpl<BinaryTag> {
         @Override
         public void write(@NotNull NetworkBuffer buffer, BinaryTag value) {
-            final BinaryTagWriter nbtWriter = new BinaryTagWriter(impl(buffer));
+            final BinaryTagWriter nbtWriter = new BinaryTagWriter(IOView.of(buffer));
             try {
                 nbtWriter.writeNameless(value);
             } catch (IOException e) {
@@ -359,7 +359,7 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
 
         @Override
         public BinaryTag read(@NotNull NetworkBuffer buffer) {
-            final BinaryTagReader nbtReader = new BinaryTagReader(impl(buffer));
+            final BinaryTagReader nbtReader = new BinaryTagReader(IOView.of(buffer));
             try {
                 return nbtReader.readNameless();
             } catch (IOException e) {
