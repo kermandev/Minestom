@@ -359,7 +359,7 @@ final class NetworkBufferImpl implements NetworkBuffer, NetworkBufferLayouts {
     }
 
     private boolean isDummy() {
-        return arena == null || segment == null;
+        return arena == null && segment == null;
     }
 
     // Internal writing methods
