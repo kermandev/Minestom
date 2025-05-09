@@ -12,7 +12,7 @@ import java.util.List;
 /**
  * Represents an advancement located in an {@link AdvancementTab}.
  * <p>
- * All fields are dynamic, changing one will update the advancement in the specific {@link AdvancementTab}.
+ * All fields are dynamic, changing one will update the advancement in the specific {@link AdvancementTab}. 
  */
 public class Advancement {
 
