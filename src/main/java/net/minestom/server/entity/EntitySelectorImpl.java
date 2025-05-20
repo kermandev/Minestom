@@ -66,20 +66,15 @@ record EntitySelectorImpl<E>(EntitySelector.Target target,
         }
 
         @Override
-        public void range(double radius) { // TODO add specialized one, required for tests as it uses the property that is not lastPosition.
-            // Attempt to upgrade the gatherer to a more specific one; we have to check bounds, because the origin is unknown.
-            upgradeGather(new Gatherer.ChunkRange((int) Math.ceil(radius / 16)));
-            // No matter what we have to use a predicate; TODO pop the predicate if it is not used (going to single)
-            final var radiusSquared = radius * radius;
-            this.<Pos>predicate(Property.class.cast(EntitySelectors.POS),
-                    (origin, coord) -> origin.distanceSquared(coord) <= radiusSquared);
+        public void range(double radius) {
+            if (upgradeGather(new Gatherer.Range(radius))) return;
+            fallbackRange(radius); // Otherwise fallback
         }
 
         @Override
-        public void chunk(long chunkIndex) {
+        public void chunk(int chunkX, int chunkZ) {
+            long chunkIndex = CoordConversion.chunkIndex(chunkX, chunkZ);
             if (upgradeGather(new Gatherer.Chunk(chunkIndex))) return;
-            final int chunkX = CoordConversion.chunkIndexGetX(chunkIndex);
-            final int chunkZ = CoordConversion.chunkIndexGetZ(chunkIndex);
             this.<Pos>predicate(Property.class.cast(EntitySelectors.POS),
                     (origin, coord) -> coord.chunkX() == chunkX && coord.chunkZ() == chunkZ);
         }
@@ -106,15 +101,63 @@ record EntitySelectorImpl<E>(EntitySelector.Target target,
         @Override
         public void limit(int limit) {
             Check.argCondition(limit < 0, "Limit must not be negative");
+            Check.argCondition(limit == 0, "Limit must not be 0, use unlimited() instead");
             this.limit = limit;
         }
 
-        // Returns true if the gatherer was upgraded
+        @Override
+        public void unlimited() {
+            this.limit = 0;
+        }
+
+        // Returns true if the gatherer was upgraded (to a smaller scope)
         boolean upgradeGather(Gatherer upgrade) {
-            final Gatherer gatherer = this.gatherer != null ? this.gatherer.smallestScope(upgrade) : upgrade;
+            final Gatherer gatherer = this.smallestScope(upgrade);
             if (gatherer == this.gatherer) return false;
             this.gatherer = gatherer;
             return true;
+        }
+
+        void fallbackRange(double radius) {
+            final var radiusSquared = radius * radius;
+            this.<Pos>predicate(Property.class.cast(EntitySelectors.POS),
+                    (origin, coord) -> origin.distanceSquared(coord) <= radiusSquared);
+        }
+
+        Gatherer smallestScope(Gatherer other) {
+            final Gatherer currentGatherer = this.gatherer;
+            if (other == null) return currentGatherer; // Going back above chunk range
+            if (currentGatherer == null) return other; // Must be a chunk range or lower.
+            if (other.equals(currentGatherer)) return other;
+            return switch (currentGatherer) {
+                // Shrinking to a range
+                case Gatherer.Range range when other instanceof Gatherer.Range(double radius) && range.radius() >= radius -> other;
+                // Shrinking to a chunk range
+                case Gatherer.Range range when other instanceof Gatherer.ChunkRange(int radius) && Math.ceil(range.radius() / 16) >= radius -> {
+                    fallbackRange(radius); // Big circle across chunks, but less than the chunk range.
+                    yield other;
+                }
+                case Gatherer.ChunkRange range when other instanceof Gatherer.ChunkRange(int radius) && range.radius() >= radius -> other;
+                // Shrinking to a single chunk
+                case Gatherer.Range range when other instanceof Gatherer.Chunk -> {
+                    fallbackRange(range.radius()); // Case when you want a circle inside of the square.
+                    yield other;
+                }
+                case Gatherer.ChunkRange ignored when other instanceof Gatherer.Chunk -> other;
+                case Gatherer.Chunk ignored when other instanceof Gatherer.Chunk -> other; // Reassigning the chunk.
+                // Shrinking to a single UUID
+                case Gatherer.Range ignored when other instanceof Gatherer.Uuid -> other;
+                case Gatherer.ChunkRange ignored when other instanceof Gatherer.Uuid -> other;
+                case Gatherer.Chunk ignored when other instanceof Gatherer.Uuid -> other;
+                case Gatherer.Uuid ignored when other instanceof Gatherer.Uuid -> other; // Reassigning the UUID.
+                // Shrinking to single ID
+                case Gatherer.Range ignored when other instanceof Gatherer.Id -> other;
+                case Gatherer.ChunkRange ignored when other instanceof Gatherer.Id -> other;
+                case Gatherer.Chunk ignored when other instanceof Gatherer.Id -> other;
+                case Gatherer.Uuid ignored when other instanceof Gatherer.Id -> other;
+                case Gatherer.Id ignored when other instanceof Gatherer.Id -> other; // Reassigning the ID.
+                default -> currentGatherer;
+            };
         }
 
         EntitySelectorImpl<E> build() {

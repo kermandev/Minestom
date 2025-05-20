@@ -74,11 +74,7 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
 
         void range(double radius);
 
-        void chunk(long chunkIndex);
-
-        default void chunk(int chunkX, int chunkZ) {
-            chunk(CoordConversion.chunkIndex(chunkX, chunkZ));
-        }
+        void chunk(int chunkX, int chunkZ);
 
         default void chunk(@NotNull Point chunkPosition) {
             chunk(chunkPosition.chunkX(), chunkPosition.chunkZ());
@@ -89,19 +85,13 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
         void sort(@NotNull Sort sort);
 
         void limit(int limit);
+
+        void unlimited();
     }
 
-    enum Target implements Predicate<Entity> {
+    enum Target {
         ENTITIES,
-        PLAYERS;
-
-        @Override
-        public boolean test(Entity entity) {
-            return switch (this) {
-                case ENTITIES -> true;
-                case PLAYERS -> entity instanceof Player;
-            };
-        }
+        PLAYERS
     }
 
     /**
@@ -109,6 +99,7 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
      */
     @ApiStatus.Internal
     sealed interface Gatherer {
+        record Range(double radius) implements Gatherer {}
         record ChunkRange(int radius) implements Gatherer {
             public ChunkRange {
                 Check.argCondition(radius < 0, "Chunk range must be positive");
@@ -117,30 +108,8 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
         }
         record Chunk(long chunkIndex) implements Gatherer {}
         record Uuid(@NotNull UUID uuid) implements Gatherer {}
-        record Id(int id) implements Gatherer {}
 
-        // TODO, move this elsewere?
-        default Gatherer smallestScope(Gatherer other) {
-            if (other == null) return this; // Going back above chunk range
-            if (this.equals(other)) return other;
-            return switch (this) {
-                // Shrinking to a chunk range
-                case ChunkRange range when other instanceof ChunkRange(int radius) && range.radius >= radius -> other;
-                // Shrinking to a single chunk
-                case ChunkRange ignored when other instanceof Chunk -> other;
-                case Chunk ignored when other instanceof Chunk -> other; // Reassigning the chunk.
-                // Shrinking to a single UUID
-                case ChunkRange ignored when other instanceof Uuid -> other;
-                case Chunk ignored when other instanceof Uuid -> other;
-                case Uuid ignored when other instanceof Uuid -> other; // Reassigning the UUID.
-                // Shrinking to single ID
-                case ChunkRange ignored when other instanceof Id -> other;
-                case Chunk ignored when other instanceof Id -> other;
-                case Uuid ignored when other instanceof Id -> other;
-                case Id ignored when other instanceof Id -> other; // Reassigning the ID.
-                default -> this;
-            };
-        }
+        record Id(int id) implements Gatherer {}
     }
 
     enum Sort {

@@ -118,36 +118,33 @@ final class EntityTrackerImpl implements EntityTracker {
 
     @Override
     public synchronized <R extends Entity> @NotNull Stream<@NotNull R> selectEntity(@NotNull EntitySelector<R> selector, @NotNull Point origin) {
+        final boolean playersOnly = selector.target() == EntitySelector.Target.PLAYERS;
         Stream<TrackedEntity> stream = switch (selector.gatherer()) {
-            case EntitySelector.Gatherer.ChunkRange(int radius) -> {
-                // Get all chunks in range
-                var array = new ObjectArrayList<TrackedEntity>();
-                ChunkRange.chunksInRange(origin, radius, (chunkX, chunkZ) -> {
-                    var entries = chunksEntities.get(CoordConversion.chunkIndex(chunkX, chunkZ));
-                    if (entries == null) return;
-                    array.addAll(entries);
-                });
-                yield array.stream().filter(trackedEntity -> selector.target().test(trackedEntity.entity()));
+            case EntitySelector.Gatherer.Range(double radius) -> {
+                var radiusSquared = radius * radius;
+                var chunkRadius = (int) Math.ceil(radius / 16);
+                var entries = gatherChunkRange(origin, chunkRadius, playersOnly);
+                yield entries.filter(trackedEntity ->
+                                trackedEntity.lastPosition().getPlain().distanceSquared(origin) <= radiusSquared);
             }
+            case EntitySelector.Gatherer.ChunkRange(int radius) -> gatherChunkRange(origin, radius, playersOnly);
             case EntitySelector.Gatherer.Chunk(long chunkIndex) -> {
                 var entry = chunksEntities.get(chunkIndex);
                 if (entry == null) yield Stream.empty();
-                yield entry.stream().filter(trackedEntity -> selector.target().test(trackedEntity.entity()));
+                if (!playersOnly) yield entry.stream();
+                yield entry.stream().filter(trackedEntity -> trackedEntity.entity() instanceof Player);
             }
             case EntitySelector.Gatherer.Uuid(@NotNull UUID uuid) -> {
                 var entry = uuidIndex.get(uuid);
-                if (entry == null || selector.target().test(entry.entity())) yield Stream.empty();
+                if (entry == null || (playersOnly && !(entry.entity() instanceof Player))) yield Stream.empty();
                 yield Stream.of(entry);
             }
             case EntitySelector.Gatherer.Id(int id) -> {
-                var entry = idIndex.get(id);
-                if (entry == null || selector.target().test(entry.entity())) yield Stream.empty();
+                var entry = playersOnly ? playerIdIndex.get(id) : idIndex.get(id);
+                if (entry == null) yield Stream.empty();
                 yield Stream.of(entry);
             }
-            case null -> switch (selector.target()) {
-                case ENTITIES -> idIndex.values().stream();
-                case PLAYERS -> playerIdIndex.values().stream();
-            };
+            case null -> playersOnly ? playerIdIndex.values().stream() : idIndex.values().stream();
         };
 
         {
@@ -206,11 +203,15 @@ final class EntityTrackerImpl implements EntityTracker {
         });
     }
 
-    private TrackedEntity findNearest(Point origin, boolean player) {
-        Stream<TrackedEntity> stream = player ? playerIdIndex.values().stream() : idIndex.values().stream();
-        return stream.min(Comparator.comparingDouble(
-                trackedEntity -> origin.distanceSquared(trackedEntity.lastPosition().getPlain())
-        )).orElse(null);
+    private Stream<TrackedEntity> gatherChunkRange(@NotNull Point origin, int chunkRadius, boolean playersOnly) {
+        var array = new ObjectArrayList<TrackedEntity>();
+        ChunkRange.chunksInRange(origin, chunkRadius, (chunkX, chunkZ) -> {
+            var entries = chunksEntities.get(CoordConversion.chunkIndex(chunkX, chunkZ));
+            if (entries == null) return;
+            array.addAll(entries);
+        });
+        if (!playersOnly) return array.stream();
+        return array.stream().filter(trackedEntity -> trackedEntity.entity() instanceof Player);
     }
 
     private void difference(Point oldPoint, Point newPoint, @NotNull Update update) {

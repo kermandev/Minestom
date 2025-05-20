@@ -228,10 +228,10 @@ public class ArgumentEntity extends Argument<EntitySelector<Entity>> {
                 try {
                     limit = Integer.parseInt(value);
                     builder.limit(limit);
-                } catch (NumberFormatException e) {
+                } catch (IllegalArgumentException e) {
                     throw new ArgumentSyntaxException("Invalid limit number", input, INVALID_ARGUMENT_VALUE);
                 }
-                if (limit <= 0) {
+                if (limit <= 0) { // TODO Return nothing when its zero?
                     throw new ArgumentSyntaxException("Limit must be positive", input, INVALID_ARGUMENT_VALUE);
                 }
                 break;
