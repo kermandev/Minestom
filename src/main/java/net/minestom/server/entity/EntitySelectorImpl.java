@@ -1,16 +1,17 @@
 package net.minestom.server.entity;
 
+import net.minestom.server.coordinate.CoordConversion;
 import net.minestom.server.coordinate.Point;
 import net.minestom.server.coordinate.Pos;
+import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
+import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 
 record EntitySelectorImpl<E>(EntitySelector.Target target,
+                             Gatherer gatherer,
                              EntitySelector.Sort sort,
                              int limit,
                              List<BiPredicate<Point, E>> conditions) implements EntitySelector<E> {
@@ -30,9 +31,10 @@ record EntitySelectorImpl<E>(EntitySelector.Target target,
     }
 
     static final class BuilderImpl<E> implements Builder<E> {
-        private Target target = Target.ALL_ENTITIES;
+        private Target target = Target.ENTITIES;
+        private Gatherer gatherer = null;
         private Sort sort = Sort.ARBITRARY;
-        private int limit = -1;
+        private int limit = 0;
         private final List<BiPredicate<Point, E>> conditions = new ArrayList<>();
 
         @Override
@@ -46,24 +48,45 @@ record EntitySelectorImpl<E>(EntitySelector.Target target,
         }
 
         @Override
+        public void id(int id) {
+            if (upgradeGather(new Gatherer.Id(id))) return;
+            this.<Integer>predicate(Property.class.cast(EntitySelectors.ID), (point, entityId) -> entityId.equals(id));
+        }
+
+        @Override
+        public void uuid(@NotNull UUID uuid) {
+            if (upgradeGather(new Gatherer.Uuid(uuid))) return;
+            this.<UUID>predicate(Property.class.cast(EntitySelectors.UUID), (point, entityUuid) -> entityUuid.equals(uuid));
+        }
+
+        @Override
         public void type(@NotNull EntityType @NotNull ... types) {
-            predicate(Property.class.cast(EntitySelectors.TYPE), (point, type) -> new HashSet<>(List.of(types)).contains(type));
+            var typeSet = Set.of(types);
+            this.<EntityType>predicate(Property.class.cast(EntitySelectors.TYPE), (point, type) -> typeSet.contains(type));
         }
 
         @Override
-        public void range(double radius) {
+        public void range(double radius) { // TODO add specialized one, required for tests as it uses the property that is not lastPosition.
+            // Attempt to upgrade the gatherer to a more specific one; we have to check bounds, because the origin is unknown.
+            upgradeGather(new Gatherer.ChunkRange((int) Math.ceil(radius / 16)));
+            // No matter what we have to use a predicate; TODO pop the predicate if it is not used (going to single)
+            final var radiusSquared = radius * radius;
             this.<Pos>predicate(Property.class.cast(EntitySelectors.POS),
-                    (origin, coord) -> origin.distance(coord) <= radius);
+                    (origin, coord) -> origin.distanceSquared(coord) <= radiusSquared);
         }
 
         @Override
-        public void chunk(int chunkX, int chunkZ) {
+        public void chunk(long chunkIndex) {
+            if (upgradeGather(new Gatherer.Chunk(chunkIndex))) return;
+            final int chunkX = CoordConversion.chunkIndexGetX(chunkIndex);
+            final int chunkZ = CoordConversion.chunkIndexGetZ(chunkIndex);
             this.<Pos>predicate(Property.class.cast(EntitySelectors.POS),
                     (origin, coord) -> coord.chunkX() == chunkX && coord.chunkZ() == chunkZ);
         }
 
         @Override
         public void chunkRange(int radius) {
+            if (upgradeGather(new Gatherer.ChunkRange(radius))) return;
             this.<Pos>predicate(Property.class.cast(EntitySelectors.POS), (origin, coord) -> {
                 final int originChunkX = origin.chunkX();
                 final int originChunkZ = origin.chunkZ();
@@ -82,11 +105,20 @@ record EntitySelectorImpl<E>(EntitySelector.Target target,
 
         @Override
         public void limit(int limit) {
+            Check.argCondition(limit < 0, "Limit must not be negative");
             this.limit = limit;
         }
 
+        // Returns true if the gatherer was upgraded
+        boolean upgradeGather(Gatherer upgrade) {
+            final Gatherer gatherer = this.gatherer != null ? this.gatherer.smallestScope(upgrade) : upgrade;
+            if (gatherer == this.gatherer) return false;
+            this.gatherer = gatherer;
+            return true;
+        }
+
         EntitySelectorImpl<E> build() {
-            return new EntitySelectorImpl<>(target, sort, limit, conditions);
+            return new EntitySelectorImpl<>(target, gatherer, sort, limit, conditions);
         }
     }
 }

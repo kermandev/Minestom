@@ -24,6 +24,8 @@ public sealed interface EntityTracker extends EntitySelector.Finder<Entity> perm
 
     /**
      * Callback to know the newly visible entities and those to remove.
+     * <p>
+     * This callback ignores the entity registered with it.
      */
     interface Update {
 

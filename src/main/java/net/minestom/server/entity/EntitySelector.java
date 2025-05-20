@@ -1,16 +1,21 @@
 package net.minestom.server.entity;
 
+import net.minestom.server.coordinate.CoordConversion;
 import net.minestom.server.coordinate.Point;
 import net.minestom.server.coordinate.Vec;
 import net.minestom.server.tag.Tag;
 import net.minestom.server.tag.TagReadable;
+import net.minestom.server.utils.validate.Check;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
+import java.util.UUID;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 /**
@@ -42,6 +47,8 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
 
     @NotNull Target target();
 
+    @Nullable Gatherer gatherer();
+
     @NotNull Sort sort();
 
     int limit();
@@ -50,7 +57,7 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
         void target(@NotNull Target target);
 
         default void requirePlayer() {
-            target(Target.ALL_PLAYERS);
+            target(Target.PLAYERS);
         }
 
         <T> void predicate(@NotNull Property<? super E, T> property, @NotNull BiPredicate<Point, T> predicate);
@@ -59,11 +66,19 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
             predicate(property, (point, t) -> Objects.equals(t, value));
         }
 
+        void id(int id);
+
+        void uuid(@NotNull UUID uuid);
+
         void type(@NotNull EntityType @NotNull ... types);
 
         void range(double radius);
 
-        void chunk(int chunkX, int chunkZ);
+        void chunk(long chunkIndex);
+
+        default void chunk(int chunkX, int chunkZ) {
+            chunk(CoordConversion.chunkIndex(chunkX, chunkZ));
+        }
 
         default void chunk(@NotNull Point chunkPosition) {
             chunk(chunkPosition.chunkX(), chunkPosition.chunkZ());
@@ -76,10 +91,56 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
         void limit(int limit);
     }
 
-    enum Target {
-        ALL_ENTITIES, ALL_PLAYERS,
-        NEAREST_ENTITY, NEAREST_PLAYER,
-        RANDOM_PLAYER,
+    enum Target implements Predicate<Entity> {
+        ENTITIES,
+        PLAYERS;
+
+        @Override
+        public boolean test(Entity entity) {
+            return switch (this) {
+                case ENTITIES -> true;
+                case PLAYERS -> entity instanceof Player;
+            };
+        }
+    }
+
+    /**
+     * Gathers attempt to shrink themselves to the smallest scope possible.
+     */
+    @ApiStatus.Internal
+    sealed interface Gatherer {
+        record ChunkRange(int radius) implements Gatherer {
+            public ChunkRange {
+                Check.argCondition(radius < 0, "Chunk range must be positive");
+                Check.argCondition(radius == 0, "Chunk range cannot just be itself, use Chunk instead!"); // TODO check this instead
+            }
+        }
+        record Chunk(long chunkIndex) implements Gatherer {}
+        record Uuid(@NotNull UUID uuid) implements Gatherer {}
+        record Id(int id) implements Gatherer {}
+
+        // TODO, move this elsewere?
+        default Gatherer smallestScope(Gatherer other) {
+            if (other == null) return this; // Going back above chunk range
+            if (this.equals(other)) return other;
+            return switch (this) {
+                // Shrinking to a chunk range
+                case ChunkRange range when other instanceof ChunkRange(int radius) && range.radius >= radius -> other;
+                // Shrinking to a single chunk
+                case ChunkRange ignored when other instanceof Chunk -> other;
+                case Chunk ignored when other instanceof Chunk -> other; // Reassigning the chunk.
+                // Shrinking to a single UUID
+                case ChunkRange ignored when other instanceof Uuid -> other;
+                case Chunk ignored when other instanceof Uuid -> other;
+                case Uuid ignored when other instanceof Uuid -> other; // Reassigning the UUID.
+                // Shrinking to single ID
+                case ChunkRange ignored when other instanceof Id -> other;
+                case Chunk ignored when other instanceof Id -> other;
+                case Uuid ignored when other instanceof Id -> other;
+                case Id ignored when other instanceof Id -> other; // Reassigning the ID.
+                default -> this;
+            };
+        }
     }
 
     enum Sort {

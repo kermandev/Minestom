@@ -293,12 +293,24 @@ public class ArgumentEntity extends Argument<EntitySelector<Entity>> {
                                              EntitySelector.Builder<? extends Entity> builder,
                                              @NotNull String selectorVariable) {
         switch (selectorVariable) {
-            case "@p" -> builder.target(EntitySelector.Target.NEAREST_PLAYER);
-            case "@n" -> builder.target(EntitySelector.Target.NEAREST_ENTITY);
-            case "@r" -> builder.target(EntitySelector.Target.RANDOM_PLAYER);
-            case "@a" -> builder.target(EntitySelector.Target.ALL_PLAYERS);
-            case "@e" -> builder.target(EntitySelector.Target.ALL_ENTITIES);
-            case "@s" -> builder.predicateEquals(EntitySelectors.NAME, sender.identity().examinableName());
+            case "@p" -> {
+                builder.target(EntitySelector.Target.PLAYERS);
+                builder.sort(EntitySelector.Sort.NEAREST);
+                builder.limit(1);
+            }
+            case "@n" -> {
+                builder.target(EntitySelector.Target.ENTITIES);
+                builder.sort(EntitySelector.Sort.NEAREST);
+                builder.limit(1);
+            }
+            case "@r" -> {
+                builder.target(EntitySelector.Target.PLAYERS);
+                builder.sort(EntitySelector.Sort.RANDOM);
+                builder.limit(1);
+            }
+            case "@a" -> builder.target(EntitySelector.Target.PLAYERS);
+            case "@e" -> builder.target(EntitySelector.Target.ENTITIES);
+            case "@s" -> builder.uuid(sender.identity().uuid()); // TODO: this should support command blocks.
             default -> throw new IllegalStateException("Weird selector variable: " + selectorVariable);
         }
     }
