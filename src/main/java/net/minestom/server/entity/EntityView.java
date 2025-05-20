@@ -1,9 +1,7 @@
 package net.minestom.server.entity;
 
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.ints.IntIterator;
-import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
-import it.unimi.dsi.fastutil.ints.IntSet;
+import it.unimi.dsi.fastutil.ints.*;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.minestom.server.ServerFlag;
 import net.minestom.server.coordinate.Point;
 import net.minestom.server.instance.Instance;
@@ -252,20 +250,22 @@ final class EntityView {
     final class SetImpl extends AbstractSet<Player> {
         @Override
         public @NotNull Iterator<Player> iterator() {
-            List<Player> players;
+            final int[] ids;
+            final Instance instance;
             synchronized (mutex) {
                 var bitSet = viewableOption.bitSet;
                 if (bitSet.isEmpty()) return Collections.emptyIterator();
-                Instance instance = entity.getInstance();
+                instance = entity.getInstance();
                 if (instance == null) return Collections.emptyIterator();
-                players = new ArrayList<>(bitSet.size());
-                for (IntIterator it = bitSet.intIterator(); it.hasNext(); ) {
-                    final int id = it.nextInt();
-                    final Player player = (Player) instance.getEntityById(id);
-                    if (player != null) players.add(player);
-                }
+                ids = bitSet.toIntArray(); // Copy to release the mutex
             }
-            return players.iterator();
+            final Player[] players = new Player[ids.length];
+            int size = 0; // We know for sure we don't need any bound/growth checks, so we use a java array.
+            for (int id : ids) {
+                final Player player = (Player) instance.getEntityById(id);
+                if (player != null) players[size++] = player;
+            }
+            return ObjectArrayList.wrap(players, size).iterator();
         }
 
         @Override
