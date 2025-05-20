@@ -611,7 +611,7 @@ public abstract class Instance implements Block.Getter, Block.Setter,
      * @return the entity having the specified id, null if not found
      */
     public @Nullable Entity getEntityById(int id) {
-        return entityTracker.selectEntityFirst(EntitySelector.selector(EntitySelectors.ID, id));
+        return entityTracker.selectEntityFirst(EntitySelector.selector((builder) -> builder.id(id)));
     }
 
     /**
@@ -621,7 +621,7 @@ public abstract class Instance implements Block.Getter, Block.Setter,
      * @return the entity having the specified uuid, null if not found
      */
     public @Nullable Entity getEntityByUuid(UUID uuid) {
-        return entityTracker.selectEntityFirst(EntitySelector.selector(EntitySelectors.UUID, uuid));
+        return entityTracker.selectEntityFirst(EntitySelector.selector((builder) -> builder.uuid(uuid)));
     }
 
     /**

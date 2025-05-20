@@ -103,7 +103,7 @@ public class ArgumentEntity extends Argument<EntitySelector<Entity>> {
             // Check if the input is a valid UUID
             try {
                 final UUID uuid = UUID.fromString(input);
-                return EntitySelector.selector(builder -> builder.predicateEquals(EntitySelectors.UUID, uuid));
+                return EntitySelector.selector(builder -> builder.uuid(uuid));
             } catch (IllegalArgumentException ignored) {
             }
 

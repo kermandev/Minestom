@@ -5,7 +5,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ObjectArraySet;
 import net.minestom.server.ServerFlag;
 import net.minestom.server.coordinate.ChunkRange;
 import net.minestom.server.coordinate.CoordConversion;
@@ -30,11 +30,15 @@ final class EntityTrackerImpl implements EntityTracker {
 
     // Indexes
     private final Int2ObjectMap<TrackedEntity> idIndex = new Int2ObjectOpenHashMap<>();
-    private final Map<UUID, TrackedEntity> uuidIndex = new Object2ObjectOpenHashMap<>();
+    private final Object2ObjectOpenHashMap<UUID, TrackedEntity> uuidIndex = new Object2ObjectOpenHashMap<>();
     private final Int2ObjectMap<TrackedEntity> playerIdIndex = new Int2ObjectOpenHashMap<>();
 
     // Spatial partitioning
     private final Long2ObjectMap<Set<TrackedEntity>> chunksEntities = new Long2ObjectOpenHashMap<>();
+
+    // Cleaning
+    private static final int ENTROPY_THRESHOLD = 10_000;
+    int entropy;
 
     @Override
     public synchronized void register(@NotNull Entity entity, @NotNull Point point, @Nullable Update update) {
@@ -82,6 +86,7 @@ final class EntityTrackerImpl implements EntityTracker {
                 update.remove(newEntity);
             });
         }
+        attemptCleanup(10); // Ensure removals count for more entropy
     }
 
     @Override
@@ -114,6 +119,7 @@ final class EntityTrackerImpl implements EntityTracker {
             });
             update.referenceUpdate(newPoint, this);
         }
+        attemptCleanup(1);
     }
 
     @Override
@@ -189,9 +195,7 @@ final class EntityTrackerImpl implements EntityTracker {
                 return entities;
             }
             // Otherwise, create a new entry
-            entities = new HashSet<>(1);
-            entities.add(entity);
-            return entities;
+            return ObjectArraySet.ofUnchecked(entity);
         });
     }
 
@@ -204,14 +208,15 @@ final class EntityTrackerImpl implements EntityTracker {
     }
 
     private Stream<TrackedEntity> gatherChunkRange(@NotNull Point origin, int chunkRadius, boolean playersOnly) {
-        var array = new ObjectArrayList<TrackedEntity>();
+        var builder = Stream.<Set<TrackedEntity>>builder();
         ChunkRange.chunksInRange(origin, chunkRadius, (chunkX, chunkZ) -> {
             var entries = chunksEntities.get(CoordConversion.chunkIndex(chunkX, chunkZ));
             if (entries == null) return;
-            array.addAll(entries);
+            builder.add(entries);
         });
-        if (!playersOnly) return array.stream();
-        return array.stream().filter(trackedEntity -> trackedEntity.entity() instanceof Player);
+        if (!playersOnly) return builder.build().flatMap(Set::stream);
+        return builder.build().flatMap(Set::stream)
+                .filter(trackedEntity -> trackedEntity.entity() instanceof Player);
     }
 
     private void difference(Point oldPoint, Point newPoint, @NotNull Update update) {
@@ -229,6 +234,21 @@ final class EntityTrackerImpl implements EntityTracker {
                     assert !entities.isEmpty() : "There should be at least one entity in the chunk";
                     for (TrackedEntity entity : entities) update.remove(entity.entity());
                 });
+    }
+
+    private synchronized void attemptCleanup(int additionalEntropy) {
+        this.entropy += additionalEntropy;
+        // Perform cleanup if possible.
+        if (ENTROPY_THRESHOLD > entropy) return;
+        entropy = 0;
+        uuidIndex.trim();
+        // Trim the chunk entities array sizes.
+        for (var entry : chunksEntities.long2ObjectEntrySet()) {
+            var key = entry.getLongKey();
+            var entities = entry.getValue().toArray(new TrackedEntity[0]);
+            assert entities.length > 0 : "There should be at least one entity in the chunk";
+            chunksEntities.put(key, ObjectArraySet.ofUnchecked(entities));
+        }
     }
 
     private record TrackedEntity(@NotNull Entity entity, @NotNull AtomicReference<Point> lastPosition) {

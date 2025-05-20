@@ -9,6 +9,7 @@ import net.minestom.server.coordinate.CoordConversion;
 import net.minestom.server.coordinate.Point;
 import net.minestom.server.coordinate.Vec;
 import net.minestom.server.entity.EntitySelector;
+import net.minestom.server.entity.EntitySelectors;
 import net.minestom.server.entity.Player;
 import net.minestom.server.instance.block.Block;
 import net.minestom.server.instance.block.BlockHandler;
@@ -355,14 +356,26 @@ public abstract class Chunk implements Block.Getter, Block.Setter, Biome.Getter,
             return entityMap.values();
         }
 
+        private static final EntitySelector<Player> SELECTOR = EntitySelector.selector(builder -> {
+            builder.requirePlayer();
+//                        builder.chunkRange(ServerFlag.CHUNK_VIEW_DISTANCE);
+            // Faster for lower player counts; with high entity counts/Viewable; TODO find the intersection
+            builder.predicate(EntitySelectors.POS, (origin, coord) -> {
+                final int originChunkX = origin.chunkX();
+                final int originChunkZ = origin.chunkZ();
+                final int coordChunkX = coord.chunkX();
+                final int coordChunkZ = coord.chunkZ();
+                final int deltaX = Math.abs(originChunkX - coordChunkX);
+                final int deltaZ = Math.abs(originChunkZ - coordChunkZ);
+                return deltaX <= ServerFlag.CHUNK_VIEW_DISTANCE && deltaZ <= ServerFlag.CHUNK_VIEW_DISTANCE;
+            });
+        });
+
         private void collectPlayers(EntityTracker tracker, Int2ObjectOpenHashMap<Player> map) {
             tracker.selectEntityConsume(
-                    EntitySelector.selector(builder -> {
-                        builder.requirePlayer();
-                        builder.chunkRange(ServerFlag.CHUNK_VIEW_DISTANCE);
-                    }),
+                    SELECTOR,
                     Chunk.this.toPosition(),
-                    player -> map.putIfAbsent(player.getEntityId(), (Player) player)
+                    player -> map.putIfAbsent(player.getEntityId(), player)
             );
         }
 
