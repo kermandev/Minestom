@@ -3,6 +3,7 @@ package net.minestom.server.instance;
 import net.minestom.server.coordinate.Point;
 import net.minestom.server.entity.Entity;
 import net.minestom.server.entity.EntitySelector;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -21,6 +22,9 @@ public sealed interface EntityTracker extends EntitySelector.Finder<Entity> perm
     void unregister(@NotNull Entity entity, @Nullable Update update);
 
     void move(@NotNull Entity entity, @NotNull Point newPoint, @Nullable Update update);
+
+    @ApiStatus.Experimental
+    void trim();
 
     /**
      * Callback to know the newly visible entities and those to remove.

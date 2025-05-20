@@ -36,10 +36,6 @@ final class EntityTrackerImpl implements EntityTracker {
     // Spatial partitioning
     private final Long2ObjectMap<Set<TrackedEntity>> chunksEntities = new Long2ObjectOpenHashMap<>();
 
-    // Cleaning
-    private static final int ENTROPY_THRESHOLD = 10_000;
-    int entropy;
-
     @Override
     public synchronized void register(@NotNull Entity entity, @NotNull Point point, @Nullable Update update) {
         TrackedEntity newEntry = new TrackedEntity(entity, new AtomicReference<>(point));
@@ -86,7 +82,6 @@ final class EntityTrackerImpl implements EntityTracker {
                 update.remove(newEntity);
             });
         }
-        attemptCleanup(10); // Ensure removals count for more entropy
     }
 
     @Override
@@ -119,7 +114,6 @@ final class EntityTrackerImpl implements EntityTracker {
             });
             update.referenceUpdate(newPoint, this);
         }
-        attemptCleanup(1);
     }
 
     @Override
@@ -187,6 +181,18 @@ final class EntityTrackerImpl implements EntityTracker {
         return (Stream<R>) stream.map(TrackedEntity::entity);
     }
 
+    @Override
+    public synchronized void trim() {
+        uuidIndex.trim();
+        // Trim the chunk entities array sizes.
+        for (var entry : chunksEntities.long2ObjectEntrySet()) {
+            var key = entry.getLongKey();
+            var entities = entry.getValue().toArray(new TrackedEntity[0]);
+            assert entities.length > 0 : "There should be at least one entity in the chunk";
+            chunksEntities.put(key, ObjectArraySet.ofUnchecked(entities));
+        }
+    }
+
     private void addChunkEntity(TrackedEntity entity, long index) {
         chunksEntities.compute(index, (ignored, entities) -> {
             // Add entity to existing chunk
@@ -234,21 +240,6 @@ final class EntityTrackerImpl implements EntityTracker {
                     assert !entities.isEmpty() : "There should be at least one entity in the chunk";
                     for (TrackedEntity entity : entities) update.remove(entity.entity());
                 });
-    }
-
-    private synchronized void attemptCleanup(int additionalEntropy) {
-        this.entropy += additionalEntropy;
-        // Perform cleanup if possible.
-        if (ENTROPY_THRESHOLD > entropy) return;
-        entropy = 0;
-        uuidIndex.trim();
-        // Trim the chunk entities array sizes.
-        for (var entry : chunksEntities.long2ObjectEntrySet()) {
-            var key = entry.getLongKey();
-            var entities = entry.getValue().toArray(new TrackedEntity[0]);
-            assert entities.length > 0 : "There should be at least one entity in the chunk";
-            chunksEntities.put(key, ObjectArraySet.ofUnchecked(entities));
-        }
     }
 
     private record TrackedEntity(@NotNull Entity entity, @NotNull AtomicReference<Point> lastPosition) {
