@@ -11,9 +11,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 import java.util.UUID;
-import java.util.function.BiPredicate;
-import java.util.function.Consumer;
-import java.util.function.Function;
+import java.util.function.*;
 import java.util.stream.Stream;
 
 /**
@@ -22,22 +20,46 @@ import java.util.stream.Stream;
  */
 public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits EntitySelectorImpl {
 
-    static <E> @NotNull EntitySelector<E> selector(@NotNull Consumer<@NotNull Builder<E>> consumer) {
+    /**
+     * Creates a selector.
+     * <p>
+     * If you are just gathering entities consider using {@link EntitySelectors#all()} or {@link EntitySelectors#players()}.
+     * @param <E> the entity type
+     * @param consumer a consumer that will be called with a builder
+     * @return a selector
+     */
+    static <E> @NotNull EntitySelector<E> selector(@NotNull Consumer<@NotNull Builder> consumer) {
         EntitySelectorImpl.BuilderImpl<E> builder = new EntitySelectorImpl.BuilderImpl<>();
         consumer.accept(builder);
         return builder.build();
     }
 
-    static <E, T> @NotNull EntitySelector<E> selector(@NotNull Property<E, T> property, T value) {
+    /**
+     * Creates a selector that uses the property to match the value.
+     * <p>
+     * If you are doing a common operation in the builder, consider using {@link #selector(BiConsumer, T)}.
+     *
+     * @param <E> the entity type
+     * @param <T> the property type
+     * @param property the property to match
+     * @param value the value to match
+     * @return a selector that matches all entities
+     */
+    static <E, T> @NotNull EntitySelector<E> selector(@NotNull Property<?, T> property, T value) {
         return selector(builder -> builder.predicateEquals(property, value));
     }
 
-    static <E, T> @NotNull Property<E, T> property(@NotNull String name, Function<E, T> function) {
-        return new EntitySelectorImpl.PropertyImpl<>(name, function);
+    static <E, T> @NotNull EntitySelector<E> selector(@NotNull BiConsumer<Builder, T> property, T value) {
+        return selector(builder -> property.accept(builder, value));
+    }
+
+    static <E, T> @NotNull Property<E, T> property(@NotNull String name, Class<E> type, Function<E, T> function) {
+        return new EntitySelectorImpl.PropertyImpl<>(name, type, function);
     }
 
     static <E extends TagReadable, T> @NotNull Property<E, T> tagProperty(@NotNull Tag<T> tag) {
-        return property(tag.getKey(), e -> e.getTag(tag));
+        //noinspection unchecked
+        return EntitySelector.property(tag.getKey(), (Class<E>) TagReadable.class, e -> e.getTag(tag));
     }
 
     @Override
@@ -51,17 +73,21 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
 
     int limit();
 
-    interface Builder<E> {
+    interface Builder {
         void target(@NotNull Target target);
 
         default void requirePlayer() {
             target(Target.PLAYERS);
         }
 
-        <T> void predicate(@NotNull Property<? super E, T> property, @NotNull BiPredicate<Point, T> predicate);
+        <T> void predicate(@NotNull Property<?, T> property, @NotNull BiPredicate<Point, T> predicate);
 
-        default <T> void predicateEquals(@NotNull Property<? super E, T> property, @Nullable T value) {
+        default <T> void predicateEquals(@NotNull Property<?, T> property, @Nullable T value) {
             predicate(property, (point, t) -> Objects.equals(t, value));
+        }
+
+        default <T> void predicateNotEquals(@NotNull Property<?, T> property, @Nullable T value) {
+            predicate(property, (point, t) -> !Objects.equals(t, value));
         }
 
         void id(int id);
@@ -97,16 +123,20 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
      */
     @ApiStatus.Internal
     sealed interface Gatherer {
-        record Range(double radius) implements Gatherer {}
+        record Range(double radius) implements Gatherer {
+            public Range {
+                Check.argCondition(radius < 0, "Range must be positive");
+                Check.argCondition(radius < Vec.EPSILON, "Range cannot just be itself, use a smaller scope!");
+            }
+        }
         record ChunkRange(int radius) implements Gatherer {
             public ChunkRange {
                 Check.argCondition(radius < 0, "Chunk range must be positive");
-                Check.argCondition(radius == 0, "Chunk range cannot just be itself, use Chunk instead!"); // TODO check this instead
+                Check.argCondition(radius == 0, "Chunk range cannot just be itself, use Chunk instead!");
             }
         }
         record Chunk(long chunkIndex) implements Gatherer {}
         record Uuid(@NotNull UUID uuid) implements Gatherer {}
-
         record Id(int id) implements Gatherer {}
     }
 
@@ -116,6 +146,8 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
 
     sealed interface Property<E, T> permits EntitySelectorImpl.PropertyImpl {
         @NotNull String name();
+
+        @NotNull Class<E> type();
 
         @NotNull Function<E, T> function();
     }

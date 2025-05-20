@@ -2,7 +2,6 @@ package net.minestom.server.entity;
 
 import net.minestom.server.coordinate.CoordConversion;
 import net.minestom.server.coordinate.Point;
-import net.minestom.server.coordinate.Pos;
 import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.NotNull;
 
@@ -27,10 +26,10 @@ record EntitySelectorImpl<E>(EntitySelector.Target target,
         return true;
     }
 
-    record PropertyImpl<E, T>(String name, Function<E, T> function) implements EntitySelector.Property<E, T> {
+    record PropertyImpl<E, T>(String name, Class<E> type, Function<E, T> function) implements EntitySelector.Property<E, T> {
     }
 
-    static final class BuilderImpl<E> implements Builder<E> {
+    static final class BuilderImpl<E> implements Builder {
         private Target target = Target.ENTITIES;
         private Gatherer gatherer = null;
         private Sort sort = Sort.ARBITRARY;
@@ -43,26 +42,30 @@ record EntitySelectorImpl<E>(EntitySelector.Target target,
         }
 
         @Override
-        public <T> void predicate(@NotNull Property<? super E, T> property, @NotNull BiPredicate<Point, T> predicate) {
-            this.conditions.add((point, entity) -> predicate.test(point, property.function().apply(entity)));
+        public <T> void predicate(@NotNull Property<?, T> property, @NotNull BiPredicate<Point, T> predicate) {
+            //noinspection unchecked
+            this.conditions.add((point, entity) ->
+                    // Check if the entity can be applied to this predicate, if not return false
+                    property.type().isAssignableFrom(entity.getClass())
+                    && predicate.test(point, ((Function<E, T>) property.function()).apply(entity)));
         }
 
         @Override
         public void id(int id) {
             if (upgradeGather(new Gatherer.Id(id))) return;
-            this.<Integer>predicate(Property.class.cast(EntitySelectors.ID), (point, entityId) -> entityId.equals(id));
+            this.predicateEquals(EntitySelectors.ID, id);
         }
 
         @Override
         public void uuid(@NotNull UUID uuid) {
             if (upgradeGather(new Gatherer.Uuid(uuid))) return;
-            this.<UUID>predicate(Property.class.cast(EntitySelectors.UUID), (point, entityUuid) -> entityUuid.equals(uuid));
+            this.predicateEquals(EntitySelectors.UUID, uuid);
         }
 
         @Override
         public void type(@NotNull EntityType @NotNull ... types) {
             var typeSet = Set.of(types);
-            this.<EntityType>predicate(Property.class.cast(EntitySelectors.TYPE), (point, type) -> typeSet.contains(type));
+            this.predicate(EntitySelectors.TYPE, (point, type) -> typeSet.contains(type));
         }
 
         @Override
@@ -75,14 +78,14 @@ record EntitySelectorImpl<E>(EntitySelector.Target target,
         public void chunk(int chunkX, int chunkZ) {
             long chunkIndex = CoordConversion.chunkIndex(chunkX, chunkZ);
             if (upgradeGather(new Gatherer.Chunk(chunkIndex))) return;
-            this.<Pos>predicate(Property.class.cast(EntitySelectors.POS),
+            this.predicate(EntitySelectors.POS,
                     (origin, coord) -> coord.chunkX() == chunkX && coord.chunkZ() == chunkZ);
         }
 
         @Override
         public void chunkRange(int radius) {
             if (upgradeGather(new Gatherer.ChunkRange(radius))) return;
-            this.<Pos>predicate(Property.class.cast(EntitySelectors.POS), (origin, coord) -> {
+            this.predicate(EntitySelectors.POS, (origin, coord) -> {
                 final int originChunkX = origin.chunkX();
                 final int originChunkZ = origin.chunkZ();
                 final int coordChunkX = coord.chunkX();
@@ -120,7 +123,7 @@ record EntitySelectorImpl<E>(EntitySelector.Target target,
 
         void fallbackRange(double radius) {
             final var radiusSquared = radius * radius;
-            this.<Pos>predicate(Property.class.cast(EntitySelectors.POS),
+            this.predicate(EntitySelectors.POS,
                     (origin, coord) -> origin.distanceSquared(coord) <= radiusSquared);
         }
 

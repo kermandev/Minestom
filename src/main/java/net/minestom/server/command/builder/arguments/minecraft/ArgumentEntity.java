@@ -103,14 +103,13 @@ public class ArgumentEntity extends Argument<EntitySelector<Entity>> {
             // Check if the input is a valid UUID
             try {
                 final UUID uuid = UUID.fromString(input);
-                return EntitySelector.selector(builder -> builder.uuid(uuid));
+                return EntitySelector.selector(EntitySelector.Builder::uuid, uuid);
             } catch (IllegalArgumentException ignored) {
             }
 
             // Check if the input is a valid player name
             if (USERNAME_PATTERN.matcher(input).matches()) {
-                EntitySelector<? extends Entity> selector = EntitySelector.<Player>selector(builder -> builder.predicateEquals(EntitySelectors.NAME, input));
-                return (EntitySelector<Entity>) selector;
+                return EntitySelector.selector(EntitySelectors.NAME, input);
             }
         }
 
@@ -149,7 +148,7 @@ public class ArgumentEntity extends Argument<EntitySelector<Entity>> {
 
     private static void parseStructure(@NotNull CommandSender sender,
                                        @NotNull String input,
-                                       @NotNull EntitySelector.Builder<Entity> builder,
+                                       @NotNull EntitySelector.Builder builder,
                                        @NotNull String structure) throws ArgumentSyntaxException {
         // The structure isn't opened or closed properly
         if (!structure.startsWith("[") || !structure.endsWith("]"))
@@ -179,7 +178,7 @@ public class ArgumentEntity extends Argument<EntitySelector<Entity>> {
     }
 
     private static int parseArgument(@NotNull CommandSender sender,
-                                     @NotNull EntitySelector.Builder<Entity> builder,
+                                     @NotNull EntitySelector.Builder builder,
                                      @NotNull String argumentName,
                                      @NotNull String input,
                                      @NotNull String structureData, int beginIndex) throws ArgumentSyntaxException {
@@ -264,6 +263,18 @@ public class ArgumentEntity extends Argument<EntitySelector<Entity>> {
                 break;
         }
 
+        for (var entry : gamemode.object2BooleanEntrySet()) {
+            var key = entry.getKey();
+            if (entry.getBooleanValue()) builder.predicateEquals(EntitySelectors.GAME_MODE, key);
+            else builder.predicateNotEquals(EntitySelectors.GAME_MODE, key);
+        }
+
+        for (var entry : type.object2BooleanEntrySet()) {
+            var key = entry.getKey();
+            if (entry.getBooleanValue()) builder.predicateEquals(EntitySelectors.TYPE, key);
+            else builder.predicateNotEquals(EntitySelectors.TYPE, key);
+        }
+
         return finalIndex;
     }
 
@@ -290,7 +301,7 @@ public class ArgumentEntity extends Argument<EntitySelector<Entity>> {
     }
 
     private static void appendTargetSelector(@NotNull CommandSender sender,
-                                             EntitySelector.Builder<? extends Entity> builder,
+                                             EntitySelector.Builder builder,
                                              @NotNull String selectorVariable) {
         switch (selectorVariable) {
             case "@p" -> {

@@ -14,14 +14,14 @@ public final class EntitySelectors {
     private static final EntitySelector<Player> PLAYERS = selector(s -> s.target(EntitySelector.Target.PLAYERS));
 
     // Properties
-    public static final Property<Entity, Integer> ID = property("id", Entity::getEntityId);
-    public static final Property<Entity, UUID> UUID = property("uuid", Entity::getUuid);
-    public static final Property<Entity, String> NAME = property("name", entity -> entity instanceof Player player ? player.getUsername() : null);
-    public static final Property<Entity, Pos> POS = property("coord", Entity::getPosition);
-    public static final Property<Entity, EntityType> TYPE = property("entity_type", Entity::getEntityType);
-    public static final Property<Player, GameMode> GAME_MODE = property("game_mode", Player::getGameMode);
-    public static final Property<Entity, Integer> LEVEL = property("experience", entity -> entity instanceof Player player ? player.getLevel() : 0);
-    public static final Property<Entity, Float> EXPERIENCE = property("experience", entity -> entity instanceof Player player ? player.getExp() : 0f);
+    public static final Property<Entity, Integer> ID = property("id", Entity.class, Entity::getEntityId);
+    public static final Property<Entity, UUID> UUID = property("uuid", Entity.class, Entity::getUuid);
+    public static final Property<Player, String> NAME = property("name", Player.class, Player::getUsername);
+    public static final Property<Entity, Pos> POS = property("coord", Entity.class, Entity::getPosition);
+    public static final Property<Entity, EntityType> TYPE = property("entity_type", Entity.class, Entity::getEntityType);
+    public static final Property<Player, GameMode> GAME_MODE = property("game_mode", Player.class, Player::getGameMode);
+    public static final Property<Player, Integer> LEVEL = property("level", Player.class, Player::getLevel);
+    public static final Property<Player, Float> EXPERIENCE = property("experience", Player.class, Player::getExp);
 
     public static @NotNull EntitySelector<Entity> all() {
         return ALL;

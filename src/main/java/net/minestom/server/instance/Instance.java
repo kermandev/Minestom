@@ -611,7 +611,7 @@ public abstract class Instance implements Block.Getter, Block.Setter,
      * @return the entity having the specified id, null if not found
      */
     public @Nullable Entity getEntityById(int id) {
-        return entityTracker.selectGlobalEntityFirst(EntitySelector.selector((builder) -> builder.id(id)));
+        return entityTracker.selectGlobalEntityFirst(EntitySelector.selector(EntitySelector.Builder::id, id));
     }
 
     /**
@@ -621,7 +621,7 @@ public abstract class Instance implements Block.Getter, Block.Setter,
      * @return the entity having the specified uuid, null if not found
      */
     public @Nullable Entity getEntityByUuid(UUID uuid) {
-        return entityTracker.selectGlobalEntityFirst(EntitySelector.selector((builder) -> builder.uuid(uuid)));
+        return entityTracker.selectGlobalEntityFirst(EntitySelector.selector(EntitySelector.Builder::uuid, uuid));
     }
 
     /**
@@ -646,7 +646,6 @@ public abstract class Instance implements Block.Getter, Block.Setter,
     @Override
     public @NotNull Set<@NotNull Player> getPlayers() {
         return entityTracker.selectGlobalEntity(EntitySelectors.players())
-                .map(entity -> (Player) entity)
                 .collect(Collectors.toUnmodifiableSet());
     }
 
@@ -658,7 +657,7 @@ public abstract class Instance implements Block.Getter, Block.Setter,
      * if {@code chunk} is unloaded, return an empty {@link HashSet}
      */
     public @NotNull Set<@NotNull Entity> getChunkEntities(Chunk chunk) {
-        final Stream<Entity> chunkEntities = entityTracker.selectGlobalEntity(EntitySelector.selector(builder -> builder.chunk(chunk.toPosition())));
+        final Stream<Entity> chunkEntities = entityTracker.selectGlobalEntity(EntitySelector.selector(builder -> builder.chunk(chunk.getChunkX(), chunk.getChunkZ())));
         return ObjectArraySet.ofUnchecked(chunkEntities.toArray(Entity[]::new));
     }
 
@@ -670,7 +669,7 @@ public abstract class Instance implements Block.Getter, Block.Setter,
      * @return entities that are not further than the specified distance from the transmitted position.
      */
     public @NotNull Collection<Entity> getNearbyEntities(@NotNull Point point, double range) {
-        return entityTracker.selectEntity(EntitySelector.selector(builder -> builder.range(range)), point).toList();
+        return entityTracker.selectEntity(EntitySelector.selector(EntitySelector.Builder::range, range), point).toList();
     }
 
     @Override
