@@ -30,7 +30,7 @@ import java.util.List;
 public class Main {
 
     public static void main(String[] args) {
-        System.setProperty("minestom.experiment.pose-updates", "true");
+        System.setProperty("minestom.dispatcher-threads", "6");
 
         MinecraftServer.setCompressionThreshold(0);
 

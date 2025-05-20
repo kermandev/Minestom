@@ -40,7 +40,7 @@ public class GiveCommand extends Command {
                 itemStacks.add(itemStack.withAmount(count));
             }
 
-            final List<Entity> targets = sender.selectEntity(selector).toList();
+            final List<Entity> targets = sender.selectGlobalEntity(selector).toList();
             for (Entity target : targets) {
                 if (target instanceof Player player) {
                     player.getInventory().addItemStacks(itemStacks, TransactionOption.ALL);

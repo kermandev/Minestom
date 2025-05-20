@@ -28,7 +28,7 @@ public class RemoveCommand extends Command {
 
         private void remove(CommandSender commandSender, CommandContext commandContext) {
             final EntitySelector<Entity> selector = commandContext.get(entity);
-            commandSender.selectEntity(selector).toList().forEach(Entity::remove);
+            commandSender.selectGlobalEntity(selector).toList().forEach(Entity::remove);
         }
     }
 }

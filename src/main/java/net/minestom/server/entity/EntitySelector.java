@@ -1,6 +1,5 @@
 package net.minestom.server.entity;
 
-import net.minestom.server.coordinate.CoordConversion;
 import net.minestom.server.coordinate.Point;
 import net.minestom.server.coordinate.Vec;
 import net.minestom.server.tag.Tag;
@@ -15,7 +14,6 @@ import java.util.UUID;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 /**
@@ -125,7 +123,7 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
     interface Finder<T> {
         <R extends T> @NotNull Stream<@NotNull R> selectEntity(@NotNull EntitySelector<R> selector, @NotNull Point origin);
 
-        default <R extends T> @NotNull Stream<@NotNull R> selectEntity(@NotNull EntitySelector<R> selector) {
+        default <R extends T> @NotNull Stream<@NotNull R> selectGlobalEntity(@NotNull EntitySelector<R> selector) {
             return selectEntity(selector, Vec.ZERO);
         }
 
@@ -134,7 +132,7 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
             stream.forEach(consumer);
         }
 
-        default <R extends T> void selectEntityConsume(@NotNull EntitySelector<R> selector, Consumer<R> consumer) {
+        default <R extends T> void selectGlobalEntityConsume(@NotNull EntitySelector<R> selector, Consumer<R> consumer) {
             selectEntityConsume(selector, Vec.ZERO, consumer);
         }
 
@@ -142,7 +140,7 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
             return selectEntity(selector, origin).findFirst().orElse(null);
         }
 
-        default <R extends T> @Nullable R selectEntityFirst(@NotNull EntitySelector<R> selector) {
+        default <R extends T> @Nullable R selectGlobalEntityFirst(@NotNull EntitySelector<R> selector) {
             return selectEntityFirst(selector, Vec.ZERO);
         }
     }

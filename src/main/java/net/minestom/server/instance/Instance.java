@@ -601,7 +601,7 @@ public abstract class Instance implements Block.Getter, Block.Setter,
      * @return an unmodifiable {@link Set} containing all the entities in the instance
      */
     public @NotNull Set<@NotNull Entity> getEntities() {
-        return entityTracker.selectEntity(EntitySelectors.all()).collect(Collectors.toUnmodifiableSet());
+        return entityTracker.selectGlobalEntity(EntitySelectors.all()).collect(Collectors.toUnmodifiableSet());
     }
 
     /**
@@ -611,7 +611,7 @@ public abstract class Instance implements Block.Getter, Block.Setter,
      * @return the entity having the specified id, null if not found
      */
     public @Nullable Entity getEntityById(int id) {
-        return entityTracker.selectEntityFirst(EntitySelector.selector((builder) -> builder.id(id)));
+        return entityTracker.selectGlobalEntityFirst(EntitySelector.selector((builder) -> builder.id(id)));
     }
 
     /**
@@ -621,7 +621,7 @@ public abstract class Instance implements Block.Getter, Block.Setter,
      * @return the entity having the specified uuid, null if not found
      */
     public @Nullable Entity getEntityByUuid(UUID uuid) {
-        return entityTracker.selectEntityFirst(EntitySelector.selector((builder) -> builder.uuid(uuid)));
+        return entityTracker.selectGlobalEntityFirst(EntitySelector.selector((builder) -> builder.uuid(uuid)));
     }
 
     /**
@@ -645,7 +645,7 @@ public abstract class Instance implements Block.Getter, Block.Setter,
      */
     @Override
     public @NotNull Set<@NotNull Player> getPlayers() {
-        return entityTracker.selectEntity(EntitySelectors.players())
+        return entityTracker.selectGlobalEntity(EntitySelectors.players())
                 .map(entity -> (Player) entity)
                 .collect(Collectors.toUnmodifiableSet());
     }
@@ -658,7 +658,7 @@ public abstract class Instance implements Block.Getter, Block.Setter,
      * if {@code chunk} is unloaded, return an empty {@link HashSet}
      */
     public @NotNull Set<@NotNull Entity> getChunkEntities(Chunk chunk) {
-        final Stream<Entity> chunkEntities = entityTracker.selectEntity(EntitySelector.selector(builder -> builder.chunk(chunk.toPosition())));
+        final Stream<Entity> chunkEntities = entityTracker.selectGlobalEntity(EntitySelector.selector(builder -> builder.chunk(chunk.toPosition())));
         return ObjectArraySet.ofUnchecked(chunkEntities.toArray(Entity[]::new));
     }
 
@@ -856,7 +856,7 @@ public abstract class Instance implements Block.Getter, Block.Setter,
     public @NotNull InstanceSnapshot updateSnapshot(@NotNull SnapshotUpdater updater) {
         final Map<Long, AtomicReference<ChunkSnapshot>> chunksMap = updater.referencesMapLong(getChunks(),
                 value -> CoordConversion.chunkIndex(value.getChunkX(), value.getChunkZ()));
-        final List<Entity> entities = getEntityTracker().selectEntity(EntitySelectors.all()).toList();
+        final List<Entity> entities = getEntityTracker().selectGlobalEntity(EntitySelectors.all()).toList();
         final int[] entitiesIds = ArrayUtils.mapToIntArray(entities, Entity::getEntityId);
         return new SnapshotImpl.Instance(updater.reference(MinecraftServer.process()),
                 getDimensionType(), getWorldAge(), getTime(), chunksMap, entitiesIds,
