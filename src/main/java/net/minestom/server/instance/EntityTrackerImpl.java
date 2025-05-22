@@ -29,12 +29,12 @@ final class EntityTrackerImpl implements EntityTracker {
     private static final EntitySelector<Entity> SELECTOR = EntitySelector.selector(builder -> builder.chunkRange(ServerFlag.ENTITY_VIEW_DISTANCE));
 
     // Indexes
-    private final Int2ObjectMap<TrackedEntity> idIndex = new Int2ObjectOpenHashMap<>();
+    private final Int2ObjectOpenHashMap<TrackedEntity> idIndex = new Int2ObjectOpenHashMap<>();
     private final Object2ObjectOpenHashMap<UUID, TrackedEntity> uuidIndex = new Object2ObjectOpenHashMap<>();
-    private final Int2ObjectMap<TrackedEntity> playerIdIndex = new Int2ObjectOpenHashMap<>();
+    private final Int2ObjectOpenHashMap<TrackedEntity> playerIdIndex = new Int2ObjectOpenHashMap<>();
 
     // Spatial partitioning
-    private final Long2ObjectMap<Set<TrackedEntity>> chunksEntities = new Long2ObjectOpenHashMap<>();
+    private final Long2ObjectOpenHashMap<Set<TrackedEntity>> chunksEntities = new Long2ObjectOpenHashMap<>();
 
     @Override
     public synchronized void register(@NotNull Entity entity, @NotNull Point point, @Nullable Update update) {
@@ -183,7 +183,9 @@ final class EntityTrackerImpl implements EntityTracker {
 
     @Override
     public synchronized void trim() {
+        idIndex.trim();
         uuidIndex.trim();
+        playerIdIndex.trim();
         // Trim the chunk entities array sizes.
         for (var entry : chunksEntities.long2ObjectEntrySet()) {
             var key = entry.getLongKey();
@@ -191,6 +193,7 @@ final class EntityTrackerImpl implements EntityTracker {
             assert entities.length > 0 : "There should be at least one entity in the chunk";
             chunksEntities.put(key, ObjectArraySet.ofUnchecked(entities));
         }
+        chunksEntities.trim();
     }
 
     private void addChunkEntity(TrackedEntity entity, long index) {
