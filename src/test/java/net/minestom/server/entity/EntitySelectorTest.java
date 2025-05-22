@@ -12,7 +12,7 @@ public final class EntitySelectorTest {
         EntitySelector<Player> selectorPlayer = EntitySelector.selector(builder -> {
             builder.requirePlayer();
             builder.predicate(NAME, (point, o) -> o.equals("TheMode"));
-            builder.predicateEquals(TYPE, EntityType.PLAYER);
+            builder.predicateEqual(TYPE, EntityType.PLAYER);
             builder.limit(5);
         });
     }

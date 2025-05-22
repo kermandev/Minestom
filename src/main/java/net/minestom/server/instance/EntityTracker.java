@@ -23,6 +23,9 @@ public sealed interface EntityTracker extends EntitySelector.Finder<Entity> perm
 
     void move(@NotNull Entity entity, @NotNull Point newPoint, @Nullable Update update);
 
+    /**
+     * Trims all the internal arrays to their current size.
+     */
     @ApiStatus.Experimental
     void trim();
 

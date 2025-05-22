@@ -10,10 +10,11 @@ import static net.minestom.server.entity.EntitySelector.property;
 import static net.minestom.server.entity.EntitySelector.selector;
 
 public final class EntitySelectors {
-    private static final EntitySelector<Entity> ALL = selector(s -> s.target(EntitySelector.Target.ENTITIES));
-    private static final EntitySelector<Player> PLAYERS = selector(s -> s.target(EntitySelector.Target.PLAYERS));
+    private static final EntitySelector<Entity> ALL = selector(s -> {});
+    private static final EntitySelector<Player> PLAYERS = selector(EntitySelector.Builder::requirePlayer);
 
     // Properties
+    public static final Property<Object, Class<?>> CLASS = property("class", Object.class, Object::getClass);
     public static final Property<Entity, Integer> ID = property("id", Entity.class, Entity::getEntityId);
     public static final Property<Entity, UUID> UUID = property("uuid", Entity.class, Entity::getUuid);
     public static final Property<Player, String> NAME = property("name", Player.class, Player::getUsername);

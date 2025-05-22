@@ -390,7 +390,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
             experiencePickupCooldown.refreshLastUpdate(time);
             final Point loweredPosition = position.sub(0, .5, 0);
             final EntitySelector<Entity> orbSelector = EntitySelector.selector(builder -> {
-                builder.type(EntityType.EXPERIENCE_ORB);
+                builder.predicateEqual(EntitySelectors.TYPE, EntityType.EXPERIENCE_ORB);
                 builder.range(expandedBoundingBox.width());
             });
             this.instance.getEntityTracker().selectEntityConsume(orbSelector, position, ent -> {

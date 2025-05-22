@@ -10,6 +10,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.*;
 import java.util.stream.Stream;
@@ -23,7 +24,7 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
     /**
      * Creates a selector.
      * <p>
-     * If you are just gathering entities consider using {@link EntitySelectors#all()} or {@link EntitySelectors#players()}.
+     * If body is just empty, use our singletons {@link EntitySelectors#all()} or {@link EntitySelectors#players()}.
      * @param <E> the entity type
      * @param consumer a consumer that will be called with a builder
      * @return a selector
@@ -46,7 +47,7 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
      * @return a selector that matches all entities
      */
     static <E, T> @NotNull EntitySelector<E> selector(@NotNull Property<?, T> property, T value) {
-        return selector(builder -> builder.predicateEquals(property, value));
+        return selector(builder -> builder.predicateEqual(property, value));
     }
 
     static <E, T> @NotNull EntitySelector<E> selector(@NotNull BiConsumer<Builder, T> property, T value) {
@@ -65,36 +66,55 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
     @Override
     boolean test(Point origin, E entity);
 
-    @NotNull Target target();
+    boolean playerOnly();
 
-    @Nullable Gatherer gatherer();
-
+    /**
+     * The sorting method to use.
+     * <p>
+     * @implNote If the sort is {@link Sort#ARBITRARY}, the order of the entities is not guaranteed.
+     * @return the sorting method
+     */
     @NotNull Sort sort();
 
+    /**
+     * The maximum number of entities to return.
+     * <p>
+     * @implNote If the limit is 0, it means unlimited.
+     * @return the limit of entities to return
+     */
     int limit();
 
-    interface Builder {
-        void target(@NotNull Target target);
+    @ApiStatus.Internal
+    @Nullable Gatherer gatherer();
 
-        default void requirePlayer() {
-            target(Target.PLAYERS);
-        }
+    interface Builder {
+        void requirePlayer();
 
         <T> void predicate(@NotNull Property<?, T> property, @NotNull BiPredicate<Point, T> predicate);
 
-        default <T> void predicateEquals(@NotNull Property<?, T> property, @Nullable T value) {
+        default <T> void predicateEqual(@NotNull Property<?, T> property, @Nullable T value) {
             predicate(property, (point, t) -> Objects.equals(t, value));
         }
 
-        default <T> void predicateNotEquals(@NotNull Property<?, T> property, @Nullable T value) {
+        @SuppressWarnings("unchecked")
+        default <T> void predicateContains(@NotNull Property<?, T> property, @NotNull T... value) {
+            Set<T> valueSet = Set.of(value);
+            predicate(property, (point, t) -> valueSet.contains(t));
+        }
+
+        default <T> void predicateNotEqual(@NotNull Property<?, T> property, @Nullable T value) {
             predicate(property, (point, t) -> !Objects.equals(t, value));
+        }
+
+        @SuppressWarnings("unchecked")
+        default <T> void predicateExcludes(@NotNull Property<?, T> property, @NotNull T... value) {
+            Set<T> valueSet = Set.of(value);
+            predicate(property, (point, t) -> !valueSet.contains(t));
         }
 
         void id(int id);
 
         void uuid(@NotNull UUID uuid);
-
-        void type(@NotNull EntityType @NotNull ... types);
 
         void range(double radius);
 
@@ -111,33 +131,6 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
         void limit(int limit);
 
         void unlimited();
-    }
-
-    enum Target {
-        ENTITIES,
-        PLAYERS
-    }
-
-    /**
-     * Gathers attempt to shrink themselves to the smallest scope possible.
-     */
-    @ApiStatus.Internal
-    sealed interface Gatherer {
-        record Range(double radius) implements Gatherer {
-            public Range {
-                Check.argCondition(radius < 0, "Range must be positive");
-                Check.argCondition(radius < Vec.EPSILON, "Range cannot just be itself, use a smaller scope!");
-            }
-        }
-        record ChunkRange(int radius) implements Gatherer {
-            public ChunkRange {
-                Check.argCondition(radius < 0, "Chunk range must be positive");
-                Check.argCondition(radius == 0, "Chunk range cannot just be itself, use Chunk instead!");
-            }
-        }
-        record Chunk(long chunkIndex) implements Gatherer {}
-        record Uuid(@NotNull UUID uuid) implements Gatherer {}
-        record Id(int id) implements Gatherer {}
     }
 
     enum Sort {
@@ -165,7 +158,8 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
         }
 
         default <R extends T> void selectGlobalEntityConsume(@NotNull EntitySelector<R> selector, Consumer<R> consumer) {
-            selectEntityConsume(selector, Vec.ZERO, consumer);
+            final Stream<R> stream = selectGlobalEntity(selector);
+            stream.forEach(consumer);
         }
 
         default <R extends T> @Nullable R selectEntityFirst(@NotNull EntitySelector<R> selector, @NotNull Point origin) {
@@ -173,7 +167,30 @@ public sealed interface EntitySelector<E> extends BiPredicate<Point, E> permits 
         }
 
         default <R extends T> @Nullable R selectGlobalEntityFirst(@NotNull EntitySelector<R> selector) {
-            return selectEntityFirst(selector, Vec.ZERO);
+            return selectGlobalEntity(selector).findFirst().orElse(null);
         }
+
+    }
+
+    /**
+     * Gathers attempt to shrink themselves to the smallest scope possible.
+     */
+    @ApiStatus.Internal
+    sealed interface Gatherer {
+        record Range(double radius) implements Gatherer {
+            public Range {
+                Check.argCondition(radius < 0, "Range must be positive");
+                Check.argCondition(radius < Vec.EPSILON, "Range cannot just be itself, use a smaller scope!");
+            }
+        }
+        record ChunkRange(int radius) implements Gatherer {
+            public ChunkRange {
+                Check.argCondition(radius < 0, "Chunk range must be positive");
+                Check.argCondition(radius == 0, "Chunk range cannot just be itself, use Chunk instead!");
+            }
+        }
+        record Chunk(long chunkIndex) implements Gatherer {}
+        record Uuid(@NotNull UUID uuid) implements Gatherer {}
+        record Id(int id) implements Gatherer {}
     }
 }

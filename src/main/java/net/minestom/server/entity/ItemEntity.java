@@ -73,7 +73,7 @@ public class ItemEntity extends Entity {
             this.lastMergeCheck = time;
 
             final EntitySelector<Entity> itemSelector = EntitySelector.selector(builder -> {
-                builder.type(EntityType.ITEM);
+                builder.predicateEqual(EntitySelectors.TYPE, EntityType.ITEM);
                 builder.range(mergeRange);
             });
             this.instance.getEntityTracker().selectEntityConsume(itemSelector, position, ent -> {

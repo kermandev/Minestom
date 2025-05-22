@@ -265,14 +265,14 @@ public class ArgumentEntity extends Argument<EntitySelector<Entity>> {
 
         for (var entry : gamemode.object2BooleanEntrySet()) {
             var key = entry.getKey();
-            if (entry.getBooleanValue()) builder.predicateEquals(EntitySelectors.GAME_MODE, key);
-            else builder.predicateNotEquals(EntitySelectors.GAME_MODE, key);
+            if (entry.getBooleanValue()) builder.predicateEqual(EntitySelectors.GAME_MODE, key);
+            else builder.predicateNotEqual(EntitySelectors.GAME_MODE, key);
         }
 
         for (var entry : type.object2BooleanEntrySet()) {
             var key = entry.getKey();
-            if (entry.getBooleanValue()) builder.predicateEquals(EntitySelectors.TYPE, key);
-            else builder.predicateNotEquals(EntitySelectors.TYPE, key);
+            if (entry.getBooleanValue()) builder.predicateEqual(EntitySelectors.TYPE, key);
+            else builder.predicateNotEqual(EntitySelectors.TYPE, key);
         }
 
         return finalIndex;
@@ -305,22 +305,21 @@ public class ArgumentEntity extends Argument<EntitySelector<Entity>> {
                                              @NotNull String selectorVariable) {
         switch (selectorVariable) {
             case "@p" -> {
-                builder.target(EntitySelector.Target.PLAYERS);
+                builder.requirePlayer();
                 builder.sort(EntitySelector.Sort.NEAREST);
                 builder.limit(1);
             }
             case "@n" -> {
-                builder.target(EntitySelector.Target.ENTITIES);
                 builder.sort(EntitySelector.Sort.NEAREST);
                 builder.limit(1);
             }
             case "@r" -> {
-                builder.target(EntitySelector.Target.PLAYERS);
+                builder.requirePlayer();
                 builder.sort(EntitySelector.Sort.RANDOM);
                 builder.limit(1);
             }
-            case "@a" -> builder.target(EntitySelector.Target.PLAYERS);
-            case "@e" -> builder.target(EntitySelector.Target.ENTITIES);
+            case "@a" -> builder.requirePlayer(); // All players
+            case "@e" -> {} // All entities
             case "@s" -> builder.uuid(sender.identity().uuid()); // TODO: this should support command blocks.
             default -> throw new IllegalStateException("Weird selector variable: " + selectorVariable);
         }

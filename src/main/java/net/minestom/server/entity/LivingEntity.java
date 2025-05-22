@@ -199,7 +199,7 @@ public class LivingEntity extends Entity implements EquipmentHandler {
             itemPickupCooldown.refreshLastUpdate(time);
             final Point loweredPosition = position.sub(0, .5, 0);
             final EntitySelector<Entity> itemSelector = EntitySelector.selector(builder -> {
-                builder.type(EntityType.ITEM);
+                builder.predicateEqual(EntitySelectors.TYPE, EntityType.ITEM);
                 builder.range(expandedBoundingBox.width());
             });
             this.instance.getEntityTracker().selectEntityConsume(itemSelector, position, ent -> {

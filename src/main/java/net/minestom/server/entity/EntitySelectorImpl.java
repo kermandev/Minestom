@@ -4,13 +4,14 @@ import net.minestom.server.coordinate.CoordConversion;
 import net.minestom.server.coordinate.Point;
 import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 
-record EntitySelectorImpl<E>(EntitySelector.Target target,
-                             Gatherer gatherer,
+record EntitySelectorImpl<E>(boolean playerOnly,
+                             @Nullable Gatherer gatherer,
                              EntitySelector.Sort sort,
                              int limit,
                              List<BiPredicate<Point, E>> conditions) implements EntitySelector<E> {
@@ -30,15 +31,23 @@ record EntitySelectorImpl<E>(EntitySelector.Target target,
     }
 
     static final class BuilderImpl<E> implements Builder {
-        private Target target = Target.ENTITIES;
-        private Gatherer gatherer = null;
-        private Sort sort = Sort.ARBITRARY;
-        private int limit = 0;
-        private final List<BiPredicate<Point, E>> conditions = new ArrayList<>();
+        private boolean playerOnly;
+        private Gatherer gatherer;
+        private Sort sort;
+        private int limit;
+        private final List<BiPredicate<Point, E>> conditions;
+
+        BuilderImpl() {
+            this.playerOnly = false;
+            this.gatherer = null; // Predicate/None could exist, but its worthless
+            this.sort = Sort.ARBITRARY;
+            this.limit = 0; // Unlimited
+            this.conditions = new ArrayList<>();
+        }
 
         @Override
-        public void target(@NotNull Target target) {
-            this.target = target;
+        public void requirePlayer() {
+            this.playerOnly = true;
         }
 
         @Override
@@ -53,19 +62,13 @@ record EntitySelectorImpl<E>(EntitySelector.Target target,
         @Override
         public void id(int id) {
             if (upgradeGather(new Gatherer.Id(id))) return;
-            this.predicateEquals(EntitySelectors.ID, id);
+            this.predicateEqual(EntitySelectors.ID, id);
         }
 
         @Override
         public void uuid(@NotNull UUID uuid) {
             if (upgradeGather(new Gatherer.Uuid(uuid))) return;
-            this.predicateEquals(EntitySelectors.UUID, uuid);
-        }
-
-        @Override
-        public void type(@NotNull EntityType @NotNull ... types) {
-            var typeSet = Set.of(types);
-            this.predicate(EntitySelectors.TYPE, (point, type) -> typeSet.contains(type));
+            this.predicateEqual(EntitySelectors.UUID, uuid);
         }
 
         @Override
@@ -164,7 +167,7 @@ record EntitySelectorImpl<E>(EntitySelector.Target target,
         }
 
         EntitySelectorImpl<E> build() {
-            return new EntitySelectorImpl<>(target, gatherer, sort, limit, conditions);
+            return new EntitySelectorImpl<>(playerOnly, gatherer, sort, limit, conditions);
         }
     }
 }
