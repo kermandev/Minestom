@@ -1,12 +1,14 @@
 package net.minestom.server.entity.damage;
 
 import net.minestom.server.utils.validate.Check;
-import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 record DamageTypeImpl(
+        String messageId,
+        String scaling,
         float exhaustion,
-        @NotNull String messageId,
-        @NotNull String scaling
+        @Nullable String effects,
+        @Nullable String deathMessageType
 ) implements DamageType {
 
     @SuppressWarnings("ConstantValue") // The builder can violate the nullability constraints

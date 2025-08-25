@@ -12,12 +12,12 @@ import net.minestom.server.network.packet.server.play.BlockEntityDataPacket;
 import net.minestom.server.tag.Tag;
 import net.minestom.testing.Env;
 import net.minestom.testing.EnvTest;
-import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
 import java.util.List;
 
+import static net.minestom.testing.TestUtils.assertPoint;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @EnvTest
@@ -36,7 +36,7 @@ public class InstanceBlockPacketIntegrationTest {
         var tracker = connection.trackIncoming();
         instance.setBlock(blockPoint, Block.STONE);
         tracker.assertSingle(BlockChangePacket.class, packet -> {
-            assertEquals(blockPoint, packet.blockPosition());
+            assertPoint(blockPoint, packet.blockPosition());
             assertEquals(Block.STONE.stateId(), packet.blockStateId());
         });
 
@@ -53,13 +53,13 @@ public class InstanceBlockPacketIntegrationTest {
 
         BlockHandler signHandler = new BlockHandler() {
             @Override
-            public @NotNull Collection<Tag<?>> getBlockEntityTags() {
+            public Collection<Tag<?>> getBlockEntityTags() {
                 return List.of(Tag.Byte("is_waxed"));
             }
 
             @Override
-            public @NotNull Key getKey() {
-                return Key.key("minecraft:sign");
+            public Key getKey() {
+                return Key.key("sign");
             }
         };
 
@@ -78,11 +78,11 @@ public class InstanceBlockPacketIntegrationTest {
         var blockEntityTracker = connection.trackIncoming(BlockEntityDataPacket.class);
         instance.setBlock(blockPoint, block);
         blockChangeTracker.assertSingle(packet -> {
-            assertEquals(blockPoint, packet.blockPosition());
+            assertPoint(blockPoint, packet.blockPosition());
             assertEquals(block.stateId(), packet.blockStateId());
         });
         blockEntityTracker.assertSingle(packet -> {
-            assertEquals(blockPoint, packet.blockPosition());
+            assertPoint(blockPoint, packet.blockPosition());
             assertEquals(block.registry().blockEntityId(), packet.action());
             assertEquals(data, packet.data());
         });
