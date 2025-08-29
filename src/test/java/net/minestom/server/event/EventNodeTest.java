@@ -88,6 +88,7 @@ public class EventNodeTest {
         AtomicBoolean result = new AtomicBoolean(false);
         var listener = EventListener.builder(CancellableTest.class)
                 .handler(event -> {
+                    assertFalse(event.isCancelled(), "The event should not be called before the call");
                     event.setCancelled(true);
                     result.set(true);
                     assertTrue(event.isCancelled(), "The event should be cancelled");
@@ -97,8 +98,36 @@ public class EventNodeTest {
         assertTrue(result.get(), "The event should be called after the call");
 
         // Test cancelling
-        node.addListener(CancellableTest.class, event -> fail("The event must have been cancelled"));
+        AtomicBoolean failed = new AtomicBoolean(false);
+        node.addListener(CancellableTest.class, event -> failed.set(!event.isCancelled()));
         node.call(new CancellableTest());
+        assertFalse(failed.get(), "The event should of been cancelled");
+    }
+
+    @Test
+    public void testIgnoredCancelled() {
+        var node = EventNode.all("main");
+        var cancel = new AtomicBoolean(true);
+        node.addListener(CancellableTest.class, event -> event.setCancelled(cancel.getAndSet(event.isCancelled())));
+        AtomicBoolean result = new AtomicBoolean(false);
+        node.addListener(EventListener.builder(CancellableTest.class)
+                .handler(event -> result.set(true))
+                .build());
+        node.call(new CancellableTest());
+        assertFalse(cancel.get(), "The event should be not be pre-cancelled");
+        assertFalse(result.get(), "The event should be cancelled");
+    }
+
+    @Test
+    public void testIgnoredCancelledOf() {
+        var node = EventNode.all("main");
+        var cancel = new AtomicBoolean(true);
+        node.addListener(CancellableTest.class, event -> event.setCancelled(cancel.getAndSet(event.isCancelled())));
+        AtomicBoolean result = new AtomicBoolean(false);
+        node.addListener(CancellableTest.class, event -> result.set(event.isCancelled()));
+        node.call(new CancellableTest());
+        assertFalse(cancel.get(), "The event should be not be pre-cancelled");
+        assertFalse(result.get(), "The event should be cancelled, and the #of should ignore cancelled events");
     }
 
     @Test
