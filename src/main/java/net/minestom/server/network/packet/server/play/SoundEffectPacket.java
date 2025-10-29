@@ -1,10 +1,10 @@
 package net.minestom.server.network.packet.server.play;
 
 import net.kyori.adventure.sound.Sound.Source;
-import net.minestom.server.adventure.AdventurePacketConvertor;
 import net.minestom.server.coordinate.Point;
 import net.minestom.server.coordinate.Vec;
 import net.minestom.server.network.NetworkBuffer;
+import net.minestom.server.network.NetworkBufferTemplate;
 import net.minestom.server.network.packet.server.ServerPacket;
 import net.minestom.server.sound.SoundEvent;
 
@@ -18,6 +18,8 @@ public record SoundEffectPacket(
         float pitch,
         long seed
 ) implements ServerPacket.Play {
+    private static final NetworkBuffer.Type<Integer> INTEGER_TYPE = NetworkBuffer.INT
+            .transform(integer -> integer / 8, integer -> integer * 8);
     public static final NetworkBuffer.Type<SoundEffectPacket> SERIALIZER = new NetworkBuffer.Type<>() {
         @Override
         public void write(NetworkBuffer buffer, SoundEffectPacket value) {
@@ -31,16 +33,17 @@ public record SoundEffectPacket(
             buffer.write(LONG, value.seed());
         }
 
-        @Override
-        public SoundEffectPacket read(NetworkBuffer buffer) {
-            return new SoundEffectPacket(buffer.read(SoundEvent.NETWORK_TYPE),
-                    buffer.read(NetworkBuffer.Enum(Source.class)),
-                    new Vec(buffer.read(INT) / 8.0, buffer.read(INT) / 8.0, buffer.read(INT) / 8.0),
-                    buffer.read(FLOAT),
-                    buffer.read(FLOAT),
-                    buffer.read(LONG));
-        }
-    };
+    public static final NetworkBuffer.Type<SoundEffectPacket> SERIALIZER = NetworkBufferTemplate.template(
+            SoundEvent.NETWORK_TYPE, SoundEffectPacket::soundEvent,
+            NetworkBuffer.Enum(Source.class), SoundEffectPacket::source,
+            INTEGER_TYPE, SoundEffectPacket::x,
+            INTEGER_TYPE, SoundEffectPacket::y,
+            INTEGER_TYPE, SoundEffectPacket::z,
+            FLOAT, SoundEffectPacket::volume,
+            FLOAT, SoundEffectPacket::pitch,
+            LONG, SoundEffectPacket::seed,
+            SoundEffectPacket::new
+    );
 
     /**
      * @deprecated Use {@link #SoundEffectPacket(SoundEvent, Source, Point, float, float, long)}
