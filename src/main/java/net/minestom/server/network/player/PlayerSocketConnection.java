@@ -74,7 +74,7 @@ public class PlayerSocketConnection extends PlayerConnection {
     private SocketAddress remoteAddress;
 
     //Could be null. Only used for Mojang Auth
-    private @Nullable EncryptionContext encryptionContext;
+    private volatile @Nullable EncryptionContext encryptionContext;
     private byte[] nonce = new byte[4];
 
     // Data from client packets
@@ -184,7 +184,6 @@ public class PlayerSocketConnection extends PlayerConnection {
      */
     public void setEncryptionKey(SecretKey secretKey) {
         Check.stateCondition(encryptionContext != null, "Encryption is already enabled!");
-        Check.stateCondition(Thread.currentThread() != readThread, "Read thread must set the encryption key.");
         this.encryptionContext = new EncryptionContext(MojangCrypt.getCipher(1, secretKey), MojangCrypt.getCipher(2, secretKey));
     }
 
