@@ -1,5 +1,6 @@
 package net.minestom.codegen;
 
+import net.minestom.codegen.value.FeatureFlagGenerator;
 import net.minestom.codegen.value.GameEventValueGenerator;
 import org.jetbrains.annotations.Nullable;
 
@@ -301,7 +302,7 @@ public final class CodegenRegistries {
                         .loaderName("AttributeImpl")
                         .build(),
                 builder().staticType()
-                        .generator(RegistryGenerator::new)
+                        .generator(FeatureFlagGenerator::new)
                         .namespace("feature_flag")
                         .packageName("net.minestom.server")
                         .typeName("FeatureFlag")

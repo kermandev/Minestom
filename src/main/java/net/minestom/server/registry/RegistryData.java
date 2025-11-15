@@ -79,11 +79,6 @@ public final class RegistryData {
     }
 
     @ApiStatus.Internal
-    public static FeatureFlagEntry featureFlag(String namespace, Properties main) {
-        return new FeatureFlagEntry(namespace, main);
-    }
-
-    @ApiStatus.Internal
     public static FluidEntry fluid(String namespace, Properties main) {
         return new FluidEntry(namespace, main);
     }
@@ -647,7 +642,7 @@ public final class RegistryData {
     public static final class VillagerProfessionEntry implements Entry {
         private final Key key;
         private final int id;
-        private final SoundEvent workSound;
+        private final @Nullable SoundEvent workSound;
 
         public VillagerProfessionEntry(String namespace, Properties main) {
             this.key = Key.key(namespace);
@@ -669,12 +664,6 @@ public final class RegistryData {
 
         public @Nullable SoundEvent workSound() {
             return workSound;
-        }
-    }
-
-    public record FeatureFlagEntry(Key key, int id) implements Entry {
-        public FeatureFlagEntry(String namespace, Properties main) {
-            this(Key.key(namespace), main.getInt("id"));
         }
     }
 
