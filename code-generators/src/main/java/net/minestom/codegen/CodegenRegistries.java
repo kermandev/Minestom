@@ -1,5 +1,6 @@
 package net.minestom.codegen;
 
+import net.minestom.codegen.value.GameEventValueGenerator;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.InputStreamReader;
@@ -324,7 +325,7 @@ public final class CodegenRegistries {
                         .loaderName("VillagerProfessionImpl")
                         .build(),
                 builder().staticType()
-                        .generator(RegistryGenerator::new)
+                        .generator(GameEventValueGenerator::new)
                         .namespace("game_event")
                         .packageName("net.minestom.server.game")
                         .typeName("GameEvent")

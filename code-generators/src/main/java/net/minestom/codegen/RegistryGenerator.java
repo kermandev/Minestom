@@ -2,13 +2,14 @@ package net.minestom.codegen;
 
 import com.google.gson.JsonObject;
 import com.palantir.javapoet.*;
+import net.minestom.codegen.value.RegistryValueGenerator;
 import org.jetbrains.annotations.Nullable;
 
 import javax.lang.model.element.Modifier;
 import java.io.InputStreamReader;
 import java.nio.file.Path;
 
-public sealed class RegistryGenerator implements MinestomCodeGenerator permits ParticleGenerator {
+public sealed class RegistryGenerator implements MinestomCodeGenerator permits ParticleGenerator, RegistryValueGenerator {
 
     @Override
     public void generate(Path outputFolder, CodegenRegistry registry, CodegenValue value) {

@@ -22,11 +22,11 @@ public record CodegenRegistry(Map<String, CodegenValue> registry, ResourceFuncti
         return Objects.requireNonNull(registry.get(value), "Cannot find registry entry: %s".formatted(value));
     }
 
-    InputStreamReader resource(String name) {
+    public InputStreamReader resource(String name) {
         return Objects.requireNonNull(resource.apply(name), "Cannot find resource: %s".formatted(name));
     }
 
-    @Nullable InputStreamReader optionalResource(String name) {
+    public @Nullable InputStreamReader optionalResource(String name) {
         return resource.apply(name);
     }
 

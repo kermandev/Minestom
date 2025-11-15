@@ -29,6 +29,10 @@ public record CodegenValue(Type codegenType, String namespace, String packageNam
         return typeName() + "Tags";
     }
 
+    public String valuesName() {
+        return typeName() + "Values";
+    }
+
     public String resource() {
         return namespace();
     }

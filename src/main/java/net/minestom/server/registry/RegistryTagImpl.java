@@ -4,10 +4,7 @@ import net.minestom.server.MinecraftServer;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 final class RegistryTagImpl {
@@ -41,10 +38,16 @@ final class RegistryTagImpl {
      */
     static final class Backed<T> implements RegistryTag<T> {
         private final TagKey<T> key;
-        private final Set<RegistryKey<T>> entries = new CopyOnWriteArraySet<>();
+        private final Set<RegistryKey<T>> entries;
 
         Backed(TagKey<T> key) {
             this.key = key;
+            this.entries = new CopyOnWriteArraySet<>();
+        }
+
+        Backed(TagKey<T> key, Collection<RegistryKey<T>> entries) {
+            this.key = key;
+            this.entries = new CopyOnWriteArraySet<>(entries);
         }
 
         public TagKey<T> key() {

@@ -20,14 +20,7 @@ public sealed interface GameEvent extends StaticProtocolObject<GameEvent>, GameE
 
     NetworkBuffer.Type<GameEvent> NETWORK_TYPE = NetworkBuffer.VAR_INT.transform(GameEvent::fromId, GameEvent::id);
 
-    /**
-     * Returns the game event registry.
-     *
-     * @return the game event registry or null if not found
-     */
-    @Contract(pure = true)
-    @Nullable
-    RegistryData.GameEventEntry registry();
+    int notificationRadius();
 
     static Collection<GameEvent> values() {
         return GameEventImpl.REGISTRY.values();

@@ -5,4 +5,5 @@ module net.minestom.codegen {
     requires java.compiler;
 
     exports net.minestom.codegen;
+    exports net.minestom.codegen.value;
 }

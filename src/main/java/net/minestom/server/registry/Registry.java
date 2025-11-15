@@ -4,10 +4,11 @@ import net.kyori.adventure.key.Key;
 import net.kyori.adventure.key.Keyed;
 import net.minestom.server.gamedata.DataPack;
 import net.minestom.server.network.packet.server.common.TagsPacket;
+import net.minestom.server.utils.collection.ObjectArray;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
+import java.util.*;
 
 public sealed interface Registry<T> extends Keyed permits StaticRegistry, DynamicRegistry {
 
@@ -111,4 +112,38 @@ public sealed interface Registry<T> extends Keyed permits StaticRegistry, Dynami
     @ApiStatus.Internal
     TagsPacket.Registry tagRegistry();
 
+    @ApiStatus.Internal
+    final class Builder<T extends StaticProtocolObject<T>> {
+        private final RegistryKey<Registry<T>> registryKey;
+        private final Map<Key, T> namespaces;
+        private final ObjectArray<T> ids;
+        private final Map<TagKey<T>, RegistryTagImpl.Backed<T>> tags;
+
+        private Builder(RegistryKey<Registry<T>> registryKey, int entries, int expectedTags) {
+            this.registryKey = registryKey;
+            this.namespaces = HashMap.newHashMap(entries);
+            this.ids = ObjectArray.singleThread(entries);
+            this.tags = HashMap.newHashMap(expectedTags);
+        }
+
+        public static <T extends StaticProtocolObject<T>> Builder<T> builder(RegistryKey<Registry<T>> key, int entries, int expectedTags) {
+            return new Builder<>(key, entries, expectedTags);
+        }
+
+        public void register(T value) {
+            Objects.requireNonNull(value, "value cannot be null");
+            namespaces.put(value.key(), value);
+            ids.set(value.id(), value);
+        }
+
+        public void registerTag(TagKey<T> key, RegistryKey<T>... values) {
+            Objects.requireNonNull(key, "key cannot be null");
+            Objects.requireNonNull(values, "values cannot be null");
+            tags.put(key, new RegistryTagImpl.Backed<>(key, List.of(values)));
+        }
+
+        public Registry<T> build() {
+            return new StaticRegistry<>(registryKey, namespaces, ids, tags); // TODO tags
+        }
+    }
 }

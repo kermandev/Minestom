@@ -98,10 +98,6 @@ public final class RegistryData {
         return new AttributeEntry(namespace, main);
     }
 
-    public static GameEventEntry gameEventEntry(String namespace, Properties properties) {
-        return new GameEventEntry(namespace, properties);
-    }
-
     public static BlockSoundTypeEntry blockSoundTypeEntry(String namespace, Properties properties) {
         return new BlockSoundTypeEntry(namespace, properties);
     }
@@ -227,12 +223,6 @@ public final class RegistryData {
 
         public String fileName() {
             return name;
-        }
-    }
-
-    public record GameEventEntry(Key key, Properties main) implements Entry {
-        public GameEventEntry(String key, Properties main) {
-            this(Key.key(key), main);
         }
     }
 
