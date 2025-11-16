@@ -11,9 +11,6 @@ import java.util.Collection;
 
 public sealed interface Fluid extends StaticProtocolObject<Fluid>, Fluids permits FluidImpl {
 
-    @Override
-    RegistryData.FluidEntry registry();
-
     static Collection<Fluid> values() {
         return FluidImpl.REGISTRY.values();
     }

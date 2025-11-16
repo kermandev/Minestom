@@ -1,7 +1,6 @@
 package net.minestom.codegen;
 
-import net.minestom.codegen.value.FeatureFlagGenerator;
-import net.minestom.codegen.value.GameEventValueGenerator;
+import net.minestom.codegen.value.*;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.InputStreamReader;
@@ -238,7 +237,7 @@ public final class CodegenRegistries {
     private static Collection<CodegenValue> staticRegistry() {
         return List.of(
                 builder().staticType()
-                        .generator(RegistryGenerator::new)
+                        .generator(RegistryValueGenerator::new)
                         .namespace("block")
                         .packageName("net.minestom.server.instance.block")
                         .typeName("Block")
@@ -246,7 +245,7 @@ public final class CodegenRegistries {
                         .loaderName("BlockImpl")
                         .build(),
                 builder().staticType()
-                        .generator(RegistryGenerator::new)
+                        .generator(RegistryValueGenerator::new)
                         .namespace("item")
                         .packageName("net.minestom.server.item")
                         .typeName("Material")
@@ -254,7 +253,7 @@ public final class CodegenRegistries {
                         .loaderName("MaterialImpl")
                         .build(),
                 builder().staticType()
-                        .generator(RegistryGenerator::new)
+                        .generator(EntityValueGenerator::new)
                         .namespace("entity_type")
                         .packageName("net.minestom.server.entity")
                         .typeName("EntityType")
@@ -262,7 +261,7 @@ public final class CodegenRegistries {
                         .loaderName("EntityTypeImpl")
                         .build(),
                 builder().staticType()
-                        .generator(RegistryGenerator::new)
+                        .generator(PotionEffectGenerator::new)
                         .namespace("potion_effect")
                         .packageName("net.minestom.server.potion")
                         .typeName("PotionEffect")
@@ -270,7 +269,7 @@ public final class CodegenRegistries {
                         .loaderName("PotionEffectImpl")
                         .build(),
                 builder().staticType()
-                        .generator(RegistryGenerator::new)
+                        .generator(RegistryValueGenerator::new)
                         .namespace("potion_type")
                         .packageName("net.minestom.server.potion")
                         .typeName("PotionType")
@@ -278,7 +277,7 @@ public final class CodegenRegistries {
                         .loaderName("PotionTypeImpl")
                         .build(),
                 builder().staticType()
-                        .generator(RegistryGenerator::new)
+                        .generator(SoundEventGenerator::new)
                         .namespace("sound_event")
                         .packageName("net.minestom.server.sound")
                         .typeName("SoundEvent")
@@ -286,7 +285,7 @@ public final class CodegenRegistries {
                         .loaderName("BuiltinSoundEvent")
                         .build(),
                 builder().staticType()
-                        .generator(RegistryGenerator::new)
+                        .generator(RegistryValueGenerator::new)
                         .namespace("custom_statistics")
                         .packageName("net.minestom.server.statistic")
                         .typeName("StatisticType")
@@ -294,7 +293,7 @@ public final class CodegenRegistries {
                         .loaderName("StatisticTypeImpl")
                         .build(),
                 builder().staticType()
-                        .generator(RegistryGenerator::new)
+                        .generator(AttributeValueGenerator::new)
                         .namespace("attribute")
                         .packageName("net.minestom.server.entity.attribute")
                         .typeName("Attribute")
@@ -302,7 +301,7 @@ public final class CodegenRegistries {
                         .loaderName("AttributeImpl")
                         .build(),
                 builder().staticType()
-                        .generator(FeatureFlagGenerator::new)
+                        .generator(RegistryValueGenerator::new)
                         .namespace("feature_flag")
                         .packageName("net.minestom.server")
                         .typeName("FeatureFlag")
@@ -310,7 +309,7 @@ public final class CodegenRegistries {
                         .loaderName("FeatureFlagImpl")
                         .build(),
                 builder().staticType()
-                        .generator(RegistryGenerator::new)
+                        .generator(RegistryValueGenerator::new)
                         .namespace("fluid")
                         .packageName("net.minestom.server.instance.fluid")
                         .typeName("Fluid")
@@ -318,7 +317,7 @@ public final class CodegenRegistries {
                         .loaderName("FluidImpl")
                         .build(),
                 builder().staticType()
-                        .generator(RegistryGenerator::new)
+                        .generator(VillagerProfessionGenerator::new)
                         .namespace("villager_profession")
                         .packageName("net.minestom.server.entity")
                         .typeName("VillagerProfession")
@@ -334,7 +333,7 @@ public final class CodegenRegistries {
                         .loaderName("GameEventImpl")
                         .build(),
                 builder().staticType()
-                        .generator(RegistryGenerator::new)
+                        .generator(BlockSoundEventGenerator::new)
                         .namespace("block_sound_type")
                         .packageName("net.minestom.server.instance.block")
                         .typeName("BlockSoundType")
@@ -342,7 +341,7 @@ public final class CodegenRegistries {
                         .loaderName("BlockSoundImpl")
                         .build(),
                 builder().staticType()
-                        .generator(RegistryGenerator::new)
+                        .generator(RegistryValueGenerator::new)
                         .namespace("block_entity_types")
                         .packageName("net.minestom.server.instance.block")
                         .typeName("BlockEntityType")

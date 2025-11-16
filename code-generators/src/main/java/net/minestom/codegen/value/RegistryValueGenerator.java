@@ -12,12 +12,12 @@ import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.util.*;
 
-public abstract non-sealed class RegistryValueGenerator extends RegistryGenerator {
+public non-sealed class RegistryValueGenerator extends RegistryGenerator {
     protected static final ClassName REGISTRY_DATA = ClassName.get("net.minestom.server.registry", "RegistryData"); // TODO move these types
     protected static final ClassName KEY = ClassName.get("net.kyori.adventure.key", "Key");
-    private static final ClassName REGISTRY = ClassName.get("net.minestom.server.registry", "Registry");
-    private static final ClassName REGISTRY_KEY = ClassName.get("net.minestom.server.registry", "RegistryKey");
-    private static final ClassName REGISTRY_BUILDER = REGISTRY.nestedClass("Builder");
+    protected static final ClassName REGISTRY = ClassName.get("net.minestom.server.registry", "Registry");
+    protected static final ClassName REGISTRY_KEY = ClassName.get("net.minestom.server.registry", "RegistryKey");
+    protected static final ClassName REGISTRY_BUILDER = REGISTRY.nestedClass("Builder");
 
     @Override
     public void generate(Path outputFolder, CodegenRegistry registry, CodegenValue value) {
@@ -27,6 +27,7 @@ public abstract non-sealed class RegistryValueGenerator extends RegistryGenerato
         generateValues(outputFolder, registry, value);
     }
 
+    // This looks awful.
     protected void generateValues(Path outputFolder, CodegenRegistry registry, CodegenValue value) {
         InputStreamReader resourceFile = registry.resource(value.resource());
         InputStreamReader gsonFile = registry.optionalResource(value.tagResource());
@@ -57,13 +58,18 @@ public abstract non-sealed class RegistryValueGenerator extends RegistryGenerato
 
         final ParameterizedTypeName builderType = ParameterizedTypeName.get(REGISTRY_BUILDER, typeClass);
         builder.addCode(CodeBlock.builder()
-                .addStatement("final $T builder = $T.builder(key, $L, $L)", builderType, REGISTRY_BUILDER, staticEntries.size(), 0).build()
+                .addStatement("final $T builder = $T.builder(key, $L, $L)", builderType, REGISTRY_BUILDER, staticEntries.size(), tagEntries.size()).build()
         );
 
         for (var entry : staticEntries) {
             final String namespace = entry.getKey();
             final JsonObject element = entry.getValue().getAsJsonObject();
-            final int id = element.get("id").getAsInt();
+            final int id;
+            if (element.get("id") != null) { // Might be missing.
+                id = element.get("id").getAsInt();
+            } else{
+                id = -1;
+            }
             final String constantName = toConstant(namespace);
             final Static codeEntry = new Static(typeClass, implType, keyClass, namespace, constantName, id, element);
             builder.addCode( // register
@@ -77,13 +83,18 @@ public abstract non-sealed class RegistryValueGenerator extends RegistryGenerato
             final String namespace = entry.getKey();
             final JsonObject element = entry.getValue().getAsJsonObject();
             final String constantName = toConstant(namespace);
-            builder.addCode(
-                    CodeBlock.builder()
-                            .addStatement("builder.registerTag($T.$L, $L)", tagsClass, constantName, generateTagValue(
-                                    registry, value, new Tag(tagJson, keyClass, element)
-                            ))
-                            .build()
-            );
+            final CodeBlock tagValue = generateTagValue(registry, value, new Tag(tagJson, keyClass, element));
+            if (!tagValue.isEmpty()) { // Empty tags exist
+                builder.addCode(
+                        CodeBlock.builder()
+                                .addStatement("builder.registerTag($T.$L, $L)", tagsClass, constantName, tagValue)
+                                .build()
+                );
+            } else {
+                builder.addCode(
+                        CodeBlock.builder().addStatement("builder.registerTag($T.$L)", tagsClass, constantName).build()
+                );
+            }
         }
 
         builder.addCode(CodeBlock.builder()
@@ -98,7 +109,14 @@ public abstract non-sealed class RegistryValueGenerator extends RegistryGenerato
         );
     }
 
-    public abstract CodeBlock generateValue(CodegenRegistry registry, CodegenValue value, Static codeEntry);
+    public CodeBlock generateValue(CodegenRegistry registry, CodegenValue value, Static codeEntry) {
+        return CodeBlock.builder().add(
+                "new $T($L, $L)",
+                codeEntry.implType(),
+                codeEntry.key(),
+                codeEntry.id()
+        ).build();
+    }
 
     public CodeBlock generateTagValue(CodegenRegistry registry, CodegenValue value, Tag tag) {
         List<CodeBlock> declarations = new ArrayList<>();
@@ -126,12 +144,17 @@ public abstract non-sealed class RegistryValueGenerator extends RegistryGenerato
             Objects.requireNonNull(keysTypes, "keysTypes");
             Objects.requireNonNull(namespace, "namespace");
             Objects.requireNonNull(constantName, "constantName");
-            if (id < 0) throw new IllegalArgumentException("id is negative");
             Objects.requireNonNull(value, "value");
         }
 
         public CodeBlock key() { //TODO support registry keys
             return CodeBlock.builder().add("$T.$L.key()", keysTypes, constantName).build();
+        }
+
+        @Override
+        public int id() {
+            if (id < 0) throw new IllegalArgumentException("id is negative");
+            return id;
         }
     }
 
@@ -141,5 +164,10 @@ public abstract non-sealed class RegistryValueGenerator extends RegistryGenerato
             Objects.requireNonNull(keysTypes, "keysTypes");
             Objects.requireNonNull(value, "value");
         }
+    }
+
+    // Useful in the future.
+    protected Collection<String> requirements() {
+        return Set.of();
     }
 }

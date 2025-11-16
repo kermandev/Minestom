@@ -527,7 +527,7 @@ public class LivingEntity extends Entity implements EquipmentHandler {
      * @return true if this entity needs to send attributes, false otherwise
      */
     protected boolean shouldSendAttributes() {
-        return this.entityType.registry().shouldSendAttributes();
+        return this.entityType.shouldSendAttributes();
     }
 
     @Override

@@ -3,6 +3,7 @@ package net.minestom.server.entity;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.key.KeyPattern;
 import net.minestom.server.codec.Codec;
+import net.minestom.server.collision.BoundingBox;
 import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.registry.Registry;
 import net.minestom.server.registry.RegistryData;
@@ -11,36 +12,43 @@ import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
+import java.util.List;
 
 public sealed interface EntityType extends StaticProtocolObject<EntityType>, EntityTypes permits EntityTypeImpl {
     NetworkBuffer.Type<EntityType> NETWORK_TYPE = NetworkBuffer.VAR_INT.transform(EntityType::fromId, EntityType::id);
     Codec<EntityType> CODEC = Codec.KEY.transform(EntityType::fromKey, EntityType::key);
 
+    String translationKey();
+
+    double drag();
+
+    double acceleration();
+
+    double horizontalAirResistance();
+
+    double verticalAirResistance();
+
+    boolean shouldSendAttributes();
+
+    double eyeHeight();
+
+    boolean fireImmune();
+
+    int clientTrackingRange();
+
     /**
-     * Returns the entity registry.
+     * Gets the entity attachment by name. Typically, will be PASSENGER or VEHICLE, but some entities have custom attachments (e.g. WARDEN_CHEST, NAMETAG)
      *
-     * @return the entity registry
+     * @param attachmentName The attachment to retrieve
+     * @return A list of 3 doubles if the attachment is defined for this entity, or null if it is not defined
      */
-    @Contract(pure = true)
-    RegistryData.EntityEntry registry();
+    @Nullable List<Double> entityAttachment(String attachmentName);
 
-    @Override
-    default Key key() {
-        return registry().key();
-    }
+    BoundingBox boundingBox();
 
-    @Override
-    default int id() {
-        return registry().id();
-    }
+    double width();
 
-    default double width() {
-        return registry().width();
-    }
-
-    default double height() {
-        return registry().height();
-    }
+    double height();
 
     static Collection<EntityType> values() {
         return EntityTypeImpl.REGISTRY.values();

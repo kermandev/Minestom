@@ -13,9 +13,9 @@ public final class GameEventValueGenerator extends RegistryValueGenerator {
         return CodeBlock.builder().add(
                 "new $T($L, $L, $L)",
                 staticEntry.implType(),
-                notificationRadius,
                 staticEntry.key(),
-                staticEntry.id()
+                staticEntry.id(),
+                notificationRadius
         ).build();
     }
 }

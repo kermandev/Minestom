@@ -16,18 +16,11 @@ public sealed interface PotionEffect extends StaticProtocolObject<PotionEffect>,
     NetworkBuffer.Type<PotionEffect> NETWORK_TYPE = NetworkBuffer.VAR_INT.transform(PotionEffect::fromId, PotionEffect::id);
     Codec<PotionEffect> CODEC = Codec.KEY.transform(PotionEffect::fromKey, PotionEffect::key);
 
-    @Contract(pure = true)
-    RegistryData.PotionEffectEntry registry();
+    String translationKey();
 
-    @Override
-    default Key key() {
-        return registry().key();
-    }
+    int color();
 
-    @Override
-    default int id() {
-        return registry().id();
-    }
+    boolean instantaneous();
 
     static Collection<PotionEffect> values() {
         return PotionEffectImpl.REGISTRY.values();

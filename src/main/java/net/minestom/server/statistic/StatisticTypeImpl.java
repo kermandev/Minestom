@@ -8,8 +8,7 @@ import net.minestom.server.registry.RegistryKey;
 import org.jetbrains.annotations.UnknownNullability;
 
 record StatisticTypeImpl(Key key, int id) implements StatisticType {
-    static final Registry<StatisticType> REGISTRY = RegistryData.createStaticRegistry(BuiltinRegistries.CUSTOM_STATISTICS,
-            (namespace, properties) -> new StatisticTypeImpl(Key.key(namespace), properties.getInt("id")));
+    static final Registry<StatisticType> REGISTRY = StatisticTypeValues.load(BuiltinRegistries.CUSTOM_STATISTICS);
 
     static @UnknownNullability StatisticType get(RegistryKey<StatisticType> key) {
         return REGISTRY.get(key);

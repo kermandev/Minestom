@@ -8,12 +8,7 @@ import net.minestom.server.registry.RegistryKey;
 import org.jetbrains.annotations.UnknownNullability;
 
 public record BlockEntityTypeImpl(Key key, int id) implements BlockEntityType {
-    static final Registry<BlockEntityType> REGISTRY = RegistryData.createStaticRegistry(
-            BuiltinRegistries.BLOCK_ENTITY_TYPES, BlockEntityTypeImpl::new);
-
-    private BlockEntityTypeImpl(String namespace, RegistryData.Properties properties) {
-        this(Key.key(namespace), properties.getInt("id"));
-    }
+    static final Registry<BlockEntityType> REGISTRY = BlockEntityTypeValues.load(BuiltinRegistries.BLOCK_ENTITY_TYPES);
 
     public static @UnknownNullability BlockEntityType get(RegistryKey<BlockEntityType> key) {
         return REGISTRY.get(key);

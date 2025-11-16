@@ -17,44 +17,19 @@ import java.util.Collection;
  */
 public sealed interface BlockSoundType extends StaticProtocolObject<BlockSoundType>, BlockSoundTypes permits BlockSoundImpl {
 
-    /**
-     * Returns the 'registry' data for the block sound type. Note: Block sound types are not an actual minecraft registry
-     */
-    @Contract(pure = true)
-    RegistryData.BlockSoundTypeEntry registry();
+    float volume();
 
-    @Override
-    default Key key() {
-        return registry().key();
-    }
+    float pitch();
 
-    default float volume() {
-        return registry().volume();
-    }
+    SoundEvent breakSound();
 
-    default float pitch() {
-        return registry().pitch();
-    }
+    SoundEvent hitSound();
 
-    default SoundEvent breakSound() {
-        return registry().breakSound();
-    }
+    SoundEvent fallSound();
 
-    default SoundEvent hitSound() {
-        return registry().hitSound();
-    }
+    SoundEvent placeSound();
 
-    default SoundEvent fallSound() {
-        return registry().fallSound();
-    }
-
-    default SoundEvent placeSound() {
-        return registry().placeSound();
-    }
-
-    default SoundEvent stepSound() {
-        return registry().stepSound();
-    }
+    SoundEvent stepSound();
 
     default int id() {
         return 0; // Not sent through packets in the protocol, also must be between 0 and [size of block sound type list] because id mappings are stored in an array
