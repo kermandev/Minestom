@@ -97,7 +97,7 @@ public final class InventoryClickProcessor {
         // Handle armor and off-hand equippables
         if (inventory instanceof PlayerInventory && targetInventory instanceof PlayerInventory) {
             final Material material = clicked.material();
-            final EquipmentSlot equipmentSlot = material.registry().equipmentSlot();
+            final EquipmentSlot equipmentSlot = material.equipmentSlot();
             if (equipmentSlot != null
                     && (equipmentSlot.isArmor() || equipmentSlot == EquipmentSlot.OFF_HAND)
                     && !craftingGridClick) {

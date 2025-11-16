@@ -237,7 +237,7 @@ public final class CodegenRegistries {
     private static Collection<CodegenValue> staticRegistry() {
         return List.of(
                 builder().staticType()
-                        .generator(RegistryValueGenerator::new)
+                        .generator(RegistryGenerator::new)
                         .namespace("block")
                         .packageName("net.minestom.server.instance.block")
                         .typeName("Block")
@@ -245,7 +245,7 @@ public final class CodegenRegistries {
                         .loaderName("BlockImpl")
                         .build(),
                 builder().staticType()
-                        .generator(RegistryValueGenerator::new)
+                        .generator(MaterialValueGenerator::new)
                         .namespace("item")
                         .packageName("net.minestom.server.item")
                         .typeName("Material")

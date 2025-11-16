@@ -5,6 +5,8 @@ import net.kyori.adventure.key.KeyPattern;
 import net.minestom.server.codec.Codec;
 import net.minestom.server.component.DataComponentMap;
 import net.minestom.server.component.DataComponents;
+import net.minestom.server.entity.EntityType;
+import net.minestom.server.entity.EquipmentSlot;
 import net.minestom.server.instance.block.Block;
 import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.registry.Registry;
@@ -21,41 +23,19 @@ public sealed interface Material extends StaticProtocolObject<Material>, Materia
     NetworkBuffer.Type<Material> NETWORK_TYPE = NetworkBuffer.VAR_INT.transform(Material::fromId, Material::id);
     Codec<Material> CODEC = Codec.KEY.transform(Material::fromKey, Material::key);
 
-    /**
-     * Returns the raw registry data for the material.
-     */
-    @Contract(pure = true)
-    RegistryData.MaterialEntry registry();
+    boolean isBlock();
 
-    @Override
-    default Key key() {
-        return registry().key();
-    }
+    @Nullable Block block();
 
-    @Override
-    default int id() {
-        return registry().id();
-    }
+    DataComponentMap prototype();
 
-    default boolean isBlock() {
-        return registry().block() != null;
-    }
-
-    default @UnknownNullability Block block() {
-        return registry().block();
-    }
-
-    default DataComponentMap prototype() {
-        return registry().prototype();
-    }
-
-    default boolean isArmor() {
-        return registry().isArmor();
-    }
+    boolean isArmor();
 
     default int maxStackSize() {
         return prototype().get(DataComponents.MAX_STACK_SIZE, 64);
     }
+
+    @Nullable EquipmentSlot equipmentSlot();
 
     static Collection<Material> values() {
         return MaterialImpl.REGISTRY.values();
@@ -76,4 +56,13 @@ public sealed interface Material extends StaticProtocolObject<Material>, Materia
     static Registry<Material> staticRegistry() {
         return MaterialImpl.REGISTRY;
     }
+
+    /**
+     * Gets the entity type this item can spawn. Only present for spawn eggs (e.g. wolf spawn egg, skeleton spawn egg)
+     *
+     * @return The entity type it can spawn, or null if it is not a spawn egg
+     * @deprecated Read {@link DataComponents#ENTITY_DATA} for the spawned entity data.
+     */
+    @Deprecated(forRemoval = true)
+    @Nullable EntityType spawnEntityType();
 }

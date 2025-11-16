@@ -35,7 +35,7 @@ public class ItemTest {
         assertEquals(item.amount(), 1, "Default item amount must be 1");
 
         // Should have the exact same components as the material prototype
-        var prototype = Material.DIAMOND_SWORD.registry().prototype();
+        var prototype = Material.DIAMOND_SWORD.prototype();
         for (DataComponent<?> component : DataComponent.values()) {
             var proto = prototype.get(component);
             if (proto == null) {
@@ -60,7 +60,7 @@ public class ItemTest {
         assertEquals(item.amount(), 1, "Default item amount must be 1");
 
         // Should have the exact same components as the material prototype
-        var prototype = Material.DIAMOND_SWORD.registry().prototype();
+        var prototype = Material.DIAMOND_SWORD.prototype();
         for (DataComponent<?> component : DataComponent.values()) {
             var proto = prototype.get(component);
             if (proto == null) {
@@ -153,10 +153,10 @@ public class ItemTest {
     @Test
     public void testEntityType() {
         var item1 = ItemStack.of(Material.DIAMOND, 1);
-        assertNull(item1.material().registry().spawnEntityType());
+        assertNull(item1.material().spawnEntityType());
         var item2 = ItemStack.of(Material.CAMEL_SPAWN_EGG, 1);
-        assertNotNull(item2.material().registry().spawnEntityType());
-        assertEquals(EntityType.CAMEL, item2.material().registry().spawnEntityType());
+        assertNotNull(item2.material().spawnEntityType());
+        assertEquals(EntityType.CAMEL, item2.material().spawnEntityType());
     }
 
     static ItemStack createItem() {
