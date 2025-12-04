@@ -35,6 +35,8 @@ import net.minestom.server.monitoring.BenchmarkManager;
 import net.minestom.server.monitoring.EventsJFR;
 import net.minestom.server.monitoring.TickMonitor;
 import net.minestom.server.network.ConnectionManager;
+import net.minestom.server.network.NetworkBufferProvider;
+import net.minestom.server.network.foreign.NetworkBufferSegmentProvider;
 import net.minestom.server.network.packet.PacketParser;
 import net.minestom.server.network.packet.PacketVanilla;
 import net.minestom.server.network.packet.client.ClientPacket;
@@ -98,6 +100,7 @@ final class ServerProcessImpl implements ServerProcess {
     private final DynamicRegistry<ZombieNautilusVariant> zombieNautilusVariant;
     private final DynamicRegistry<Timeline> timeline;
 
+    private final NetworkBufferProvider networkBufferProvider;
     private final ConnectionManager connection;
     private final PacketListenerManager packetListener;
     private final PacketParser.Client packetParser;
@@ -155,6 +158,8 @@ final class ServerProcessImpl implements ServerProcess {
         this.timeline = Timeline.createDefaultRegistry();
         this.dimensionType = DimensionType.createDefaultRegistry(this); // depends on timelines
 
+        // Needs to happen early enough before any pools have allocated their first segment.
+        this.networkBufferProvider = new NetworkBufferSegmentProvider();
         this.connection = new ConnectionManager();
         this.packetListener = new PacketListenerManager();
         this.packetParser = PacketVanilla.CLIENT_PACKET_PARSER;
@@ -379,6 +384,11 @@ final class ServerProcessImpl implements ServerProcess {
     @Override
     public Server server() {
         return server;
+    }
+
+    @Override
+    public NetworkBufferProvider networkBufferProvider() {
+        return networkBufferProvider;
     }
 
     @Override
