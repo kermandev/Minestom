@@ -1,4 +1,4 @@
 @NotNullByDefault
-package net.minestom.server.utils.time;
+package net.minestom.server.time;
 
 import org.jetbrains.annotations.NotNullByDefault;

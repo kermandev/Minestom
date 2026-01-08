@@ -28,7 +28,7 @@ import net.minestom.server.recipe.RecipeBookCategory;
 import net.minestom.server.registry.RegistryKey;
 import net.minestom.server.registry.RegistryTag;
 import net.minestom.server.registry.TagKey;
-import net.minestom.server.utils.time.TimeUnit;
+import net.minestom.server.time.TimeUnit;
 
 import java.io.IOException;
 import java.io.InputStream;

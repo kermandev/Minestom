@@ -7,8 +7,8 @@ import net.minestom.server.entity.EntityProjectile;
 import net.minestom.server.entity.EntityType;
 import net.minestom.server.entity.ai.GoalSelector;
 import net.minestom.server.entity.pathfinding.Navigator;
-import net.minestom.server.utils.time.Cooldown;
-import net.minestom.server.utils.time.TimeUnit;
+import net.minestom.server.time.Cooldown;
+import net.minestom.server.time.TimeUnit;
 import net.minestom.server.utils.validate.Check;
 
 import java.time.Duration;

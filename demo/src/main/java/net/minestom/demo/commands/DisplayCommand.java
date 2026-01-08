@@ -16,7 +16,7 @@ import net.minestom.server.entity.metadata.display.TextDisplayMeta;
 import net.minestom.server.instance.block.Block;
 import net.minestom.server.item.ItemStack;
 import net.minestom.server.item.Material;
-import net.minestom.server.utils.time.TimeUnit;
+import net.minestom.server.time.TimeUnit;
 
 public class DisplayCommand extends Command {
 

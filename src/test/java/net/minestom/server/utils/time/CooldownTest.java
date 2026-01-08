@@ -1,5 +1,6 @@
 package net.minestom.server.utils.time;
 
+import net.minestom.server.time.Cooldown;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;

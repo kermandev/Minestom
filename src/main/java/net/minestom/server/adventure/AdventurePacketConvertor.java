@@ -15,7 +15,7 @@ import net.minestom.server.entity.Entity;
 import net.minestom.server.network.packet.server.ServerPacket;
 import net.minestom.server.network.packet.server.play.*;
 import net.minestom.server.sound.SoundEvent;
-import net.minestom.server.utils.time.Tick;
+import net.minestom.server.time.Tick;
 
 import java.util.Collection;
 import java.util.concurrent.ThreadLocalRandom;

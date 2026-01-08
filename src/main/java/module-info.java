@@ -172,7 +172,7 @@ module net.minestom.server {
     exports net.minestom.server.utils.mojang;
     exports net.minestom.server.utils.nbt;
     exports net.minestom.server.utils.position;
-    exports net.minestom.server.utils.time;
+    exports net.minestom.server.time;
     exports net.minestom.server.utils.url;
     exports net.minestom.server.utils.validate;
     exports net.minestom.server.world;

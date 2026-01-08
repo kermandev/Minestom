@@ -1,4 +1,4 @@
-package net.minestom.server.utils.time;
+package net.minestom.server.time;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;

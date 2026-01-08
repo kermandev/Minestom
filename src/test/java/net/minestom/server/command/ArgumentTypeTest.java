@@ -26,7 +26,7 @@ import net.minestom.server.particle.Particle;
 import net.minestom.server.tag.Tag;
 import net.minestom.server.utils.Range;
 import net.minestom.server.utils.location.RelativeVec;
-import net.minestom.server.utils.time.TimeUnit;
+import net.minestom.server.time.TimeUnit;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;

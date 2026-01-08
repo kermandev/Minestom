@@ -3,7 +3,7 @@ package net.minestom.server.event.server;
 import net.minestom.server.event.trait.AsyncEvent;
 import net.minestom.server.event.trait.CancellableEvent;
 import net.minestom.server.network.player.PlayerConnection;
-import net.minestom.server.utils.time.TimeUnit;
+import net.minestom.server.time.TimeUnit;
 
 import java.time.Duration;
 
