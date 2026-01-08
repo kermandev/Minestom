@@ -1,7 +1,4 @@
-package net.minestom.server.utils.chunk;
-
-import net.minestom.server.instance.Chunk;
-import net.minestom.server.instance.Instance;
+package net.minestom.server.instance;
 
 /**
  * Used to customize which type of {@link Chunk} an implementation should use.

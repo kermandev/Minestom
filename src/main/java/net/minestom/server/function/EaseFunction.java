@@ -1,9 +1,11 @@
-package net.minestom.server.utils;
+package net.minestom.server.function;
 
 import net.kyori.adventure.key.Key;
 import net.minestom.server.codec.Codec;
 import net.minestom.server.codec.StructCodec;
 import net.minestom.server.coordinate.Vec;
+import net.minestom.server.utils.Ease;
+import net.minestom.server.utils.Either;
 import net.minestom.server.utils.validate.Check;
 
 import java.util.List;
@@ -42,6 +44,11 @@ public interface EaseFunction {
     EaseFunction OUT_BACK = Ease::outBack;
     EaseFunction IN_OUT_BACK = Ease::inOutBack;
     EaseFunction IN_ELASTIC = Ease::inElastic;
+    EaseFunction OUT_ELASTIC = Ease::outElastic;
+    EaseFunction IN_OUT_ELASTIC = Ease::inOutElastic;
+    EaseFunction IN_BOUNCE = Ease::inBounce;
+    EaseFunction OUT_BOUNCE = Ease::outBounce;
+    EaseFunction IN_OUT_BOUNCE = Ease::inOutBounce;
 
     // Only contains the named functions
     Map<Key, EaseFunction> NAMED_BY_KEY = Map.ofEntries(
@@ -71,7 +78,12 @@ public interface EaseFunction {
             Map.entry(Key.key("in_back"), IN_BACK),
             Map.entry(Key.key("out_back"), OUT_BACK),
             Map.entry(Key.key("in_out_back"), IN_OUT_BACK),
-            Map.entry(Key.key("in_elastic"), IN_ELASTIC)
+            Map.entry(Key.key("in_elastic"), IN_ELASTIC),
+            Map.entry(Key.key("out_elastic"), OUT_ELASTIC),
+            Map.entry(Key.key("in_out_elastic"), IN_OUT_ELASTIC),
+            Map.entry(Key.key("in_bounce"), IN_BOUNCE),
+            Map.entry(Key.key("out_bounce"), OUT_BOUNCE),
+            Map.entry(Key.key("in_out_bounce"), IN_OUT_BOUNCE)
     );
     Map<EaseFunction, Key> NAMED_BY_VALUE = NAMED_BY_KEY.entrySet().stream()
             .collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey));

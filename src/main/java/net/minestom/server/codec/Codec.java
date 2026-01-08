@@ -11,7 +11,7 @@ import net.minestom.server.coordinate.Point;
 import net.minestom.server.registry.Registries;
 import net.minestom.server.registry.Registry;
 import net.minestom.server.utils.Either;
-import net.minestom.server.utils.ThrowingFunction;
+import net.minestom.server.function.ThrowingFunctions.TF1;
 import net.minestom.server.utils.UUIDUtils;
 import net.minestom.server.utils.Unit;
 import org.jetbrains.annotations.Contract;
@@ -360,7 +360,7 @@ public interface Codec<T extends @UnknownNullability Object> extends Encoder<T>,
      * @return the transforming codec of {@link S}
      */
     @Contract(pure = true, value = "_, _ -> new")
-    default <S extends @UnknownNullability Object> Codec<S> transform(ThrowingFunction<T, S> to, ThrowingFunction<S, T> from) {
+    default <S extends @UnknownNullability Object> Codec<S> transform(TF1<T, S> to, TF1<S, T> from) {
         return new CodecImpl.TransformImpl<>(this, to, from);
     }
 
@@ -572,8 +572,8 @@ public interface Codec<T extends @UnknownNullability Object> extends Encoder<T>,
      * @param mapper the mapper to transform the error into a value of {@link T}
      * @return the or else codec of {@link T}
      */
-    @Contract(pure = true, value = "_ -> new")
-    default <S> Codec<T> orElse(Codec<S> other, ThrowingFunction<S, T> mapper) {
+    @Contract(pure = true, value = "_, _ -> new")
+    default <S> Codec<T> orElse(Codec<S> other, TF1<S, T> mapper) {
         return new CodecImpl.OrElseImpl<>(this, other.transform(mapper, _ -> {
             throw new UnsupportedOperationException("unreachable");
         }));

@@ -88,7 +88,6 @@ module net.minestom.server {
     exports net.minestom.server.event.trait;
     exports net.minestom.server.exception;
     exports net.minestom.server.extras.lan;
-    exports net.minestom.server.extras.mojangAuth;
     exports net.minestom.server.extras.query;
     exports net.minestom.server.extras.query.event;
     exports net.minestom.server.extras.query.response;
@@ -162,7 +161,6 @@ module net.minestom.server {
     exports net.minestom.server.utils;
     exports net.minestom.server.utils.async;
     exports net.minestom.server.utils.block;
-    exports net.minestom.server.utils.callback;
     exports net.minestom.server.utils.chunk;
     exports net.minestom.server.utils.collection;
     exports net.minestom.server.utils.crypto;
@@ -181,5 +179,6 @@ module net.minestom.server {
     exports net.minestom.server.world.attribute;
     exports net.minestom.server.world.biome;
     exports net.minestom.server.world.timeline;
+    exports net.minestom.server.function;
 
 }

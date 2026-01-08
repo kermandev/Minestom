@@ -7,7 +7,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.minestom.server.Auth;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.entity.Player;
-import net.minestom.server.extras.mojangAuth.MojangCrypt;
+import net.minestom.server.utils.mojang.MojangCrypt;
 import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.network.packet.client.configuration.ClientFinishConfigurationPacket;
 import net.minestom.server.network.packet.client.configuration.ClientSelectKnownPacksPacket;

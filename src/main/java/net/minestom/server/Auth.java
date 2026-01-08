@@ -1,6 +1,6 @@
 package net.minestom.server;
 
-import net.minestom.server.extras.mojangAuth.MojangCrypt;
+import net.minestom.server.utils.mojang.MojangCrypt;
 import net.minestom.server.network.NetworkBuffer;
 import org.jetbrains.annotations.Nullable;
 

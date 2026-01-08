@@ -1,4 +1,4 @@
-package net.minestom.server.extras.mojangAuth;
+package net.minestom.server.utils.mojang;
 
 import net.minestom.server.MinecraftServer;
 import org.jetbrains.annotations.Nullable;

@@ -2,7 +2,6 @@ package net.minestom.server.entity;
 
 import net.kyori.adventure.identity.Identified;
 import net.kyori.adventure.identity.Identity;
-import net.kyori.adventure.nbt.CompoundBinaryTag;
 import net.kyori.adventure.pointer.Pointered;
 import net.kyori.adventure.pointer.Pointers;
 import net.kyori.adventure.pointer.PointersSupplier;
@@ -58,7 +57,6 @@ import net.minestom.server.timer.Schedulable;
 import net.minestom.server.timer.Scheduler;
 import net.minestom.server.timer.TaskSchedule;
 import net.minestom.server.utils.ArrayUtils;
-import net.minestom.server.utils.MathUtils;
 import net.minestom.server.utils.PacketViewableUtils;
 import net.minestom.server.utils.async.AsyncUtils;
 import net.minestom.server.utils.block.BlockIterator;
@@ -233,10 +231,13 @@ public class Entity implements Viewable, Tickable, Schedulable, Snapshotable, Ev
         if (newPosition.x() >= MAX_COORDINATE || newPosition.x() <= -MAX_COORDINATE ||
                 newPosition.y() >= MAX_COORDINATE || newPosition.y() <= -MAX_COORDINATE ||
                 newPosition.z() >= MAX_COORDINATE || newPosition.z() <= -MAX_COORDINATE) {
+            double min = -MAX_COORDINATE;
+            double min1 = -MAX_COORDINATE;
+            double min2 = -MAX_COORDINATE;
             newPosition = newPosition.withCoord(
-                    MathUtils.clamp(newPosition.x(), -MAX_COORDINATE, MAX_COORDINATE),
-                    MathUtils.clamp(newPosition.y(), -MAX_COORDINATE, MAX_COORDINATE),
-                    MathUtils.clamp(newPosition.z(), -MAX_COORDINATE, MAX_COORDINATE)
+                    Math.clamp(newPosition.x(), min2, MAX_COORDINATE),
+                    Math.clamp(newPosition.y(), min1, MAX_COORDINATE),
+                    Math.clamp(newPosition.z(), min, MAX_COORDINATE)
             );
         }
         this.position = newPosition;

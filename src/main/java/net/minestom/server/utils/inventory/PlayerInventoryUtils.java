@@ -1,5 +1,8 @@
 package net.minestom.server.utils.inventory;
 
+import org.jetbrains.annotations.ApiStatus;
+
+@ApiStatus.Internal
 public final class PlayerInventoryUtils {
     /*
     There are 3 different slot mappings discussed in this file:
@@ -120,6 +123,7 @@ public final class PlayerInventoryUtils {
      * @param slot the internal slot
      * @return a slot id which can be used for packets
      */
+    @SuppressWarnings({"DataFlowIssue", "SillyAssignment"})
     public static int convertMinestomSlotToWindowSlot(int slot) {
         if (slot > -1 && slot < 9) { // Held bar 0-8
             slot = slot + 36;

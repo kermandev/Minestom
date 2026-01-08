@@ -1,7 +1,5 @@
 package net.minestom.server.registry;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.ToNumberPolicy;
 import com.google.gson.stream.JsonReader;
 import net.kyori.adventure.key.Key;
@@ -46,8 +44,6 @@ import java.util.function.Supplier;
  * Use at your own risk.
  */
 public final class RegistryData {
-    static final Gson GSON = new GsonBuilder().disableHtmlEscaping().disableJdkUnsafe().create();
-
     @ApiStatus.Internal
     public static BlockEntry block(String namespace, Properties main) {
         return new BlockEntry(namespace, main, new HashMap<>(), null, null);

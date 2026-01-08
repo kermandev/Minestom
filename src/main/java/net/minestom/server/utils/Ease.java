@@ -1,5 +1,9 @@
 package net.minestom.server.utils;
 
+import org.jetbrains.annotations.ApiStatus;
+
+/// @see net.minestom.server.function.EaseFunction EaseFunction for usage.
+@ApiStatus.Internal
 // https://github.com/ai/easings.net/blob/master/src/easings/easingsFunctions.ts
 public final class Ease {
     private static final float c1 = 1.70158f;
@@ -8,7 +12,7 @@ public final class Ease {
     private static final float c4 = (float) (2 * Math.PI) / 3;
     private static final float c5 = (float) (2 * Math.PI) / 4.5f;
 
-    public static float constant(float x) {
+    public static float constant(float ignored) {
         return 0f;
     }
 

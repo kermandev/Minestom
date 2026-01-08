@@ -13,14 +13,4 @@ public final class AsyncUtils {
         //noinspection unchecked
         return (CompletableFuture<T>) VOID_FUTURE;
     }
-
-    public static CompletableFuture<Void> runAsync(Runnable runnable) {
-        return CompletableFuture.runAsync(() -> {
-            try {
-                runnable.run();
-            } catch (Exception e) {
-                MinecraftServer.getExceptionManager().handleException(e);
-            }
-        });
-    }
 }

@@ -268,7 +268,7 @@ public record Vec(double x, double y, double z) implements Point {
      */
     @Contract(pure = true)
     public double angle(Vec vec) {
-        final double dot = MathUtils.clamp(dot(vec) / (length() * vec.length()), -1.0, 1.0);
+        final double dot = Math.clamp(dot(vec) / (length() * vec.length()), -1.0, 1.0);
         return Math.acos(dot);
     }
 

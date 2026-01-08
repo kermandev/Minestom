@@ -15,7 +15,7 @@ import net.minestom.server.entity.Entity;
 import net.minestom.server.network.packet.server.ServerPacket;
 import net.minestom.server.network.packet.server.play.*;
 import net.minestom.server.sound.SoundEvent;
-import net.minestom.server.utils.TickUtils;
+import net.minestom.server.utils.time.Tick;
 
 import java.util.Collection;
 import java.util.concurrent.ThreadLocalRandom;
@@ -189,9 +189,9 @@ public class AdventurePacketConvertor {
         } else if (part == TitlePart.TIMES) {
             Title.Times times = (Title.Times) value;
             return new SetTitleTimePacket(
-                    TickUtils.fromDuration(times.fadeIn(), TickUtils.CLIENT_TICK_MS),
-                    TickUtils.fromDuration(times.stay(), TickUtils.CLIENT_TICK_MS),
-                    TickUtils.fromDuration(times.fadeOut(), TickUtils.CLIENT_TICK_MS));
+                    Tick.CLIENT_TICKS.fromDuration(times.fadeIn()),
+                    Tick.CLIENT_TICKS.fromDuration(times.stay()),
+                    Tick.CLIENT_TICKS.fromDuration(times.fadeOut()));
         } else {
             throw new IllegalArgumentException("Unknown TitlePart " + part);
         }

@@ -8,7 +8,6 @@ import net.minestom.server.codec.Transcoder;
 import net.minestom.server.gamedata.DataPack;
 import net.minestom.server.registry.DynamicRegistry;
 import net.minestom.server.registry.Registries;
-import net.minestom.server.utils.MathUtils;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
 
@@ -92,7 +91,7 @@ public interface LevelBasedValue {
 
         @Override
         public float calc(int level) {
-            return MathUtils.clamp(value.calc(level), min, max);
+            return Math.clamp(value.calc(level), min, max);
         }
 
         @Override

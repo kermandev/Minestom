@@ -8,7 +8,7 @@ import net.minestom.server.registry.DynamicRegistry;
 import net.minestom.server.registry.Registries;
 import net.minestom.server.registry.RegistryData;
 import net.minestom.server.registry.RegistryKey;
-import net.minestom.server.utils.EaseFunction;
+import net.minestom.server.function.EaseFunction;
 import net.minestom.server.world.attribute.EnvironmentAttribute;
 import net.minestom.server.world.attribute.EnvironmentAttribute.Modifier;
 import org.jetbrains.annotations.ApiStatus;

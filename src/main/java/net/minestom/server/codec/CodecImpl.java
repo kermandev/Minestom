@@ -15,7 +15,7 @@ import net.minestom.server.registry.Registries;
 import net.minestom.server.registry.RegistryKey;
 import net.minestom.server.registry.RegistryTranscoder;
 import net.minestom.server.utils.Either;
-import net.minestom.server.utils.ThrowingFunction;
+import net.minestom.server.function.ThrowingFunctions.TF1;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
@@ -123,8 +123,8 @@ final class CodecImpl {
     }
 
     record TransformImpl<T, S>(
-            Codec<T> inner, ThrowingFunction<T, S> to,
-            ThrowingFunction<@Nullable S, T> from
+            Codec<T> inner, TF1<T, S> to,
+            TF1<@Nullable S, T> from
     ) implements Codec<S> {
         TransformImpl {
             Objects.requireNonNull(inner, "inner");

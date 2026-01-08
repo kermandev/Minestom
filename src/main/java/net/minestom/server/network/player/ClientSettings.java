@@ -6,7 +6,6 @@ import net.minestom.server.entity.Player;
 import net.minestom.server.message.ChatMessageType;
 import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.network.NetworkBufferTemplate;
-import net.minestom.server.utils.MathUtils;
 
 import java.util.Locale;
 import java.util.Objects;
@@ -49,7 +48,7 @@ public record ClientSettings(Locale locale, byte viewDistance,
     public ClientSettings {
         Objects.requireNonNull(locale);
         // Clamp viewDistance to valid bounds
-        viewDistance = (byte) MathUtils.clamp(viewDistance, 2, 32);
+        viewDistance = (byte) Math.clamp(viewDistance, 2, 32);
         Objects.requireNonNull(chatMessageType);
         Objects.requireNonNull(mainHand);
     }

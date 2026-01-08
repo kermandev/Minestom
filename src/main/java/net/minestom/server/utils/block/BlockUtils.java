@@ -12,51 +12,8 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Map;
 import java.util.Objects;
 
-public class BlockUtils {
-
-    private final Block.Getter instance;
-    private final Point position;
-
-    public BlockUtils(Block.Getter instance, Point position) {
-        this.instance = instance;
-        this.position = position;
-    }
-
-    public BlockUtils getRelativeTo(int x, int y, int z) {
-        return new BlockUtils(instance, position.add(x, y, z));
-    }
-
-    public BlockUtils above() {
-        return getRelativeTo(0, 1, 0);
-    }
-
-    public BlockUtils below() {
-        return getRelativeTo(0, -1, 0);
-    }
-
-    public BlockUtils north() {
-        return getRelativeTo(0, 0, -1);
-    }
-
-    public BlockUtils east() {
-        return getRelativeTo(1, 0, 0);
-    }
-
-    public BlockUtils south() {
-        return getRelativeTo(0, 0, 1);
-    }
-
-    public BlockUtils west() {
-        return getRelativeTo(-1, 0, 0);
-    }
-
-    public Block getBlock() {
-        return instance.getBlock(position);
-    }
-
-    public boolean equals(Block block) {
-        return getBlock().compare(block);
-    }
+public final class BlockUtils {
+    private BlockUtils() {}
 
     public static Map<String, String> parseProperties(String query) {
         if (!query.startsWith("[") || !query.endsWith("]")) return Map.of();

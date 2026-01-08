@@ -121,8 +121,7 @@ public record RelativeVec(Vec vec, CoordinateType coordinateType, boolean relati
         /**
          * Relative when any XYZ have the relative flag; unless local.
          */
-        RELATIVE((relative, origin, relativeX, relativeY, relativeZ) -> {
-            final var absolute = Objects.requireNonNullElse(origin, Vec.ZERO);
+        RELATIVE((relative, absolute, relativeX, relativeY, relativeZ) -> {
             final double x = relative.x() + (relativeX ? absolute.x() : 0);
             final double y = relative.y() + (relativeY ? absolute.y() : 0);
             final double z = relative.z() + (relativeZ ? absolute.z() : 0);
@@ -131,7 +130,7 @@ public record RelativeVec(Vec vec, CoordinateType coordinateType, boolean relati
         /**
          * Local type used in direction, requires full relatively on XZ/XYZ
          */
-        LOCAL((local, origin, relativeX, relativeY, relativeZ) -> {
+        LOCAL((local, origin, _, _, _) -> {
             final Vec vec1 = new Vec(Math.cos(Math.toRadians(origin.yaw() + 90.0f)), 0, Math.sin(Math.toRadians(origin.yaw() + 90.0f)));
             final Vec a = vec1.mul(Math.cos(Math.toRadians(-origin.pitch()))).withY(Math.sin(Math.toRadians(-origin.pitch())));
             final Vec b = vec1.mul(Math.cos(Math.toRadians(-origin.pitch() + 90.0f))).withY(Math.sin(Math.toRadians(-origin.pitch() + 90.0f)));
@@ -142,7 +141,7 @@ public record RelativeVec(Vec vec, CoordinateType coordinateType, boolean relati
         /**
          * Absolute just returns the original vector.
          */
-        ABSOLUTE(((vec, origin, relativeX1, relativeY1, relativeZ1) -> vec));
+        ABSOLUTE(((vec, _, _, _, _) -> vec));
 
         private final CoordinateConverter converter;
 

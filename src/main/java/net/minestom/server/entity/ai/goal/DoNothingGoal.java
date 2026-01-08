@@ -2,7 +2,6 @@ package net.minestom.server.entity.ai.goal;
 
 import net.minestom.server.entity.EntityCreature;
 import net.minestom.server.entity.ai.GoalSelector;
-import net.minestom.server.utils.MathUtils;
 
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
@@ -25,7 +24,7 @@ public class DoNothingGoal extends GoalSelector {
     public DoNothingGoal(EntityCreature entityCreature, long time, float chance) {
         super(entityCreature);
         this.time = TimeUnit.MILLISECONDS.toNanos(time);
-        this.chance = MathUtils.clamp(chance, 0, 1);
+        this.chance = Math.clamp(chance, (float) 0, (float) 1);
     }
 
     @Override

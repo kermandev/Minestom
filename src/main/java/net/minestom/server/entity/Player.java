@@ -753,8 +753,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
     public void onChunkBatchReceived(float newTargetChunksPerTick) {
 //        logger.debug("chunk batch received player={} chunks/tick={} lead={}", username, newTargetChunksPerTick, chunkBatchLead);
         chunkBatchLead -= 1;
-        targetChunksPerTick = Float.isNaN(newTargetChunksPerTick) ? ServerFlag.MIN_CHUNKS_PER_TICK : MathUtils.clamp(
-                newTargetChunksPerTick * ServerFlag.CHUNKS_PER_TICK_MULTIPLIER, ServerFlag.MIN_CHUNKS_PER_TICK, ServerFlag.MAX_CHUNKS_PER_TICK);
+        targetChunksPerTick = Float.isNaN(newTargetChunksPerTick) ? ServerFlag.MIN_CHUNKS_PER_TICK : Math.clamp(newTargetChunksPerTick * ServerFlag.CHUNKS_PER_TICK_MULTIPLIER, ServerFlag.MIN_CHUNKS_PER_TICK, ServerFlag.MAX_CHUNKS_PER_TICK);
 
         // Beyond the first batch we can preemptively send up to 10 (matching mojang server)
         if (maxChunkBatchLead == 1) maxChunkBatchLead = 10;

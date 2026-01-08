@@ -14,13 +14,6 @@ public final class ArrayUtils {
     private ArrayUtils() {
     }
 
-    public static boolean isEmpty(@Nullable Object [] array) {
-        for (Object object : array) {
-            if (object != null) return false;
-        }
-        return true;
-    }
-
     public static <T> int[] mapToIntArray(Collection<T> collection, ToIntFunction<T> function) {
         final int size = collection.size();
         if (size == 0)

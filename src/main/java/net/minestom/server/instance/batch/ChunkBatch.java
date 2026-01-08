@@ -9,14 +9,13 @@ import net.minestom.server.instance.Chunk;
 import net.minestom.server.instance.Instance;
 import net.minestom.server.instance.InstanceContainer;
 import net.minestom.server.instance.block.Block;
-import net.minestom.server.utils.callback.OptionalCallback;
-import net.minestom.server.utils.chunk.ChunkCallback;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.UnknownNullability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.function.Consumer;
 
 /**
  * A Batch used when all of the block changed are contained inside a single chunk.
@@ -30,7 +29,7 @@ import java.util.concurrent.CountDownLatch;
  *
  * @see Batch
  */
-public class ChunkBatch implements Batch<ChunkCallback> {
+public class ChunkBatch implements Batch<Consumer<Chunk>> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ChunkBatch.class);
 
@@ -89,7 +88,7 @@ public class ChunkBatch implements Batch<ChunkCallback> {
      * @return The inverse of this batch, if inverse is enabled in the {@link BatchOption}
      */
     @Override
-    public @UnknownNullability ChunkBatch apply(Instance instance, @Nullable ChunkCallback callback) {
+    public @UnknownNullability ChunkBatch apply(Instance instance, @Nullable Consumer<Chunk> callback) {
         return apply(instance, 0, 0, callback);
     }
 
@@ -102,7 +101,7 @@ public class ChunkBatch implements Batch<ChunkCallback> {
      * @param callback The callback to be executed when the batch is applied.
      * @return The inverse of this batch, if inverse is enabled in the {@link BatchOption}
      */
-    public @UnknownNullability ChunkBatch apply(Instance instance, int chunkX, int chunkZ, @Nullable ChunkCallback callback) {
+    public @UnknownNullability ChunkBatch apply(Instance instance, int chunkX, int chunkZ, @Nullable Consumer<Chunk> callback) {
         final Chunk chunk = instance.getChunk(chunkX, chunkZ);
         if (chunk == null) {
             LOGGER.warn("Unable to apply ChunkBatch to unloaded chunk ({}, {}) in {}.",
@@ -120,7 +119,7 @@ public class ChunkBatch implements Batch<ChunkCallback> {
      * @param callback The callback to be executed when the batch is applied
      * @return The inverse of this batch, if inverse is enabled in the {@link BatchOption}
      */
-    public @UnknownNullability ChunkBatch apply(Instance instance, Chunk chunk, @Nullable ChunkCallback callback) {
+    public @UnknownNullability ChunkBatch apply(Instance instance, Chunk chunk, @Nullable Consumer<Chunk> callback) {
         return apply(instance, chunk, callback, true);
     }
 
@@ -133,7 +132,7 @@ public class ChunkBatch implements Batch<ChunkCallback> {
      * @param callback The callback to be executed when the batch is applied
      * @return The inverse of this batch, if inverse is enabled in the {@link BatchOption}
      */
-    public @UnknownNullability ChunkBatch unsafeApply(Instance instance, Chunk chunk, @Nullable ChunkCallback callback) {
+    public @UnknownNullability ChunkBatch unsafeApply(Instance instance, Chunk chunk, @Nullable Consumer<Chunk> callback) {
         return apply(instance, chunk, callback, false);
     }
 
@@ -148,7 +147,7 @@ public class ChunkBatch implements Batch<ChunkCallback> {
      * @return The inverse of this batch, if inverse is enabled in the {@link BatchOption}
      */
     protected @UnknownNullability ChunkBatch apply(Instance instance,
-                               Chunk chunk, @Nullable ChunkCallback callback,
+                               Chunk chunk, @Nullable Consumer<Chunk> callback,
                                boolean safeCallback) {
         if (!this.options.isUnsafeApply()) this.awaitReady();
 
@@ -161,7 +160,7 @@ public class ChunkBatch implements Batch<ChunkCallback> {
      * Applies this batch in the current thread, executing the callback upon completion.
      */
     private void singleThreadFlush(Instance instance, Chunk chunk, @Nullable ChunkBatch inverse,
-                                   @Nullable ChunkCallback callback, boolean safeCallback) {
+                                   @Nullable Consumer<Chunk> callback, boolean safeCallback) {
         try {
             if (!chunk.isLoaded()) {
                 LOGGER.warn("Unable to apply ChunkBatch to unloaded chunk ({}, {}) in {}.",
@@ -176,7 +175,7 @@ public class ChunkBatch implements Batch<ChunkCallback> {
 
             if (blocks.isEmpty()) {
                 // Nothing to flush
-                OptionalCallback.execute(callback, chunk);
+                if (callback != null) callback.accept(chunk);
                 return;
             }
 
@@ -222,7 +221,7 @@ public class ChunkBatch implements Batch<ChunkCallback> {
     /**
      * Updates the given chunk for all of its viewers, and executes the callback.
      */
-    private void updateChunk(Instance instance, Chunk chunk, IntSet updatedSections, @Nullable ChunkCallback callback, boolean safeCallback) {
+    private void updateChunk(Instance instance, Chunk chunk, IntSet updatedSections, @Nullable Consumer<Chunk> callback, boolean safeCallback) {
         // Refresh chunk for viewers
         if (options.shouldSendUpdate()) {
             // TODO update all sections from `updatedSections`
@@ -236,7 +235,7 @@ public class ChunkBatch implements Batch<ChunkCallback> {
 
         if (callback != null) {
             if (safeCallback) {
-                instance.scheduleNextTick(inst -> callback.accept(chunk));
+                instance.scheduleNextTick(_ -> callback.accept(chunk));
             } else {
                 callback.accept(chunk);
             }

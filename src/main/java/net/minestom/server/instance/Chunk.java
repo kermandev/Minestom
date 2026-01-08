@@ -15,7 +15,6 @@ import net.minestom.server.network.packet.server.SendablePacket;
 import net.minestom.server.snapshot.Snapshotable;
 import net.minestom.server.tag.TagHandler;
 import net.minestom.server.tag.Taggable;
-import net.minestom.server.utils.chunk.ChunkSupplier;
 import net.minestom.server.world.DimensionType;
 import net.minestom.server.world.biome.Biome;
 import org.jetbrains.annotations.ApiStatus;

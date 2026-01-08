@@ -1,6 +1,4 @@
-package net.minestom.server.utils.callback;
-
-import net.minestom.server.command.CommandSender;
+package net.minestom.server.command;
 
 /**
  * Functional interface used by the {@link net.minestom.server.command.CommandManager}
