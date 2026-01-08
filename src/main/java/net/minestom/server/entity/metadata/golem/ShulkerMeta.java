@@ -6,7 +6,7 @@ import net.minestom.server.component.DataComponents;
 import net.minestom.server.entity.Entity;
 import net.minestom.server.entity.MetadataDef;
 import net.minestom.server.entity.MetadataHolder;
-import net.minestom.server.utils.Direction;
+import net.minestom.server.coordinate.Direction;
 import org.jetbrains.annotations.Nullable;
 
 public class ShulkerMeta extends AbstractGolemMeta {

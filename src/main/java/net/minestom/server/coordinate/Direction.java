@@ -1,6 +1,4 @@
-package net.minestom.server.utils;
-
-import net.minestom.server.coordinate.Vec;
+package net.minestom.server.coordinate;
 
 public enum Direction {
     DOWN(0, -1, 0),

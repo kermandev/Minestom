@@ -5,7 +5,7 @@ import net.minestom.server.entity.MetadataDef;
 import net.minestom.server.entity.MetadataHolder;
 import net.minestom.server.entity.metadata.EntityMeta;
 import net.minestom.server.entity.metadata.ObjectDataProvider;
-import net.minestom.server.utils.Direction;
+import net.minestom.server.coordinate.Direction;
 import org.jetbrains.annotations.Nullable;
 
 public class HangingMeta extends EntityMeta implements ObjectDataProvider {

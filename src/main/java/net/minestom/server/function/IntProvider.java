@@ -1,4 +1,4 @@
-package net.minestom.server.utils;
+package net.minestom.server.function;
 
 import net.kyori.adventure.key.Key;
 import net.minestom.server.codec.Codec;
@@ -7,6 +7,7 @@ import net.minestom.server.codec.StructCodec;
 import net.minestom.server.codec.Transcoder;
 import net.minestom.server.registry.DynamicRegistry;
 import net.minestom.server.registry.Registry;
+import net.minestom.server.utils.WeightedList;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;

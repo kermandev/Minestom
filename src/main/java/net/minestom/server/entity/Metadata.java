@@ -16,7 +16,7 @@ import net.minestom.server.network.player.ResolvableProfile;
 import net.minestom.server.particle.Particle;
 import net.minestom.server.registry.Holder;
 import net.minestom.server.registry.RegistryKey;
-import net.minestom.server.utils.Direction;
+import net.minestom.server.coordinate.Direction;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.UnknownNullability;
 

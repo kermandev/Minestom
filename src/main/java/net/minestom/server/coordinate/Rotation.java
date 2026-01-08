@@ -1,4 +1,4 @@
-package net.minestom.server.utils;
+package net.minestom.server.coordinate;
 
 public enum Rotation {
 

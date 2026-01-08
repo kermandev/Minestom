@@ -1,7 +1,6 @@
 package net.minestom.server.coordinate;
 
 import net.minestom.server.instance.block.BlockFace;
-import net.minestom.server.utils.Direction;
 import net.minestom.server.utils.MathUtils;
 import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.Contract;

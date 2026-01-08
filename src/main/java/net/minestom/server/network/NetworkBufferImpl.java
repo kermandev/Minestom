@@ -1,7 +1,7 @@
 package net.minestom.server.network;
 
 import net.minestom.server.registry.Registries;
-import net.minestom.server.utils.ObjectPool;
+import net.minestom.server.utils.collection.ObjectPool;
 import net.minestom.server.utils.nbt.BinaryTagReader;
 import net.minestom.server.utils.nbt.BinaryTagWriter;
 import org.jetbrains.annotations.Nullable;

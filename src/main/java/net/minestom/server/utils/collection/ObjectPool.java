@@ -1,6 +1,5 @@
-package net.minestom.server.utils;
+package net.minestom.server.utils.collection;
 
-import net.minestom.server.utils.collection.ConcurrentMessageQueues;
 import org.jctools.queues.MessagePassingQueue;
 import org.jetbrains.annotations.ApiStatus;
 

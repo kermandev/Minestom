@@ -4,7 +4,7 @@ import net.minestom.server.coordinate.Point;
 import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.network.NetworkBufferTemplate;
 import net.minestom.server.network.packet.client.ClientPacket;
-import net.minestom.server.utils.Rotation;
+import net.minestom.server.coordinate.Rotation;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 

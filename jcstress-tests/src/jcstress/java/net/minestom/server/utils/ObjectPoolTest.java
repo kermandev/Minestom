@@ -2,6 +2,7 @@ package net.minestom.server.utils;
 
 import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.network.packet.PacketVanilla;
+import net.minestom.server.utils.collection.ObjectPool;
 import org.openjdk.jcstress.annotations.*;
 import org.openjdk.jcstress.infra.results.L_Result;
 

@@ -1,6 +1,6 @@
 package net.minestom.server.instance.block;
 
-import net.minestom.server.utils.Direction;
+import net.minestom.server.coordinate.Direction;
 
 public enum BlockFace {
     BOTTOM(Direction.DOWN),

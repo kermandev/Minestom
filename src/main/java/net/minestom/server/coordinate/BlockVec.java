@@ -1,7 +1,6 @@
 package net.minestom.server.coordinate;
 
 import net.minestom.server.instance.block.BlockFace;
-import net.minestom.server.utils.Direction;
 import org.jetbrains.annotations.Contract;
 
 import java.util.function.DoubleUnaryOperator;

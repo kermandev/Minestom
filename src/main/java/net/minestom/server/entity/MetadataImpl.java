@@ -15,7 +15,7 @@ import net.minestom.server.item.ItemStack;
 import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.network.player.ResolvableProfile;
 import net.minestom.server.particle.Particle;
-import net.minestom.server.utils.Direction;
+import net.minestom.server.coordinate.Direction;
 import net.minestom.server.utils.collection.ObjectArray;
 import org.jetbrains.annotations.UnknownNullability;
 

@@ -1,7 +1,7 @@
 package net.minestom.server.world;
 
 import net.minestom.server.registry.RegistryTag;
-import net.minestom.server.utils.IntProvider;
+import net.minestom.server.function.IntProvider;
 import net.minestom.server.world.attribute.EnvironmentAttributeMap;
 import net.minestom.server.world.timeline.Timeline;
 

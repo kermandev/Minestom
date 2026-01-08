@@ -6,7 +6,7 @@ import net.minestom.server.coordinate.Point;
 import net.minestom.server.instance.block.Block;
 import net.minestom.server.instance.block.BlockFace;
 import net.minestom.server.instance.palette.Palette;
-import net.minestom.server.utils.Direction;
+import net.minestom.server.coordinate.Direction;
 
 import java.util.Arrays;
 import java.util.Objects;
