@@ -9,8 +9,7 @@ import net.minestom.server.network.NetworkBufferTemplate;
 import net.minestom.server.network.packet.server.ServerPacket;
 import net.minestom.server.sound.SoundEvent;
 
-import static net.minestom.server.network.NetworkBuffer.FLOAT;
-import static net.minestom.server.network.NetworkBuffer.LONG;
+import static net.minestom.server.network.NetworkBuffer.*;
 
 public record SoundEffectPacket(
         SoundEvent soundEvent,
@@ -20,27 +19,24 @@ public record SoundEffectPacket(
         float pitch,
         long seed
 ) implements ServerPacket.Play {
-    private static final NetworkBuffer.Type<Integer> INTEGER_TYPE = NetworkBuffer.INT
-            .transform(integer -> integer / 8, integer -> integer * 8);
-    public static final NetworkBuffer.Type<SoundEffectPacket> SERIALIZER = new NetworkBuffer.Type<>() {
+    private static final NetworkBuffer.Type<Point> VECTOR3FI = new NetworkBuffer.Type<>() {
         @Override
-        public void write(NetworkBuffer buffer, SoundEffectPacket value) {
-            buffer.write(SoundEvent.NETWORK_TYPE, value.soundEvent());
-            buffer.write(VAR_INT, AdventurePacketConvertor.getSoundSourceValue(value.source()));
-            buffer.write(INT, (int)(value.origin.x() * 8));
-            buffer.write(INT, (int)(value.origin.y() * 8));
-            buffer.write(INT, (int)(value.origin.z() * 8));
-            buffer.write(FLOAT, value.volume());
-            buffer.write(FLOAT, value.pitch());
-            buffer.write(LONG, value.seed());
+        public void write(NetworkBuffer buffer, Point value) {
+            buffer.write(INT, (int) value.x());
+            buffer.write(INT, (int) value.y());
+            buffer.write(INT, (int) value.z());
         }
+
+        @Override
+        public Point read(NetworkBuffer buffer) {
+            return new Vec(buffer.read(INT), buffer.read(INT), buffer.read(INT));
+        }
+    };
 
     public static final NetworkBuffer.Type<SoundEffectPacket> SERIALIZER = NetworkBufferTemplate.template(
             SoundEvent.NETWORK_TYPE, SoundEffectPacket::soundEvent,
             AdventurePacketConvertor.SOUND_SOURCE_TYPE, SoundEffectPacket::source,
-            INTEGER_TYPE, SoundEffectPacket::x,
-            INTEGER_TYPE, SoundEffectPacket::y,
-            INTEGER_TYPE, SoundEffectPacket::z,
+            VECTOR3FI.transform(point -> point.div(8.0d), point -> point.mul(8.0d)), SoundEffectPacket::origin,
             FLOAT, SoundEffectPacket::volume,
             FLOAT, SoundEffectPacket::pitch,
             LONG, SoundEffectPacket::seed,

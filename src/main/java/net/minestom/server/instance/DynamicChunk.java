@@ -267,6 +267,7 @@ public class DynamicChunk extends Chunk {
         // Compute light data outside any locks. This *should* prevent deadlocks
         var lightData = createLightData(true);
 
+        final List<ChunkData.BlockEntityInfo> entries;
         lockReadLock();
         try {
             NetworkBuffer.Type<Palette> biomeSerializer = Palette.biomeSerializer(MinecraftServer.getBiomeRegistry().size());
@@ -278,13 +279,19 @@ public class DynamicChunk extends Chunk {
                 }
             });
 
-            return new ChunkDataPacket(chunkX, chunkZ,
-                    new ChunkData(heightmaps, data, entries),
-                    lightData
-            );
+            entries = new ArrayList<>(this.entries.size());
+            for (var entry : this.entries.int2ObjectEntrySet()) {
+                final int index = entry.getIntKey();
+                final Block block = entry.getValue();
+                entries.add(new ChunkData.BlockEntityInfo(index, block));
+            }
         } finally {
             unlockReadLock();
         }
+        return new ChunkDataPacket(chunkX, chunkZ,
+                new ChunkData(heightmaps, data, entries),
+                lightData
+        );
     }
 
     UpdateLightPacket createLightPacket() {
