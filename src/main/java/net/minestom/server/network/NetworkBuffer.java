@@ -7,6 +7,7 @@ import net.kyori.adventure.text.Component;
 import net.minestom.server.codec.Codec;
 import net.minestom.server.coordinate.Point;
 import net.minestom.server.coordinate.Pos;
+import net.minestom.server.coordinate.Quaternion;
 import net.minestom.server.coordinate.Vec;
 import net.minestom.server.entity.EntityPose;
 import net.minestom.server.registry.Registries;
@@ -73,7 +74,10 @@ public sealed interface NetworkBuffer permits NetworkBufferImpl {
     Type<Point> VECTOR3I = new NetworkBufferTypeImpl.Vector3IType();
     Type<Point> VECTOR3B = new NetworkBufferTypeImpl.Vector3BType();
     Type<Vec> LP_VECTOR3 = new NetworkBufferTypeImpl.LpVector3Type();
-    Type<float[]> QUATERNION = new NetworkBufferTypeImpl.QuaternionType();
+    /**
+     * Quaternion is serialized as floats, expect a precision loss when converting from/to double Quaternion.
+     */
+    Type<Quaternion> QUATERNION = new NetworkBufferTypeImpl.QuaternionType();
 
     Type<@Nullable Component> OPT_CHAT = COMPONENT.optional();
     Type<@Nullable Point> OPT_BLOCK_POSITION = BLOCK_POSITION.optional();

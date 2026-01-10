@@ -24,6 +24,11 @@ public record Quaternion(double x, double y, double z, double w) {
     public static final double EPSILON = 1e-6;
 
     /**
+     * The zero quaternion representing no rotation.
+     */
+    public static final Quaternion ZERO = new Quaternion(0, 0, 0, 0);
+
+    /**
      * The identity quaternion representing no rotation.
      */
     public static final Quaternion IDENTITY = new Quaternion(0, 0, 0, 1);

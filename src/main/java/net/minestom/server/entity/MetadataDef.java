@@ -2,6 +2,7 @@ package net.minestom.server.entity;
 
 import net.kyori.adventure.text.Component;
 import net.minestom.server.coordinate.Point;
+import net.minestom.server.coordinate.Quaternion;
 import net.minestom.server.coordinate.Vec;
 import net.minestom.server.entity.metadata.animal.*;
 import net.minestom.server.entity.metadata.animal.tameable.CatVariant;
@@ -61,8 +62,8 @@ public sealed class MetadataDef {
         public static final Entry<Integer> POSITION_ROTATION_INTERPOLATION_DURATION = index(2, Metadata::VarInt, 0);
         public static final Entry<Point> TRANSLATION = index(3, Metadata::Vector3, Vec.ZERO);
         public static final Entry<Point> SCALE = index(4, Metadata::Vector3, Vec.ONE);
-        public static final Entry<float[]> ROTATION_LEFT = index(5, Metadata::Quaternion, new float[]{0, 0, 0, 1});
-        public static final Entry<float[]> ROTATION_RIGHT = index(6, Metadata::Quaternion, new float[]{0, 0, 0, 1});
+        public static final Entry<Quaternion> ROTATION_LEFT = index(5, Metadata::Quaternion, Quaternion.IDENTITY);
+        public static final Entry<Quaternion> ROTATION_RIGHT = index(6, Metadata::Quaternion, Quaternion.IDENTITY);
         public static final Entry<Byte> BILLBOARD_CONSTRAINTS = index(7, Metadata::Byte, (byte) 0);
         public static final Entry<Integer> BRIGHTNESS_OVERRIDE = index(8, Metadata::VarInt, -1);
         public static final Entry<Float> VIEW_RANGE = index(9, Metadata::Float, 1f);
