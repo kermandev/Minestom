@@ -20,7 +20,7 @@ import java.util.function.Supplier;
  *                 MyClass::new
  *         );
  *         // Compared to writing a custom serializer:
- *         public static final NetworkBuffer.Type<MyClass> SERIALIZER = new NetworkBufferTypeImpl<>() {
+ *         public static final NetworkBuffer.Type<MyClass> SERIALIZER = new NetworkBuffer.Type<>() {
  *             @Override
  *             public void write(NetworkBuffer buffer, MyClass value) {
  *                 buffer.write(NetworkBuffer.INT, value.id());
@@ -166,7 +166,7 @@ public final class NetworkBufferTemplate {
      * @param <R>      the type of the value
      * @return the new template
      */
-    public static <R> Type<R> template(Supplier<R> supplier) {
+    public static <R> Type<R> template(Supplier<? extends R> supplier) {
         Objects.requireNonNull(supplier, "supplier");
         return new NetworkBuffer.Type<>() {
             @Override
