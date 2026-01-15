@@ -149,7 +149,7 @@ public final class NetworkBufferTemplate {
      * @return the new template
      */
     public static <R extends @UnknownNullability Object> Type<R> template(R value) {
-        return new NetworkBufferTypeImpl<>() {
+        return new NetworkBuffer.Type<>() {
             @Override
             public void write(NetworkBuffer buffer, R value) {
             }
@@ -173,7 +173,7 @@ public final class NetworkBufferTemplate {
      * @param <R>      the type of the value
      * @return the new template
      */
-    public static <R> Type<R> template(Supplier<? extends R> supplier) {
+    public static <R extends @UnknownNullability Object> Type<R> template(Supplier<? extends R> supplier) {
         Objects.requireNonNull(supplier, "supplier");
         return new NetworkBuffer.Type<>() {
             @Override
@@ -182,7 +182,7 @@ public final class NetworkBufferTemplate {
 
             @Override
             public R read(NetworkBuffer buffer) {
-                return Objects.requireNonNull(supplier.get(), "value");
+                return supplier.get();
             }
 
             @Override
