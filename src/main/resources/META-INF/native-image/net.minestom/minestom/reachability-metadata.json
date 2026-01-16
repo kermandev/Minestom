@@ -53,7 +53,15 @@
     },
     {
       "type": "java.lang.String",
-      "serializable": true
+      "serializable": true,
+      "methods": [
+        {
+          "name": "getBytesLength",
+          "parameterTypes": [
+            "java.nio.charset.Charset"
+          ]
+        }
+      ]
     },
     {
       "type": "java.lang.String[]"
@@ -61,6 +69,30 @@
     {
       "type": "java.lang.Throwable",
       "serializable": true
+    },
+    {
+      "type": "java.lang.foreign.MemorySegment",
+      "methods": [
+        {
+          "name": "copy",
+          "parameterTypes": [
+            "java.lang.String",
+            "java.nio.charset.Charset",
+            "int",
+            "java.lang.foreign.MemorySegment",
+            "long",
+            "int"
+          ]
+        },
+        {
+          "name": "getString",
+          "parameterTypes": [
+            "long",
+            "java.nio.charset.Charset",
+            "long"
+          ]
+        }
+      ]
     },
     {
       "type": "java.lang.reflect.RecordComponent"
@@ -199,6 +231,22 @@
       ]
     },
     {
+      "type": "net.minestom.server.network.packet.server.CachedPacket",
+      "fields": [
+        {
+          "name": "packet"
+        }
+      ]
+    },
+    {
+      "type": "net.minestom.server.network.packet.server.LazyPacket",
+      "fields": [
+        {
+          "name": "packet"
+        }
+      ]
+    },
+    {
       "type": "net.minestom.server.timer.TaskImpl",
       "fields": [
         {
@@ -263,14 +311,6 @@
         },
         {
           "name": "threadContentionMonitoringSupport"
-        }
-      ]
-    },
-    {
-      "type": "sun.misc.Unsafe",
-      "fields": [
-        {
-          "name": "theUnsafe"
         }
       ]
     },
