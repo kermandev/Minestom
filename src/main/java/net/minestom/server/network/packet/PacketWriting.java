@@ -132,9 +132,18 @@ public final class PacketWriting {
             ConnectionState state,
             T packet,
             int compressionThreshold) {
+        @SuppressWarnings("unchecked") // We assume that T's registry is tied to the state.
+        final PacketRegistry<T> registry = (PacketRegistry<T>) parser.stateRegistry(state);
+        return allocateTrimmedPacket(registry, packet, compressionThreshold);
+    }
+
+    public static <T> NetworkBuffer allocateTrimmedPacket(
+            PacketRegistry<T> registry,
+            T packet,
+            int compressionThreshold) {
         NetworkBuffer buffer = PacketVanilla.PACKET_POOL.get();
         try {
-            return allocateTrimmedPacket(buffer, parser, state, packet, compressionThreshold);
+            return allocateTrimmedPacket(buffer, registry, packet, compressionThreshold);
         } finally {
             PacketVanilla.PACKET_POOL.add(buffer);
         }
