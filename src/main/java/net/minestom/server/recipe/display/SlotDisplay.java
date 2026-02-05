@@ -15,7 +15,7 @@ import java.util.function.UnaryOperator;
 public sealed interface SlotDisplay extends ComponentHolder<SlotDisplay> {
 
     NetworkBuffer.Type<SlotDisplay> NETWORK_TYPE = SlotDisplayType.NETWORK_TYPE
-            .unionType(SlotDisplay::dataSerializer, SlotDisplay::slotDisplayToType);
+            .unionType(SlotDisplay::dataSerializer, SlotDisplay::slotDisplayToType, SlotDisplayType.values().length);
 
     record Empty() implements SlotDisplay {
         public static final Empty INSTANCE = new Empty();

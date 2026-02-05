@@ -15,7 +15,7 @@ import java.util.List;
 
 public sealed interface ConsumeEffect {
     NetworkBuffer.Type<ConsumeEffect> NETWORK_TYPE = ConsumeEffectType.NETWORK_TYPE
-            .unionType(ConsumeEffect::networkType, ConsumeEffect::consumeEffectToType);
+            .unionType(ConsumeEffect::networkType, ConsumeEffect::consumeEffectToType, ConsumeEffectType.values().length);
     StructCodec<ConsumeEffect> CODEC = ConsumeEffectType.CODEC
             .unionType(ConsumeEffect::codec, ConsumeEffect::consumeEffectToType);
 

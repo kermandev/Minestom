@@ -33,7 +33,7 @@ final class NetworkBufferDummy implements NetworkBuffer, NetworkBuffer.Direct {
     }
 
     @Override
-    public <T> T read(Type<T> type) throws IndexOutOfBoundsException {
+    public <T> T read(Reader<T> type) throws IndexOutOfBoundsException {
         assertDummy();
         return null;
     }
@@ -114,6 +114,11 @@ final class NetworkBufferDummy implements NetworkBuffer, NetworkBuffer.Direct {
     @Override
     public void resize(@Range(from = 0, to = Long.MAX_VALUE) long length) {
         assertDummy();
+    }
+
+    @Override
+    public void ensureWritable(@Range(from = 0, to = Long.MAX_VALUE) long length) throws IndexOutOfBoundsException {
+        // noop
     }
 
     @Override

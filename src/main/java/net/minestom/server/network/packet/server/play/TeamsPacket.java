@@ -24,7 +24,7 @@ public record TeamsPacket(String teamName, Action action) implements ServerPacke
 
     public static final NetworkBuffer.Type<TeamsPacket> SERIALIZER = NetworkBufferTemplate.template(
             STRING, TeamsPacket::teamName,
-            BYTE.unionType(Action::serializer, Action::id), TeamsPacket::action,
+            BYTE.unionType(Action::serializer, Action::id, 5), TeamsPacket::action,
             TeamsPacket::new
     );
 

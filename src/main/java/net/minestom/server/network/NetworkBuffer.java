@@ -101,7 +101,7 @@ public interface NetworkBuffer {
     Type<@Nullable Integer> OPTIONAL_VAR_INT = new NetworkBufferTypeImpl.OptionalVarIntType();
     Type<Integer> VAR_INT_3 = new NetworkBufferTypeImpl.VarInt3Type();
     Type<Long> VAR_LONG = new NetworkBufferTypeImpl.VarLongType();
-    Type<byte[]> RAW_BYTES = new NetworkBufferTypeImpl.RawBytesType(-1);
+    Type<byte[]> RAW_BYTES = new NetworkBufferTypeImpl.RawBytesType(NetworkBufferTypeImpl.RawBytesType.UNLIMITED);
     Type<String> STRING = new NetworkBufferTypeImpl.StringType();
     Type<Key> KEY = STRING.transform(Key::key, Key::asString);
     Type<String> STRING_TERMINATED = new NetworkBufferTypeImpl.StringTerminatedType();
@@ -437,7 +437,7 @@ public interface NetworkBuffer {
      * @return the smallest byte array to represent {@link T}
      */
     @Contract("_ ,_, _ -> new")
-    static <T extends @UnknownNullability Object> byte[] makeArray(Type<T> type, T value, @Nullable Registries registries) {
+    static <T extends @UnknownNullability Object> byte[] makeArray(Writer<T> type, T value, @Nullable Registries registries) {
         Objects.requireNonNull(type, "type");
         return NetworkBufferSegmentProvider.INSTANCE.makeArray(type, value, registries);
     }
@@ -454,7 +454,7 @@ public interface NetworkBuffer {
      * @return the smallest byte array to represent {@link T}
      */
     @Contract("_, _ -> new")
-    static <T extends @UnknownNullability Object> byte[] makeArray(Type<T> type, T value) {
+    static <T extends @UnknownNullability Object> byte[] makeArray(Writer<T> type, T value) {
         return makeArray(type, value, null);
     }
 
@@ -536,7 +536,7 @@ public interface NetworkBuffer {
      * @throws IndexOutOfBoundsException if the write index is out of bounds.
      */
     @Contract(mutates = "this")
-    default <T extends @UnknownNullability Object> void write(Type<T> type, T value) throws IndexOutOfBoundsException {
+    default <T extends @UnknownNullability Object> void write(Writer<T> type, T value) throws IndexOutOfBoundsException {
         type.write(this, value);
     }
 
@@ -549,7 +549,7 @@ public interface NetworkBuffer {
      * @throws IndexOutOfBoundsException if the read index is out of bounds.
      */
     @Contract(mutates = "this")
-    default <T extends @UnknownNullability Object> T read(Type<T> type) throws IndexOutOfBoundsException {
+    default <T extends @UnknownNullability Object> T read(Reader<T> type) throws IndexOutOfBoundsException {
         return type.read(this);
     }
 
@@ -565,7 +565,7 @@ public interface NetworkBuffer {
      * @throws IndexOutOfBoundsException if the index is out of bounds.
      */
     @Contract(mutates = "this")
-    default <T extends @UnknownNullability Object> void writeAt(long index, Type<T> type, T value) throws IndexOutOfBoundsException {
+    default <T extends @UnknownNullability Object> void writeAt(long index, Writer<T> type, T value) throws IndexOutOfBoundsException {
         final long oldWriteIndex = writeIndex();
         writeIndex(index);
         try {
@@ -587,7 +587,7 @@ public interface NetworkBuffer {
      * @throws IndexOutOfBoundsException if the index is out of bounds.
      */
     @Contract(mutates = "this", value = "_, _ -> new")
-    default <T extends @UnknownNullability Object> T readAt(long index, Type<T> type) throws IndexOutOfBoundsException {
+    default <T extends @UnknownNullability Object> T readAt(long index, Reader<T> type) throws IndexOutOfBoundsException {
         final long oldReadIndex = readIndex();
         readIndex(index);
         try {
@@ -672,9 +672,9 @@ public interface NetworkBuffer {
      * @return the bytes extracted
      */
     @Contract(mutates = "this", value = "_ -> new")
-    default byte[] extractReadBytes(Type<?> type) {
+    default byte[] extractReadBytes(Reader<?> type) {
         Objects.requireNonNull(type, "type");
-        return extractReadBytes(buffer -> buffer.read(type));
+        return extractReadBytes((Consumer<NetworkBuffer>) buffer -> buffer.read(type));
     }
 
     /**
@@ -697,7 +697,7 @@ public interface NetworkBuffer {
      * @return the bytes extracted
      */
     @Contract(mutates = "this", value = "_, _ -> new")
-    default <T extends @UnknownNullability Object> byte[] extractWrittenBytes(Type<T> type, T value) {
+    default <T extends @UnknownNullability Object> byte[] extractWrittenBytes(Writer<T> type, T value) {
         Objects.requireNonNull(type, "type");
         return extractWrittenBytes(buffer -> buffer.write(type, value));
     }
@@ -1170,17 +1170,8 @@ public interface NetworkBuffer {
     @Override
     int hashCode();
 
-    /**
-     * A type is a writer/reader for {@link T} it attempts to provide a bidirectional guarantee.
-     * Through {@link #write(NetworkBuffer, Object)} and {@link #read(NetworkBuffer)}.
-     * <br>
-     * Unlike {@link net.minestom.server.codec.StructCodec} types are always written linearly into a {@link NetworkBuffer}
-     * <br>
-     * You should use templates wherever possibly to ensure bidirectional serialization.
-     *
-     * @param <T> the type, nullable.
-     */
-    interface Type<T extends @UnknownNullability Object> {
+    @FunctionalInterface
+    interface Writer<T extends @UnknownNullability Object> {
         /**
          * Write {@link T} to a {@link NetworkBuffer}.
          *
@@ -1189,15 +1180,6 @@ public interface NetworkBuffer {
          */
         @Contract(mutates = "param1")
         void write(NetworkBuffer buffer, T value);
-
-        /**
-         * Read the value from the {@link NetworkBuffer}
-         *
-         * @param buffer the buffer
-         * @return {@link T}
-         */
-        @Contract(mutates = "param1")
-        T read(NetworkBuffer buffer);
 
         /**
          * Determines the sizeOf {@link T} using the registries provided.
@@ -1230,7 +1212,73 @@ public interface NetworkBuffer {
         default long sizeOf(T value) {
             return sizeOf(value, null);
         }
+    }
 
+    @FunctionalInterface
+    interface Reader<T extends @UnknownNullability Object> {
+        long UNSUPPORTED_BYTE_MAX = -1;
+
+        /**
+         * Read the value from the {@link NetworkBuffer}
+         *
+         * @param buffer the buffer
+         * @return {@link T}
+         */
+        @Contract(mutates = "param1")
+        T read(NetworkBuffer buffer);
+
+        /**
+         * Determines the upper bound number of bytes that this type could read.
+         * <br>
+         * Uses the re
+         *
+         * @param registries the registries
+         * @return the upper bound, or -1 if unsupported.
+         */
+        @Range(from = UNSUPPORTED_BYTE_MAX, to = Long.MAX_VALUE)
+        @SuppressWarnings("unused") // Dont change paramter name for something that can be overriden.
+        default long maxBytes(@Nullable Registries registries) {
+            return UNSUPPORTED_BYTE_MAX;
+        }
+
+        /**
+         * Determines the upper bound number of bytes that this type could read.
+         * <br>
+         * Consider overriding {@link #maxBytes(Registries)} instead if applicable.
+         * @return the max read bytes, or -1 if unsupported.
+         */
+        @Range(from = UNSUPPORTED_BYTE_MAX, to = Long.MAX_VALUE)
+        default long maxBytes() {
+            return maxBytes(null);
+        }
+
+        /**
+         *
+         * @param registries
+         * @return
+         */
+        @Range(from = 0, to = Long.MAX_VALUE)
+        default long minBytes(@Nullable Registries registries) {
+            return 0;
+        }
+
+        @Range(from = 0, to = Long.MAX_VALUE)
+        default long minBytes() {
+            return minBytes(null);
+        }
+    }
+
+    /**
+     * A type is a writer/reader for {@link T} it attempts to provide a bidirectional guarantee.
+     * Through {@link #write(NetworkBuffer, Object)} and {@link #read(NetworkBuffer)}.
+     * <br>
+     * Unlike {@link net.minestom.server.codec.StructCodec} types are always written linearly into a {@link NetworkBuffer}
+     * <br>
+     * You should use templates wherever possibly to ensure bidirectional serialization.
+     *
+     * @param <T> the type, nullable.
+     */
+    interface Type<T extends @UnknownNullability Object> extends Writer<T>, Reader<T> {
         /**
          * Transform the current type {@link T} to {@link S} and {@link S} to {@link T}.
          *
@@ -1350,6 +1398,21 @@ public interface NetworkBuffer {
         @Contract(pure = true, value = "_, _ -> new")
         default <R> Type<R> unionType(Function<T, NetworkBuffer.Type<? extends R>> serializers, Function<? super R, ? extends T> keyFunc) {
             return new NetworkBufferTypeImpl.UnionType<>(this, keyFunc, serializers);
+        }
+
+
+        /**
+         * Creates a union type for {@link T}, this allows you to map subtypes of {@link T} useful for sealed interfaces, you must supply the upperbound.
+         *
+         * @param serializers the map of {@link T} to the serializer
+         * @param keyFunc     the key to use from {@link R} into {@link T} into {@code serializers}
+         * @param <R>         the union type
+         * @return the new union type for {@link T} using {@link R}
+         */
+        @Contract(pure = true, value = "_, _, _ -> new")
+        default <R> Type<R> unionType(Function<T, NetworkBuffer.Type<? extends R>> serializers, Function<? super R, ? extends T> keyFunc, int entries) {
+            // This will be a more optimized call site in the future, Map.ofLazy
+            return unionType(serializers, keyFunc);
         }
 
         /**

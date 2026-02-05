@@ -11,7 +11,7 @@ import static net.minestom.server.network.NetworkBuffer.*;
 public record ClientInteractEntityPacket(int targetId, Type type, boolean sneaking) implements ClientPacket.Play {
     public static final NetworkBuffer.Type<ClientInteractEntityPacket> SERIALIZER = NetworkBufferTemplate.template(
             VAR_INT, ClientInteractEntityPacket::targetId,
-  /*VarInt*/BYTE.unionType(Type::serializer, Type::id), ClientInteractEntityPacket::type,
+  /*VarInt*/BYTE.unionType(Type::serializer, Type::id, 3), ClientInteractEntityPacket::type,
             BOOLEAN, ClientInteractEntityPacket::sneaking,
             ClientInteractEntityPacket::new
     );

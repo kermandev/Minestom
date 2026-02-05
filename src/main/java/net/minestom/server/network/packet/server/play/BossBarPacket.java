@@ -20,7 +20,7 @@ public record BossBarPacket(UUID uuid,
                             Action action) implements ServerPacket.Play, ServerPacket.ComponentHolding {
     public static final NetworkBuffer.Type<BossBarPacket> SERIALIZER = NetworkBufferTemplate.template(
             UUID, BossBarPacket::uuid,
-  /*VarInt*/BYTE.unionType(Action::serializer, Action::id), BossBarPacket::action,
+  /*VarInt*/BYTE.unionType(Action::serializer, Action::id, 6), BossBarPacket::action,
             BossBarPacket::new
     );
 

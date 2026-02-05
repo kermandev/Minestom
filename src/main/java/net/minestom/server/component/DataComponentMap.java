@@ -37,7 +37,7 @@ public sealed interface DataComponentMap extends DataComponent.Holder permits Da
     }
 
     /**
-     * Creates a network type for the given component type. For internal use only, get the value from the target component class.
+     * Creates a networkType type for the given component type. For internal use only, get the value from the target component class.
      */
     @ApiStatus.Internal
     static Codec<DataComponentMap> codec(
@@ -48,7 +48,7 @@ public sealed interface DataComponentMap extends DataComponent.Holder permits Da
     }
 
     /**
-     * Creates a network type for the given component type. For internal use only, get the value from the target component class.
+     * Creates a networkType type for the given component type. For internal use only, get the value from the target component class.
      */
     @ApiStatus.Internal
     static NetworkBuffer.Type<DataComponentMap> patchNetworkType(IntFunction<DataComponent<?>> idToType, boolean trusted) {
@@ -56,7 +56,7 @@ public sealed interface DataComponentMap extends DataComponent.Holder permits Da
     }
 
     /**
-     * Creates a network type for the given component type. For internal use only, get the value from the target component class.
+     * Creates a networkType type for the given component type. For internal use only, get the value from the target component class.
      */
     @ApiStatus.Internal
     static Codec<DataComponentMap> patchCodec(

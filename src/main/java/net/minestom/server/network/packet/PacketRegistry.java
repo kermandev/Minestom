@@ -20,14 +20,10 @@ import net.minestom.server.network.packet.server.configuration.*;
 import net.minestom.server.network.packet.server.login.*;
 import net.minestom.server.network.packet.server.play.*;
 import net.minestom.server.network.packet.server.status.ResponsePacket;
-import net.minestom.server.utils.ArrayUtils;
 import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.Unmodifiable;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 public interface PacketRegistry<T> {
     T create(int packetId, NetworkBuffer reader);
@@ -453,7 +449,18 @@ public interface PacketRegistry<T> {
 
     abstract sealed class PacketRegistryTemplate<T> implements PacketRegistry<T> {
         private final List<PacketInfo<? extends T>> packetsById;
-        private final Map<Class<? extends T>, PacketInfo<? extends T>> packetsByClass;
+        private final ClassValue<PacketInfo<? extends T>> packetsByClass = new ClassValue<>() {
+            @Override
+            protected PacketInfo<? extends T> computeValue(Class<?> type) {
+                for (PacketInfo<? extends T> packetInfo : packetsById) {
+                    if (packetInfo.packetClass() == type) {
+                        return packetInfo;
+                    }
+                }
+                // We throw here to not pollute the ClassValue
+                throw new IllegalStateException("Packet class %s cannot be sent in state %s_%s!".formatted(type.getSimpleName(), side().name(), state().name()));
+            }
+        };
 
         @SuppressWarnings("unchecked")
         @SafeVarargs
@@ -466,8 +473,8 @@ public interface PacketRegistry<T> {
                 packetInfoClasses[i] = entry.type();
                 packetInfos[i] = new PacketInfo<>(entry.type(), i, entry.serializer());
             }
+            assert Set.of(packetInfoClasses).size() == packetInfoClasses.length : "Duplicate packet class found!";
             this.packetsById = List.of(packetInfos);
-            this.packetsByClass = ArrayUtils.toMap(packetInfoClasses, packetInfos, suppliers.length);
             super();
         }
 
@@ -484,11 +491,7 @@ public interface PacketRegistry<T> {
 
         @Override
         public final PacketInfo<? extends T> packetInfo(Class<?> packetClass) {
-            final PacketInfo<? extends T> info = packetsByClass.get(packetClass);
-            if (info == null) {
-                throw new IllegalStateException("Packet type %s cannot be sent in state %s_%s!".formatted(packetClass.getSimpleName(), side().name(), state().name()));
-            }
-            return info;
+            return packetsByClass.get(packetClass);
         }
 
         @Override

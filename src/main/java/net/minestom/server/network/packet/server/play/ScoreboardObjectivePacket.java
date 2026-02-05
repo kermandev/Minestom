@@ -20,7 +20,7 @@ import static net.minestom.server.network.NetworkBuffer.*;
 public record ScoreboardObjectivePacket(String objectiveName, Mode mode) implements ServerPacket.Play, ServerPacket.ComponentHolding {
     public static final NetworkBuffer.Type<ScoreboardObjectivePacket> SERIALIZER = NetworkBufferTemplate.template(
             STRING, ScoreboardObjectivePacket::objectiveName,
-            BYTE.unionType(Mode::typeFromId, Mode::id), ScoreboardObjectivePacket::mode,
+            BYTE.unionType(Mode::typeFromId, Mode::id, 3), ScoreboardObjectivePacket::mode,
             ScoreboardObjectivePacket::new
     );
 

@@ -61,7 +61,7 @@ sealed abstract class NetworkBufferSegmentImpl implements NetworkBuffer, Network
     protected abstract @Nullable Arena arena();
 
     @Override
-    public final <T> void write(Type<T> type, @UnknownNullability T value) {
+    public final <T> void write(Writer<T> type, @UnknownNullability T value) {
         assertReadOnly();
         type.write(this, value);
     }

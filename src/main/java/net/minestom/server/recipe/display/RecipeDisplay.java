@@ -12,7 +12,7 @@ import java.util.function.UnaryOperator;
 
 public sealed interface RecipeDisplay extends ComponentHolder<RecipeDisplay> {
     NetworkBuffer.Type<RecipeDisplay> NETWORK_TYPE = RecipeDisplayType.NETWORK_TYPE
-            .unionType(RecipeDisplay::dataSerializer, RecipeDisplay::recipeDisplayToType);
+            .unionType(RecipeDisplay::dataSerializer, RecipeDisplay::recipeDisplayToType, RecipeDisplayType.values().length);
 
     record CraftingShapeless(
             List<SlotDisplay> ingredients,

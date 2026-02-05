@@ -69,7 +69,7 @@ public record TrackedWaypointPacket(
 
     public sealed interface Target {
         NetworkBuffer.Type<Target> NETWORK_TYPE = Type.NETWORK_TYPE
-                .unionType(Target::dataSerializer, Target::targetToType);
+                .unionType(Target::dataSerializer, Target::targetToType, Type.values().length);
 
         record Empty() implements Target {
             public static final Empty INSTANCE = new Empty();

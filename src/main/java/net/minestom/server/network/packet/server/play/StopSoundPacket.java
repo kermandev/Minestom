@@ -12,7 +12,7 @@ import static net.minestom.server.network.NetworkBuffer.*;
 
 public record StopSoundPacket(Action action) implements ServerPacket.Play {
     public static final NetworkBuffer.Type<StopSoundPacket> SERIALIZER = NetworkBufferTemplate.template(
-            BYTE.unionType(Action::serializer, Action::flag), StopSoundPacket::action,
+            BYTE.unionType(Action::serializer, Action::flag, 4), StopSoundPacket::action,
             StopSoundPacket::new
     );
 

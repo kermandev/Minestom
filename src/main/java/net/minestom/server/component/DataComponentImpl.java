@@ -17,7 +17,7 @@ import java.util.function.UnaryOperator;
 record DataComponentImpl<T>(
         int id,
         Key key,
-        @Nullable NetworkBuffer.Type<T> network,
+        @Nullable NetworkBuffer.Type<T> networkType,
         @Nullable Codec<T> codec,
         @Nullable UnaryOperator<T> freeze
 ) implements DataComponent<T> {
@@ -37,16 +37,6 @@ record DataComponentImpl<T>(
     }
 
     @Override
-    public boolean isSynced() {
-        return network != null;
-    }
-
-    @Override
-    public boolean isSerialized() {
-        return codec != null;
-    }
-
-    @Override
     public <D> Result<T> decode(Transcoder<D> coder, D value) {
         Check.notNull(codec, "{0} cannot be deserialized from Codec", this);
         return this.codec.decode(coder, value);
@@ -60,14 +50,14 @@ record DataComponentImpl<T>(
 
     @Override
     public T read(NetworkBuffer reader) {
-        Check.notNull(network, "{0} cannot be deserialized from network", this);
-        return network.read(reader);
+        Check.notNull(networkType, "{0} cannot be deserialized from networkType", this);
+        return networkType.read(reader);
     }
 
     @Override
     public void write(NetworkBuffer writer, T value) {
-        Check.notNull(network, "{0} cannot be serialized to network", this);
-        network.write(writer, value);
+        Check.notNull(networkType, "{0} cannot be serialized to networkType", this);
+        networkType.write(writer, value);
     }
 
     @Override

@@ -71,7 +71,7 @@ public record AttributeList(List<Modifier> modifiers) {
 
     public sealed interface Display {
         NetworkBuffer.Type<Display> NETWORK_TYPE = Type.NETWORK_TYPE
-                .unionType(Display::dataSerializer, Display::targetToType);
+                .unionType(Display::dataSerializer, Display::targetToType, Type.values().length);
         Codec<Display> CODEC = Type.CODEC.unionType(Display::codec, Display::targetToType);
 
         record Default() implements Display {

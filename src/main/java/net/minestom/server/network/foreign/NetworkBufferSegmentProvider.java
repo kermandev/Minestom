@@ -109,7 +109,7 @@ public final class NetworkBufferSegmentProvider {
      * @return the smallest byte array to represent {@link T}
      */
     @Contract("_ ,_, _ -> new")
-    public <T extends @UnknownNullability Object> byte[] makeArray(NetworkBuffer.Type<T> type, T value, @Nullable Registries registries) {
+    public <T extends @UnknownNullability Object> byte[] makeArray(NetworkBuffer.Writer<T> type, T value, @Nullable Registries registries) {
         try (Arena arena = Arena.ofConfined()) {
             NetworkBufferFactory factory = NetworkBufferFactory.resizeableFactory().arena(arena);
             factory = registries != null ? factory.registry(registries) : factory;
