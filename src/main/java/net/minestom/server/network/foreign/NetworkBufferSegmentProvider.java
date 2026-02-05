@@ -1,6 +1,7 @@
 package net.minestom.server.network.foreign;
 
 import net.minestom.server.ServerFlag;
+import net.minestom.server.codec.stream.StreamEncoder;
 import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.network.NetworkBufferFactory;
 import net.minestom.server.registry.Registries;
@@ -109,7 +110,7 @@ public final class NetworkBufferSegmentProvider {
      * @return the smallest byte array to represent {@link T}
      */
     @Contract("_ ,_, _ -> new")
-    public <T extends @UnknownNullability Object> byte[] makeArray(NetworkBuffer.Writer<T> type, T value, @Nullable Registries registries) {
+    public <T extends @UnknownNullability Object> byte[] makeArray(StreamEncoder<T> type, T value, @Nullable Registries registries) {
         try (Arena arena = Arena.ofConfined()) {
             NetworkBufferFactory factory = NetworkBufferFactory.resizeableFactory().arena(arena);
             factory = registries != null ? factory.registry(registries) : factory;

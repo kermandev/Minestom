@@ -1,7 +1,6 @@
 package net.minestom.server.network;
 
 import com.google.gson.JsonElement;
-import it.unimi.dsi.fastutil.bytes.ByteArrayList;
 import net.kyori.adventure.nbt.BinaryTag;
 import net.kyori.adventure.nbt.EndBinaryTag;
 import net.kyori.adventure.text.Component;
@@ -14,573 +13,23 @@ import net.minestom.server.coordinate.Pos;
 import net.minestom.server.coordinate.Vec;
 import net.minestom.server.registry.Registries;
 import net.minestom.server.registry.RegistryTranscoder;
-import net.minestom.server.utils.ArrayUtils;
-import net.minestom.server.utils.Either;
 import net.minestom.server.utils.MathUtils;
 import net.minestom.server.utils.json.JsonUtil;
 import net.minestom.server.utils.nbt.BinaryTagReader;
 import net.minestom.server.utils.nbt.BinaryTagWriter;
 import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.Nullable;
-import org.jetbrains.annotations.Range;
 
 import java.io.DataInputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.*;
-import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.function.UnaryOperator;
+import java.util.Objects;
+import java.util.UUID;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
 final class NetworkBufferTypeImpl {
     static final int SEGMENT_BITS = 0x7F;
     static final int CONTINUE_BIT = 0x80;
-
-    interface ConstantSizeType<T> extends Type<T> {
-        long size();
-
-        default long sizeOf(T value, @Nullable Registries ignored) {
-            return size();
-        }
-
-        @Override
-        default long minBytes(@Nullable Registries ignored) {
-            return size();
-        }
-
-        @Override
-        default long maxBytes(@Nullable Registries ignored) {
-            return size();
-        }
-    }
-
-    record BooleanType() implements ConstantSizeType<Boolean> {
-        @Override
-        public void write(NetworkBuffer buffer, Boolean value) {
-            buffer.ensureWritable(Byte.BYTES);
-            buffer.direct().putByte(buffer.writeIndex(), value ? (byte) 1 : (byte) 0);
-            buffer.advanceWrite(Byte.BYTES);
-        }
-
-        @Override
-        public Boolean read(NetworkBuffer buffer) {
-            buffer.ensureReadable(Byte.BYTES);
-            final byte value = buffer.direct().getByte(buffer.readIndex());
-            buffer.advanceRead(Byte.BYTES);
-            return value == 1;
-        }
-
-        @Override
-        public long size() {
-            return Byte.BYTES;
-        }
-    }
-
-    record ByteType() implements ConstantSizeType<Byte> {
-        @Override
-        public void write(NetworkBuffer buffer, Byte value) {
-            buffer.ensureWritable(Byte.BYTES);
-            buffer.direct().putByte(buffer.writeIndex(), value);
-            buffer.advanceWrite(Byte.BYTES);
-        }
-
-        @Override
-        public Byte read(NetworkBuffer buffer) {
-            buffer.ensureReadable(Byte.BYTES);
-            final byte value = buffer.direct().getByte(buffer.readIndex());
-            buffer.advanceRead(Byte.BYTES);
-            return value;
-        }
-
-        @Override
-        public long size() {
-            return Byte.BYTES;
-        }
-    }
-
-    record UnsignedByteType() implements ConstantSizeType<Short> {
-        @Override
-        public void write(NetworkBuffer buffer, Short value) {
-            buffer.ensureWritable(Byte.BYTES);
-            buffer.direct().putByte(buffer.writeIndex(), (byte) (value & 0xFF));
-            buffer.advanceWrite(Byte.BYTES);
-        }
-
-        @Override
-        public Short read(NetworkBuffer buffer) {
-            buffer.ensureReadable(Byte.BYTES);
-            final byte value = buffer.direct().getByte(buffer.readIndex());
-            buffer.advanceRead(Byte.BYTES);
-            return (short) (value & 0xFF);
-        }
-
-        @Override
-        public long size() {
-            return Byte.BYTES;
-        }
-    }
-
-    record ShortType() implements ConstantSizeType<Short> {
-        @Override
-        public void write(NetworkBuffer buffer, Short value) {
-            buffer.ensureWritable(Short.BYTES);
-            buffer.direct().putShort(buffer.writeIndex(), value);
-            buffer.advanceWrite(Short.BYTES);
-        }
-
-        @Override
-        public Short read(NetworkBuffer buffer) {
-            buffer.ensureReadable(Short.BYTES);
-            final short value = buffer.direct().getShort(buffer.readIndex());
-            buffer.advanceRead(Short.BYTES);
-            return value;
-        }
-
-        @Override
-        public long size() {
-            return Short.BYTES;
-        }
-    }
-
-    record UnsignedShortType() implements ConstantSizeType<Integer> {
-        @Override
-        public void write(NetworkBuffer buffer, Integer value) {
-            buffer.ensureWritable(Short.BYTES);
-            buffer.direct().putShort(buffer.writeIndex(), (short) (value & 0xFFFF));
-            buffer.advanceWrite(Short.BYTES);
-        }
-
-        @Override
-        public Integer read(NetworkBuffer buffer) {
-            buffer.ensureReadable(Short.BYTES);
-            final short value = buffer.direct().getShort(buffer.readIndex());
-            buffer.advanceRead(Short.BYTES);
-            return value & 0xFFFF;
-        }
-
-        @Override
-        public long size() {
-            return Short.BYTES;
-        }
-    }
-
-    record IntType() implements ConstantSizeType<Integer> {
-        @Override
-        public void write(NetworkBuffer buffer, Integer value) {
-            buffer.ensureWritable(Integer.BYTES);
-            buffer.direct().putInt(buffer.writeIndex(), value);
-            buffer.advanceWrite(Integer.BYTES);
-        }
-
-        @Override
-        public Integer read(NetworkBuffer buffer) {
-            buffer.ensureReadable(Integer.BYTES);
-            final int value = buffer.direct().getInt(buffer.readIndex());
-            buffer.advanceRead(Integer.BYTES);
-            return value;
-        }
-
-        @Override
-        public long size() {
-            return Integer.BYTES;
-        }
-    }
-
-    record UnsignedIntType() implements ConstantSizeType<Long> {
-        @Override
-        public void write(NetworkBuffer buffer, Long value) {
-            buffer.ensureWritable(Integer.BYTES);
-            buffer.direct().putInt(buffer.writeIndex(), (int) (value & 0xFFFFFFFFL));
-            buffer.advanceWrite(Integer.BYTES);
-        }
-
-        @Override
-        public Long read(NetworkBuffer buffer) {
-            buffer.ensureReadable(Integer.BYTES);
-            final int value = buffer.direct().getInt(buffer.readIndex());
-            buffer.advanceRead(Integer.BYTES);
-            return value & 0xFFFFFFFFL;
-        }
-
-        @Override
-        public long size() {
-            return Integer.BYTES;
-        }
-    }
-
-    record LongType() implements ConstantSizeType<Long> {
-        @Override
-        public void write(NetworkBuffer buffer, Long value) {
-            buffer.ensureWritable(Long.BYTES);
-            buffer.direct().putLong(buffer.writeIndex(), value);
-            buffer.advanceWrite(Long.BYTES);
-        }
-
-        @Override
-        public Long read(NetworkBuffer buffer) {
-            buffer.ensureReadable(Long.BYTES);
-            final long value = buffer.direct().getLong(buffer.readIndex());
-            buffer.advanceRead(Long.BYTES);
-            return value;
-        }
-
-        @Override
-        public long size() {
-            return Long.BYTES;
-        }
-    }
-
-    record FloatType() implements ConstantSizeType<Float> {
-        @Override
-        public void write(NetworkBuffer buffer, Float value) {
-            buffer.ensureWritable(Float.BYTES);
-            buffer.direct().putFloat(buffer.writeIndex(), value);
-            buffer.advanceWrite(Float.BYTES);
-        }
-
-        @Override
-        public Float read(NetworkBuffer buffer) {
-            buffer.ensureReadable(Float.BYTES);
-            final float value = buffer.direct().getFloat(buffer.readIndex());
-            buffer.advanceRead(Float.BYTES);
-            return value;
-        }
-
-        @Override
-        public long size() {
-            return Float.BYTES;
-        }
-    }
-
-    record DoubleType() implements ConstantSizeType<Double> {
-        @Override
-        public void write(NetworkBuffer buffer, Double value) {
-            buffer.ensureWritable(Double.BYTES);
-            buffer.direct().putDouble(buffer.writeIndex(), value);
-            buffer.advanceWrite(Double.BYTES);
-        }
-
-        @Override
-        public Double read(NetworkBuffer buffer) {
-            buffer.ensureReadable(Double.BYTES);
-            final double value = buffer.direct().getDouble(buffer.readIndex());
-            buffer.advanceRead(Double.BYTES);
-            return value;
-        }
-
-        @Override
-        public long size() {
-            return Double.BYTES;
-        }
-    }
-
-    record VarIntType() implements Type<Integer> {
-        static final int MIN_BYTES = 1;
-        static final int MAX_BYTES = 5;
-
-        static final int I_SHIFT = 7;
-
-        @Override
-        public void write(NetworkBuffer buffer, Integer boxed) {
-            int value = boxed;
-            if (buffer.writableBytes() < MAX_BYTES) {
-                // We need to do a more complex calculation to ensure we have size.
-                buffer.ensureWritable(sizeOf(value));
-            }
-            long index = buffer.writeIndex();
-            var nio = buffer.direct();
-            // Using a counted loop allows easier unrolling, we try to write 4 here
-            for (byte i = 0; i < MAX_BYTES - 1; i++) {
-                if ((value & ~SEGMENT_BITS) == 0) {
-                    break;
-                }
-                nio.putByte(index++, (byte) (value & SEGMENT_BITS | CONTINUE_BIT));
-                // Note: >>> means that the sign bit is shifted with the rest of the number rather than being left alone
-                value >>>= I_SHIFT;
-            }
-            // We are required to write at least one byte.
-            nio.putByte(index++, (byte) value);
-            buffer.advanceWrite(index - buffer.writeIndex());
-        }
-
-        @Override
-        public Integer read(NetworkBuffer buffer) {
-            int result = 0;
-            for (byte i = 0; i < MAX_BYTES; i++) {
-                byte b = BYTE.read(buffer);
-                result |= (b & SEGMENT_BITS) << (i * I_SHIFT);
-                if (b >= 0) {
-                    return result;
-                }
-            }
-            throw new IllegalStateException("VarInt is too big");
-        }
-
-        int sizeOf(int value) {
-            int normal = value | -(value >>> 31) | 1;
-            int bits = 32 - Integer.numberOfLeadingZeros(normal);
-            return (bits + 6) / 7;
-        }
-
-        @Override
-        public long sizeOf(Integer value, @Nullable Registries registries) {
-            return sizeOf(value.intValue());
-        }
-
-        @Override
-        public long minBytes(@Nullable Registries registries) {
-            return MIN_BYTES;
-        }
-
-        @Override
-        public long maxBytes(@Nullable Registries registries) {
-            return MAX_BYTES;
-        }
-    }
-
-    record OptionalVarIntType() implements Type<@Nullable Integer> {
-        @Override
-        public void write(NetworkBuffer buffer, @Nullable Integer value) {
-            buffer.write(VAR_INT, value == null ? 0 : value + 1);
-        }
-
-        @Override
-        public @Nullable Integer read(NetworkBuffer buffer) {
-            final int value = buffer.read(VAR_INT);
-            return value == 0 ? null : value - 1;
-        }
-
-        @Override
-        public long sizeOf(@Nullable Integer value) {
-            return VAR_INT.sizeOf(value == null ? 0 : value + 1);
-        }
-
-        @Override
-        public long minBytes(@Nullable Registries registries) {
-            return VAR_INT.minBytes(registries);
-        }
-
-        @Override
-        public long maxBytes(@Nullable Registries registries) {
-            return VAR_INT.maxBytes(registries);
-        }
-    }
-
-    record VarInt3Type() implements Type<Integer> {
-        static final int SIZE = 3;
-
-        @Override
-        public void write(NetworkBuffer buffer, Integer boxed) {
-            final int value = boxed;
-            // Value must be between 0 and 2^21
-            Check.argCondition(value < 0 || value >= (1 << 21), "VarInt3 out of bounds: {0}", value);
-            buffer.ensureWritable(SIZE);
-            final long startIndex = buffer.writeIndex();
-            var impl = buffer.direct();
-            impl.putByte(startIndex, (byte) ((value & SEGMENT_BITS) | CONTINUE_BIT));
-            impl.putByte(startIndex + 1, (byte) (((value >>> 7) & SEGMENT_BITS) | CONTINUE_BIT));
-            impl.putByte(startIndex + 2, (byte) (value >>> 14));
-            buffer.advanceWrite(SIZE);
-        }
-
-        @Override
-        public Integer read(NetworkBuffer buffer) {
-            // Ensure that the buffer can read other var-int sizes
-            // The optimization is mostly relevant for writing
-            return buffer.read(VAR_INT);
-        }
-
-        @Override
-        public long sizeOf(Integer value, @Nullable Registries registries) {
-            return SIZE;
-        }
-
-        @Override
-        public long minBytes(@Nullable Registries registries) {
-            return VAR_INT.minBytes(registries);
-        }
-
-        @Override
-        public long maxBytes(@Nullable Registries registries) {
-            return VAR_INT.maxBytes(registries);
-        }
-    }
-
-    record VarLongType() implements Type<Long> {
-        static final int MAX_BYTES = 10;
-        static final int MIN_BYTES = 1;
-
-        static final int I_SHIFT = 7;
-
-        @Override
-        public void write(NetworkBuffer buffer, Long boxed) {
-            long value = boxed;
-            if (buffer.writableBytes() < MAX_BYTES) {
-                // We need to do a more complex calculation to ensure we have size.
-                buffer.ensureWritable(sizeOf(value));
-            }
-            long index = buffer.writeIndex();
-            var nio = buffer.direct();
-            // Using a counted loop allows easier unrolling, we try to write 9 here
-            for (byte i = 0; i < MAX_BYTES - 1; i++) {
-                if ((value & ~SEGMENT_BITS) == 0) {
-                    break;
-                }
-                nio.putByte(index++, (byte) (value & SEGMENT_BITS | CONTINUE_BIT));
-                // Note: >>> means that the sign bit is shifted with the rest of the number rather than being left alone
-                value >>>= I_SHIFT;
-            }
-            // We are required to write at least one byte.
-            nio.putByte(index++, (byte) value);
-            buffer.advanceWrite(index - buffer.writeIndex());
-        }
-
-        @Override
-        public Long read(NetworkBuffer buffer) {
-            long result = 0;
-            for (byte i = 0; i < MAX_BYTES; i++) {
-                byte b = BYTE.read(buffer);
-                result |= (long) (b & SEGMENT_BITS) << (i * I_SHIFT);
-                if (b >= 0) {
-                    return result;
-                }
-            }
-            throw new IllegalStateException("VarLong is too big");
-        }
-
-        public long sizeOf(long value) {
-            long normal = value | -(value >>> 63) | 1;
-            int bits = 64 - Long.numberOfLeadingZeros(normal);
-            return (bits + 6) / 7;
-        }
-
-        @Override
-        public long sizeOf(Long value, @Nullable Registries registries) {
-            return sizeOf(value.longValue());
-        }
-
-        @Override
-        public long maxBytes() {
-            return MAX_BYTES;
-        }
-
-        @Override
-        public long minBytes(@Nullable Registries registries) {
-            return MIN_BYTES;
-        }
-    }
-
-    record RawBytesType(int length) implements Type<byte[]> {
-        static final int UNLIMITED = -1;
-
-        @Override
-        public void write(NetworkBuffer buffer, byte[] value) {
-            if (!isUnlimited() && value.length != length) {
-                throw new IllegalArgumentException("Invalid length: " + value.length + " != " + length);
-            }
-            final int length = value.length;
-            if (length == 0) return;
-            buffer.ensureWritable(length);
-            buffer.direct().putBytes(buffer.writeIndex(), value);
-            buffer.advanceWrite(length);
-        }
-
-        @Override
-        public byte[] read(NetworkBuffer buffer) {
-            long length = isUnlimited() ? buffer.readableBytes() : this.length;
-            if (length == 0) return new byte[0];
-            buffer.ensureReadable(length);
-            final int arrayLength = Math.toIntExact(length);
-            final byte[] bytes = new byte[arrayLength];
-            buffer.direct().getBytes(buffer.readIndex(), bytes);
-            buffer.advanceRead(arrayLength);
-            return bytes;
-        }
-
-        boolean isUnlimited() {
-            return length == UNLIMITED;
-        }
-
-        @Override
-        public long sizeOf(byte[] value, @Nullable Registries registries) {
-            return isUnlimited() ? value.length : length;
-        }
-
-        // We can read the whole array.
-        @Override
-        public long maxBytes(@Nullable Registries registries) {
-            return isUnlimited() ? Integer.MAX_VALUE : length;
-        }
-
-        @Override
-        public long minBytes(@Nullable Registries registries) {
-            return isUnlimited() ? 0 : length;
-        }
-    }
-
-    record StringType() implements Type<String> {
-        @Override
-        public void write(NetworkBuffer buffer, String value) {
-            final byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
-            buffer.write(BYTE_ARRAY, bytes);
-        }
-
-        @Override
-        public String read(NetworkBuffer buffer) {
-            final int length = buffer.read(VAR_INT);
-            buffer.ensureReadable(length);
-            String string = buffer.direct().getString(buffer.readIndex(), length);
-            buffer.advanceRead(length);
-            return string;
-        }
-
-        //TODO sizeOf, required JDK 27, or a custom UTF8 sizeOf
-
-        @Override
-        public long minBytes(@Nullable Registries registries) {
-            return BYTE_ARRAY.minBytes(registries);
-        }
-
-        @Override
-        public long maxBytes(@Nullable Registries registries) {
-            return BYTE_ARRAY.maxBytes(registries);
-        }
-    }
-
-    record StringTerminatedType() implements Type<String> {
-        @Override
-        public void write(NetworkBuffer buffer, String value) {
-            final byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
-            final int length = bytes.length + 1;
-            buffer.ensureWritable(length);
-            var impl = buffer.direct();
-            impl.putBytes(buffer.writeIndex(), bytes);
-            impl.putByte(buffer.writeIndex() + bytes.length, (byte) 0); // null terminator
-            buffer.advanceWrite(length);
-        }
-
-        @Override
-        public String read(NetworkBuffer buffer) {
-            ByteArrayList bytes = new ByteArrayList();
-            byte b;
-            while ((b = buffer.read(BYTE)) != 0) {
-                bytes.add(b);
-            }
-            return new String(bytes.toByteArray(), StandardCharsets.UTF_8);
-        }
-
-        @Override
-        public long minBytes(@Nullable Registries registries) {
-            return BYTE.minBytes(registries);
-        }
-
-        @Override
-        public long maxBytes(@Nullable Registries registries) {
-            return RAW_BYTES.maxBytes(registries);
-        }
-    }
 
     record NbtType() implements Type<BinaryTag> {
         static final NbtType TYPE = new NbtType();
@@ -658,21 +107,6 @@ final class NetworkBufferTypeImpl {
             final int z = (int) (value << 26 >> 38);
             return new BlockVec(x, y, z);
         }
-
-        @Override
-        public long sizeOf(Point value, @Nullable Registries registries) {
-            return LONG.maxBytes();
-        }
-
-        @Override
-        public long maxBytes(@Nullable Registries registries) {
-            return LONG.maxBytes();
-        }
-
-        @Override
-        public long minBytes(@Nullable Registries registries) {
-            return LONG.minBytes();
-        }
     }
 
     record JsonComponentType() implements Type<Component> {
@@ -695,21 +129,9 @@ final class NetworkBufferTypeImpl {
             final JsonElement json = JsonUtil.fromJson(buffer.read(STRING));
             return Codec.COMPONENT.decode(coder, json).orElseThrow();
         }
-
-        // Use default sizeOf
-
-        @Override
-        public long maxBytes(@Nullable Registries registries) {
-            return STRING.maxBytes(registries);
-        }
-
-        @Override
-        public long minBytes(@Nullable Registries registries) {
-            return STRING.minBytes(registries);
-        }
     }
 
-    record UUIDType() implements ConstantSizeType<UUID> {
+    record UUIDType() implements Type<UUID> {
         @Override
         public void write(NetworkBuffer buffer, java.util.UUID value) {
             buffer.write(LONG, value.getMostSignificantBits());
@@ -722,14 +144,9 @@ final class NetworkBufferTypeImpl {
             final long leastSignificantBits = buffer.read(LONG);
             return new UUID(mostSignificantBits, leastSignificantBits);
         }
-
-        @Override
-        public long size() {
-            return LONG.minBytes() + LONG.minBytes();
-        }
     }
 
-    record PosType() implements ConstantSizeType<Pos> {
+    record PosType() implements Type<Pos> {
         @Override
         public void write(NetworkBuffer buffer, Pos value) {
             buffer.write(DOUBLE, value.x());
@@ -748,11 +165,6 @@ final class NetworkBufferTypeImpl {
             final float pitch = buffer.read(FLOAT);
             return new Pos(x, y, z, yaw, pitch);
         }
-
-        @Override
-        public long size() {
-            return DOUBLE.minBytes() + DOUBLE.minBytes() + DOUBLE.minBytes() + FLOAT.minBytes() + FLOAT.minBytes();
-        }
     }
 
     record ByteArrayType() implements Type<byte[]> {
@@ -770,21 +182,6 @@ final class NetworkBufferTypeImpl {
             Check.argCondition(length > remaining, "String is too long (length: {0}, readable: {1})", length, remaining);
             return buffer.read(FixedRawBytes(length));
         }
-
-        @Override
-        public long sizeOf(byte[] value, @Nullable Registries registries) {
-            return VAR_INT.sizeOf(value.length) + RAW_BYTES.sizeOf(value);
-        }
-
-        @Override
-        public long minBytes(@Nullable Registries registries) {
-            return VAR_INT.minBytes(registries);
-        }
-
-        @Override
-        public long maxBytes(@Nullable Registries registries) {
-            return RAW_BYTES.maxBytes(registries); // FixedRawBytes uses this length, but we don't know that yet.
-        }
     }
 
     record LongArrayType() implements Type<long[]> {
@@ -800,21 +197,6 @@ final class NetworkBufferTypeImpl {
             final long[] longs = new long[length];
             for (int i = 0; i < length; i++) longs[i] = buffer.read(LONG);
             return longs;
-        }
-
-        @Override
-        public long sizeOf(long[] value, @Nullable Registries registries) {
-            return VAR_INT.sizeOf(value.length) + (long) value.length * LONG.maxBytes();
-        }
-
-        @Override
-        public long minBytes(@Nullable Registries registries) {
-            return VAR_INT.minBytes(registries);
-        }
-
-        @Override
-        public long maxBytes(@Nullable Registries registries) {
-            return VAR_INT.maxBytes() + Integer.MAX_VALUE * LONG.maxBytes();
         }
     }
 
@@ -832,18 +214,6 @@ final class NetworkBufferTypeImpl {
             for (int i = 0; i < length; i++) ints[i] = buffer.read(VAR_INT);
             return ints;
         }
-
-        // Use default sizeOf impl
-
-        @Override
-        public long minBytes(@Nullable Registries registries) {
-            return VAR_INT.minBytes(registries);
-        }
-
-        @Override
-        public long maxBytes(@Nullable Registries registries) {
-            return VAR_INT.maxBytes(registries) + Integer.MAX_VALUE * VAR_INT.maxBytes(registries);
-        }
     }
 
     record VarLongArrayType() implements Type<long[]> {
@@ -860,22 +230,9 @@ final class NetworkBufferTypeImpl {
             for (int i = 0; i < length; i++) longs[i] = buffer.read(VAR_LONG);
             return longs;
         }
-
-        // Use default sizeOf impl
-
-
-        @Override
-        public long minBytes(@Nullable Registries registries) {
-            return VAR_INT.minBytes(registries);
-        }
-
-        @Override
-        public long maxBytes(@Nullable Registries registries) {
-            return VAR_INT.maxBytes(registries) + Integer.MAX_VALUE * VAR_LONG.maxBytes(registries);
-        }
     }
 
-    record Vector3Type() implements ConstantSizeType<Point> {
+    record Vector3Type() implements Type<Point> {
         @Override
         public void write(NetworkBuffer buffer, Point value) {
             buffer.write(FLOAT, (float) value.x());
@@ -890,14 +247,9 @@ final class NetworkBufferTypeImpl {
             final float z = buffer.read(FLOAT);
             return new Vec(x, y, z);
         }
-
-        @Override
-        public long size() {
-            return Float.BYTES * 3;
-        }
     }
 
-    record Vector3DType() implements ConstantSizeType<Point> {
+    record Vector3DType() implements Type<Point> {
         @Override
         public void write(NetworkBuffer buffer, Point value) {
             buffer.write(DOUBLE, value.x());
@@ -911,11 +263,6 @@ final class NetworkBufferTypeImpl {
             final double y = buffer.read(DOUBLE);
             final double z = buffer.read(DOUBLE);
             return new Vec(x, y, z);
-        }
-
-        @Override
-        public long size() {
-            return Double.BYTES * 3;
         }
     }
 
@@ -934,21 +281,9 @@ final class NetworkBufferTypeImpl {
             final int z = buffer.read(VAR_INT);
             return new BlockVec(x, y, z);
         }
-
-        // Use default sizeOf impl
-
-        @Override
-        public long minBytes(@Nullable Registries registries) {
-            return VAR_INT.maxBytes(registries) + VAR_INT.maxBytes(registries) + VAR_INT.maxBytes(registries);
-        }
-
-        @Override
-        public long maxBytes(@Nullable Registries registries) {
-            return VAR_INT.maxBytes(registries) + VAR_INT.maxBytes(registries) + VAR_INT.maxBytes(registries);
-        }
     }
 
-    record Vector3BType() implements ConstantSizeType<Point> {
+    record Vector3BType() implements Type<Point> {
         @Override
         public void write(NetworkBuffer buffer, Point value) {
             buffer.write(BYTE, (byte) value.x());
@@ -963,14 +298,11 @@ final class NetworkBufferTypeImpl {
             final byte z = buffer.read(BYTE);
             return new BlockVec(x, y, z);
         }
-
-        @Override
-        public long size() {
-            return Byte.BYTES * 3;
-        }
     }
 
     record LpVector3Type() implements Type<Vec> {
+        public static final double ABS_MAX_VALUE = 1.7179869183E10;
+        public static final double ABS_MIN_VALUE = 3.051944088384301E-5;
         private static final int DATA_BITS_MASK = 0b111111111111111;
         private static final double MAX_QUANTIZED_VALUE = 32766.0;
         private static final int SCALE_BITS_MASK = 0b11;
@@ -978,8 +310,18 @@ final class NetworkBufferTypeImpl {
         private static final int X_OFFSET = 3;
         private static final int Y_OFFSET = 18;
         private static final int Z_OFFSET = 33;
-        public static final double ABS_MAX_VALUE = 1.7179869183E10;
-        public static final double ABS_MIN_VALUE = 3.051944088384301E-5;
+
+        private static double sanitize(double value) {
+            return Double.isNaN(value) ? 0.0 : Math.clamp(value, -ABS_MAX_VALUE, ABS_MAX_VALUE);
+        }
+
+        private static long pack(double value) {
+            return Math.round((value * 0.5 + 0.5) * MAX_QUANTIZED_VALUE);
+        }
+
+        private static double unpack(long value) {
+            return Math.min((double) (value & DATA_BITS_MASK), MAX_QUANTIZED_VALUE) * 2.0 / MAX_QUANTIZED_VALUE - 1.0;
+        }
 
         @Override
         public void write(NetworkBuffer buffer, Vec value) {
@@ -1022,31 +364,9 @@ final class NetworkBufferTypeImpl {
                 );
             }
         }
-
-        private static double sanitize(double value) {
-            return Double.isNaN(value) ? 0.0 : Math.clamp(value, -ABS_MAX_VALUE, ABS_MAX_VALUE);
-        }
-
-        private static long pack(double value) {
-            return Math.round((value * 0.5 + 0.5) * MAX_QUANTIZED_VALUE);
-        }
-
-        private static double unpack(long value) {
-            return Math.min((double) (value & DATA_BITS_MASK), MAX_QUANTIZED_VALUE) * 2.0 / MAX_QUANTIZED_VALUE - 1.0;
-        }
-
-        @Override
-        public long minBytes(@Nullable Registries registries) {
-            return UNSIGNED_BYTE.minBytes(registries);
-        }
-
-        @Override
-        public long maxBytes(@Nullable Registries registries) {
-            return UNSIGNED_BYTE.maxBytes(registries) + UNSIGNED_BYTE.maxBytes(registries) + UNSIGNED_INT.maxBytes(registries) + VAR_INT.maxBytes(registries);
-        }
     }
 
-    record QuaternionType() implements ConstantSizeType<float[]> {
+    record QuaternionType() implements Type<float[]> {
         @Override
         public void write(NetworkBuffer buffer, float[] value) {
             buffer.write(FLOAT, value[0]);
@@ -1063,110 +383,9 @@ final class NetworkBufferTypeImpl {
             final float w = buffer.read(FLOAT);
             return new float[]{x, y, z, w};
         }
-
-        @Override
-        public long size() {
-            return FLOAT.minBytes() * 4;
-        }
     }
 
     // Combinators
-
-    record EnumSetType<E extends Enum<E>>(Class<E> enumType,
-                                          E[] values) implements ConstantSizeType<EnumSet<E>> {
-        public EnumSetType {
-            Objects.requireNonNull(enumType, "enumType");
-            Objects.requireNonNull(values, "values");
-        }
-
-        @Override
-        public void write(NetworkBuffer buffer, EnumSet<E> value) {
-            BitSet bitSet = new BitSet(values.length);
-            for (int i = 0; i < values.length; ++i) {
-                bitSet.set(i, value.contains(values[i]));
-            }
-            buffer.write(FixedBitSet(values.length), bitSet);
-        }
-
-        @Override
-        public EnumSet<E> read(NetworkBuffer buffer) {
-            final BitSet bitSet = buffer.read(FixedBitSet(values.length));
-            EnumSet<E> enumSet = EnumSet.noneOf(enumType);
-            for (int i = 0; i < values.length; ++i) {
-                if (bitSet.get(i)) {
-                    enumSet.add(values[i]);
-                }
-            }
-            return enumSet;
-        }
-
-        @Override
-        public long size() {
-            return FixedBitSet(values.length).minBytes();
-        }
-    }
-
-    record FixedBitSetType(int length) implements ConstantSizeType<BitSet> {
-        public FixedBitSetType {
-            Check.argCondition(length < 0, "Length is negative found {0}", length);
-        }
-
-        @Override
-        public void write(NetworkBuffer buffer, BitSet value) {
-            if (value.length() > length) {
-                throw new IllegalArgumentException("BitSet is larger than expected size (" + value.length() + ">" + length + ")");
-            }
-            final int size = (int) size();
-            final byte[] array = value.toByteArray();
-            buffer.write(RAW_BYTES, Arrays.copyOf(array, size));
-        }
-
-        @Override
-        public BitSet read(NetworkBuffer buffer) {
-            final byte[] array = buffer.read(FixedRawBytes((int) size()));
-            return BitSet.valueOf(array);
-        }
-
-        @Override
-        public long size() {
-            return (length + 7) / Long.BYTES;
-        }
-    }
-
-    record OptionalType<T extends @Nullable Object>(Type<T> parent) implements Type<T> {
-        public OptionalType {
-            Objects.requireNonNull(parent, "parent");
-        }
-
-        @Override
-        public void write(NetworkBuffer buffer, @Nullable T value) {
-            buffer.write(BOOLEAN, value != null);
-            if (value != null) buffer.write(parent, value);
-        }
-
-        @Override
-        public @Nullable T read(NetworkBuffer buffer) {
-            return buffer.read(BOOLEAN) ? buffer.read(parent) : null;
-        }
-
-        @Override
-        public long sizeOf(T value, @Nullable Registries registries) {
-            if (value == null) return BOOLEAN.sizeOf(false, registries);
-            return BOOLEAN.sizeOf(true, registries) + parent.sizeOf(value, registries);
-        }
-
-        @Override
-        public long minBytes(@Nullable Registries registries) {
-            return BOOLEAN.minBytes(registries) + parent.minBytes(registries);
-        }
-
-        @Override
-        public long maxBytes(@Nullable Registries registries) {
-            long parentMax = parent.maxBytes(registries);
-            if (parentMax == UNSUPPORTED_BYTE_MAX) return UNSUPPORTED_BYTE_MAX;
-            return BOOLEAN.maxBytes(registries) + parentMax;
-        }
-    }
 
     record LengthPrefixedType<T>(Type<T> parent, int maxLength) implements Type<T> {
         public LengthPrefixedType {
@@ -1192,100 +411,6 @@ final class NetworkBufferTypeImpl {
             Check.argCondition(buffer.readableBytes() != availableBytes - length, "Value is too short (length: {0}, available: {1})", length, availableBytes);
 
             return value;
-        }
-
-        @Override
-        public long minBytes(@Nullable Registries registries) {
-            return BYTE_ARRAY.minBytes(registries);
-        }
-
-        @Override
-        public long maxBytes(@Nullable Registries registries) {
-            return BYTE_ARRAY.maxBytes(registries);
-        }
-    }
-
-    static final class LazyType<T> implements Type<T> {
-        private final Supplier<Type<T>> supplier;
-        private volatile @Nullable Type<T> type;
-
-        public LazyType(Supplier<Type<T>> supplier) {
-            this.supplier = Objects.requireNonNull(supplier, "supplier");
-        }
-
-        @Override
-        public void write(NetworkBuffer buffer, T value) {
-            type().write(buffer, value);
-        }
-
-        @Override
-        public T read(NetworkBuffer buffer) {
-            return type().read(buffer);
-        }
-
-        private Type<T> type() {
-            Type<T> type = this.type;
-            if (type == null) {
-                synchronized (this) {
-                    if ((type = this.type) == null) {
-                        type = this.type = Objects.requireNonNull(supplier.get(), "type");
-                    }
-                }
-            }
-            return type;
-        }
-
-        @Override
-        public long sizeOf(T value, @Nullable Registries registries) {
-            return type().sizeOf(value, registries);
-        }
-
-        @Override
-        public long minBytes(@Nullable Registries registries) {
-            return type().minBytes(registries);
-        }
-
-        @Override
-        public long maxBytes(@Nullable Registries registries) {
-            return type().maxBytes(registries);
-        }
-    }
-
-    static final class RecursiveType<T> implements Type<T> {
-        private final Type<T> delegate;
-
-        public RecursiveType(UnaryOperator<Type<T>> supplier) {
-            Objects.requireNonNull(supplier, "supplier");
-            this.delegate = Objects.requireNonNull(supplier.apply(this), "delegate");
-        }
-
-        @Override
-        public void write(NetworkBuffer buffer, T value) {
-            delegate.write(buffer, value);
-        }
-
-        @Override
-        public T read(NetworkBuffer buffer) {
-            return delegate.read(buffer);
-        }
-
-        public Type<T> delegate() {
-            return this.delegate;
-        }
-
-        @Override
-        public long sizeOf(T value, @Nullable Registries registries) {
-            return delegate.sizeOf(value, registries);
-        }
-
-        @Override
-        public long minBytes(@Nullable Registries registries) {
-            return delegate().minBytes();
-        }
-
-        @Override
-        public long maxBytes(@Nullable Registries registries) {
-            return delegate().maxBytes();
         }
     }
 
@@ -1315,244 +440,6 @@ final class NetworkBufferTypeImpl {
                 case Result.Error(String message) -> throw new IllegalArgumentException("Invalid NBT tag: " + message);
             };
         }
-
-        @Override
-        public long minBytes(@Nullable Registries registries) {
-            return NBT.minBytes(registries);
-        }
-
-        @Override
-        public long maxBytes(@Nullable Registries registries) {
-            return NBT.maxBytes(registries);
-        }
-    }
-
-    record EitherType<L, R>(
-            Type<L> left,
-            Type<R> right
-    ) implements Type<Either<L, R>> {
-        public EitherType {
-            Objects.requireNonNull(left, "left");
-            Objects.requireNonNull(right, "right");
-        }
-
-        @Override
-        public void write(NetworkBuffer buffer, Either<L, R> value) {
-            switch (value) {
-                case Either.Left(L leftValue) -> {
-                    buffer.write(BOOLEAN, true);
-                    buffer.write(left, leftValue);
-                }
-                case Either.Right(R rightValue) -> {
-                    buffer.write(BOOLEAN, false);
-                    buffer.write(right, rightValue);
-                }
-            }
-        }
-
-        @Override
-        public Either<L, R> read(NetworkBuffer buffer) {
-            if (buffer.read(BOOLEAN))
-                return Either.left(buffer.read(left));
-            return Either.right(buffer.read(right));
-        }
-
-        @Override
-        public long sizeOf(Either<L, R> value, @Nullable Registries registries) {
-            return switch (value) {
-                case Either.Left(L leftValue) ->
-                        BOOLEAN.sizeOf(true, registries) + left().sizeOf(leftValue, registries);
-                case Either.Right(R rightValue) ->
-                        BOOLEAN.sizeOf(false, registries) + right().sizeOf(rightValue, registries);
-            };
-        }
-    }
-
-    record TransformType<T, S>(Type<T> parent, Function<T, S> to,
-                               Function<S, T> from) implements Type<S> {
-        public TransformType {
-            Objects.requireNonNull(parent, "parent");
-            Objects.requireNonNull(to, "to");
-            Objects.requireNonNull(from, "from");
-        }
-
-        @Override
-        public void write(NetworkBuffer buffer, S value) {
-            parent.write(buffer, from.apply(value));
-        }
-
-        @Override
-        public S read(NetworkBuffer buffer) {
-            return to.apply(parent.read(buffer));
-        }
-
-        @Override
-        public long sizeOf(S value) {
-            return parent().sizeOf(from.apply(value));
-        }
-
-        @Override
-        public @Range(from = 0, to = Long.MAX_VALUE) long minBytes(@Nullable Registries registries) {
-            return parent().minBytes(registries);
-        }
-
-        @Override
-        public @Range(from = 0, to = Long.MAX_VALUE) long maxBytes(@Nullable Registries registries) {
-            return parent().maxBytes(registries);
-        }
-    }
-
-    record MapType<K, V>(Type<K> parent, Type<V> valueType,
-                         int maxSize) implements Type<Map<K, V>> {
-        public MapType {
-            Objects.requireNonNull(parent, "parent");
-            Objects.requireNonNull(valueType, "valueType");
-            Check.argCondition(maxSize < 0, "Max size is negative found {0}", maxSize);
-        }
-
-        @Override
-        public void write(NetworkBuffer buffer, Map<K, V> map) {
-            buffer.write(VAR_INT, map.size());
-            for (Map.Entry<K, V> entry : map.entrySet()) {
-                buffer.write(parent, entry.getKey());
-                buffer.write(valueType, entry.getValue());
-            }
-        }
-
-        @SuppressWarnings("unchecked")
-        @Override
-        public Map<K, V> read(NetworkBuffer buffer) {
-            final int size = buffer.read(VAR_INT);
-            Check.argCondition(size > maxSize, "Map size ({0}) is higher than the maximum allowed size ({1})", size, maxSize);
-            K[] keys = (K[]) new Object[size];
-            V[] values = (V[]) new Object[size];
-            for (int i = 0; i < size; i++) {
-                keys[i] = buffer.read(parent);
-                values[i] = buffer.read(valueType);
-            }
-            return ArrayUtils.toMap(keys, values, size);
-        }
-
-        @Override
-        public long minBytes(@Nullable Registries registries) {
-            return VAR_INT.minBytes(registries);
-        }
-
-        @Override
-        public long maxBytes(@Nullable Registries registries) {
-            return VAR_INT.sizeOf(maxSize, registries) + valueType.maxBytes(registries) * maxSize + parent.maxBytes(registries) * maxSize;
-        }
-    }
-
-    record ListType<T>(Type<T> parent, int maxSize) implements Type<List<T>> {
-        public ListType {
-            Objects.requireNonNull(parent, "parent");
-            Check.argCondition(maxSize < 0, "Max size is negative found {0}", maxSize);
-        }
-
-        @Override
-        public void write(NetworkBuffer buffer, @Nullable List<T> values) {
-            if (values == null) {
-                buffer.write(BYTE, (byte) 0);
-                return;
-            }
-            buffer.write(VAR_INT, values.size());
-            for (T value : values) buffer.write(parent, value);
-        }
-
-        @SuppressWarnings("unchecked")
-        @Override
-        public List<T> read(NetworkBuffer buffer) {
-            final int size = buffer.read(VAR_INT);
-            Check.argCondition(size > maxSize, "Collection size ({0}) is higher than the maximum allowed size ({1})", size, maxSize);
-            T[] values = (T[]) new Object[size];
-            for (int i = 0; i < size; i++) values[i] = buffer.read(parent);
-            return List.of(values);
-        }
-
-        @Override
-        public @Range(from = 0, to = Long.MAX_VALUE) long minBytes(@Nullable Registries registries) {
-            return VAR_INT.minBytes(registries);
-        }
-
-        @Override
-        public @Range(from = UNSUPPORTED_BYTE_MAX, to = Long.MAX_VALUE) long maxBytes(@Nullable Registries registries) {
-            return VAR_INT.sizeOf(maxSize, registries) + parent.maxBytes(registries) * maxSize;
-        }
-    }
-
-    record SetType<T>(Type<T> parent, int maxSize) implements Type<Set<T>> {
-        public SetType {
-            Objects.requireNonNull(parent, "parent");
-            Check.argCondition(maxSize < 0, "Max size is negative found {0}", maxSize);
-        }
-
-        @Override
-        public void write(NetworkBuffer buffer, @Nullable Set<T> values) {
-            if (values == null) {
-                buffer.write(BYTE, (byte) 0);
-                return;
-            }
-            buffer.write(VAR_INT, values.size());
-            for (T value : values) buffer.write(parent, value);
-        }
-
-        @SuppressWarnings("unchecked")
-        @Override
-        public Set<T> read(NetworkBuffer buffer) {
-            final int size = buffer.read(VAR_INT);
-            Check.argCondition(size > maxSize, "Collection size ({0}) is higher than the maximum allowed size ({1})", size, maxSize);
-            T[] values = (T[]) new Object[size];
-            for (int i = 0; i < size; i++) values[i] = buffer.read(parent);
-            return Set.of(values);
-        }
-
-        @Override
-        public @Range(from = 0, to = Long.MAX_VALUE) long minBytes(@Nullable Registries registries) {
-            return VAR_INT.minBytes(registries);
-        }
-
-        @Override
-        public @Range(from = UNSUPPORTED_BYTE_MAX, to = Long.MAX_VALUE) long maxBytes(@Nullable Registries registries) {
-            return VAR_INT.sizeOf(maxSize, registries) + parent.maxBytes(registries) * maxSize;
-        }
-    }
-
-    record UnionType<T, K>(
-            Type<K> keyType, Function<? super T, ? extends K> keyFunc,
-            Function<K, NetworkBuffer.@Nullable Type<? extends T>> serializers
-    ) implements Type<T> {
-        public UnionType {
-            Objects.requireNonNull(keyType, "keyType");
-            Objects.requireNonNull(keyFunc, "keyFunc");
-            Objects.requireNonNull(serializers, "serializers");
-        }
-
-        @SuppressWarnings("unchecked") // Much nicer than using the correct wildcard type for returns, pretty much ensuring T has subtypes already.
-        @Override
-        public void write(NetworkBuffer buffer, T value) {
-            final K key = keyFunc.apply(value);
-            buffer.write(keyType, key);
-            var serializer = serializers.apply(key);
-            if (serializer == null)
-                throw new UnsupportedOperationException("Unrecognized type: " + key);
-            ((Type<T>) serializer).write(buffer, value);
-        }
-
-        @Override
-        public T read(NetworkBuffer buffer) {
-            final K key = buffer.read(keyType);
-            var serializer = serializers.apply(key);
-            if (serializer == null)
-                throw new UnsupportedOperationException("Unrecognized type: " + key);
-            return serializer.read(buffer);
-        }
-
-        // Knowing the byte size without knowing the upper bound methods is quite complicated.
-        @Override
-        public @Range(from = 0, to = Long.MAX_VALUE) long minBytes(@Nullable Registries registries) {
-            return keyType.minBytes(registries);
-        }
     }
 
     /**
@@ -1564,7 +451,8 @@ final class NetworkBufferTypeImpl {
     record StringIOUTFType() implements Type<String> {
         static final int MAX_BYTE_LEN = 65535;
 
-        @SuppressWarnings("deprecation") // Follows java.io.DataOutputStream#writeUTF(DataOutput, String) for JDK 25, not public sadly.
+        @SuppressWarnings("deprecation")
+        // Follows java.io.DataOutputStream#writeUTF(DataOutput, String) for JDK 25, not public sadly.
         @Override
         public void write(NetworkBuffer buffer, String value) {
             final int strlen = value.length();
@@ -1599,11 +487,11 @@ final class NetworkBufferTypeImpl {
                     impl.putByte(offset++, (byte) c);
                 } else if (c >= 0x800) {
                     impl.putByte(offset++, (byte) (0xE0 | c >> 12 & 0x0F));
-                    impl.putByte(offset++, (byte) (0x80 | c >> 6  & 0x3F));
-                    impl.putByte(offset++, (byte) (0x80 | c       & 0x3F));
+                    impl.putByte(offset++, (byte) (0x80 | c >> 6 & 0x3F));
+                    impl.putByte(offset++, (byte) (0x80 | c & 0x3F));
                 } else {
                     impl.putByte(offset++, (byte) (0xC0 | c >> 6 & 0x1F));
-                    impl.putByte(offset++, (byte) (0x80 | c      & 0x3F));
+                    impl.putByte(offset++, (byte) (0x80 | c & 0x3F));
                 }
             }
             buffer.writeIndex(offset);
@@ -1617,16 +505,6 @@ final class NetworkBufferTypeImpl {
             } catch (IOException e) {
                 throw new IllegalStateException("failed to read string", e);
             }
-        }
-
-        @Override
-        public long minBytes(@Nullable Registries registries) {
-            return UNSIGNED_SHORT.minBytes();
-        }
-
-        @Override
-        public long maxBytes(@Nullable Registries registries) {
-            return UNSIGNED_SHORT.minBytes() + MAX_BYTE_LEN;
         }
     }
 }
