@@ -39,6 +39,8 @@ import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import java.util.zip.DataFormatException;
 
+import static net.minestom.server.codec.stream.StreamCodec.*;
+
 /**
  * A mutable byte buffer for reading and writing network protocol data with type-safe operations.
  * <p>
@@ -88,24 +90,7 @@ import java.util.zip.DataFormatException;
  */
 public interface NetworkBuffer extends StreamTranscoder {
     Type<Unit> UNIT = NetworkBufferTemplate.template(Unit.INSTANCE);
-    Type<Boolean> BOOLEAN = new NetworkBufferTypeImpl.BooleanType();
-    Type<Byte> BYTE = new NetworkBufferTypeImpl.ByteType();
-    Type<Short> UNSIGNED_BYTE = new NetworkBufferTypeImpl.UnsignedByteType();
-    Type<Short> SHORT = new NetworkBufferTypeImpl.ShortType();
-    Type<Integer> UNSIGNED_SHORT = new NetworkBufferTypeImpl.UnsignedShortType();
-    Type<Integer> INT = new NetworkBufferTypeImpl.IntType();
-    Type<Long> UNSIGNED_INT = new NetworkBufferTypeImpl.UnsignedIntType();
-    Type<Long> LONG = new NetworkBufferTypeImpl.LongType();
-    Type<Float> FLOAT = new NetworkBufferTypeImpl.FloatType();
-    Type<Double> DOUBLE = new NetworkBufferTypeImpl.DoubleType();
-    Type<Integer> VAR_INT = new NetworkBufferTypeImpl.VarIntType();
-    Type<@Nullable Integer> OPTIONAL_VAR_INT = new NetworkBufferTypeImpl.OptionalVarIntType();
-    Type<Integer> VAR_INT_3 = new NetworkBufferTypeImpl.VarInt3Type();
-    Type<Long> VAR_LONG = new NetworkBufferTypeImpl.VarLongType();
-    Type<byte[]> RAW_BYTES = new NetworkBufferTypeImpl.RawBytesType(NetworkBufferTypeImpl.RawBytesType.UNLIMITED);
-    Type<String> STRING = new NetworkBufferTypeImpl.StringType();
-    Type<Key> KEY = STRING.transform(Key::key, Key::asString);
-    Type<String> STRING_TERMINATED = new NetworkBufferTypeImpl.StringTerminatedType();
+    StreamCodec<@Nullable Integer> OPTIONAL_VAR_INT = VAR_INT.transform(it -> it == 0 ? null : it - 1, it -> it == null ? 0 : it + 1);
     Type<String> STRING_IO_UTF8 = new NetworkBufferTypeImpl.StringIOUTFType();
     Type<BinaryTag> NBT = NetworkBufferTypeImpl.NbtType.typed();
     Type<CompoundBinaryTag> NBT_COMPOUND = NetworkBufferTypeImpl.NbtType.typed();
@@ -124,9 +109,9 @@ public interface NetworkBuffer extends StreamTranscoder {
     Type<int[]> VAR_INT_ARRAY = new NetworkBufferTypeImpl.VarIntArrayType();
     Type<long[]> VAR_LONG_ARRAY = new NetworkBufferTypeImpl.VarLongArrayType();
 
-    Type<BitSet> BITSET = LONG_ARRAY.transform(BitSet::valueOf, BitSet::toLongArray);
-    Type<Instant> INSTANT_MS = LONG.transform(Instant::ofEpochMilli, Instant::toEpochMilli);
-    Type<PublicKey> PUBLIC_KEY = BYTE_ARRAY.transform(KeyUtils::publicRSAKeyFrom, PublicKey::getEncoded);
+    StreamCodec<BitSet> BITSET = LONG_ARRAY.transform(BitSet::valueOf, BitSet::toLongArray);
+    StreamCodec<Instant> INSTANT_MS = LONG.transform(Instant::ofEpochMilli, Instant::toEpochMilli);
+    StreamCodec<PublicKey> PUBLIC_KEY = BYTE_ARRAY.transform(KeyUtils::publicRSAKeyFrom, PublicKey::getEncoded);
 
     Type<Point> VECTOR3 = new NetworkBufferTypeImpl.Vector3Type();
     Type<Point> VECTOR3D = new NetworkBufferTypeImpl.Vector3DType();
@@ -134,104 +119,15 @@ public interface NetworkBuffer extends StreamTranscoder {
     Type<Point> VECTOR3B = new NetworkBufferTypeImpl.Vector3BType();
     Type<Vec> LP_VECTOR3 = new NetworkBufferTypeImpl.LpVector3Type();
     Type<float[]> QUATERNION = new NetworkBufferTypeImpl.QuaternionType();
-    Type<Float> LP_ANGLE = BYTE.transform(to -> to * 360f / 256f, from -> (byte) (from * 256f / 360f));
+    StreamCodec<Float> LP_ANGLE = BYTE.transform(to -> to * 360f / 256f, from -> (byte) (from * 256f / 360f));
 
-    Type<@Nullable Component> OPT_CHAT = COMPONENT.optional();
-    Type<@Nullable Point> OPT_BLOCK_POSITION = BLOCK_POSITION.optional();
+    StreamCodec<@Nullable Component> OPT_CHAT = COMPONENT.optional();
+    StreamCodec<@Nullable Point> OPT_BLOCK_POSITION = BLOCK_POSITION.optional();
 
-    Type<Direction> DIRECTION = Enum(Direction.class);
-    Type<EntityPose> POSE = Enum(EntityPose.class);
+    StreamCodec<Direction> DIRECTION = Enum(Direction.class);
+    StreamCodec<EntityPose> POSE = Enum(EntityPose.class);
 
     // Combinators
-
-    /**
-     * Creates an enum type from the enum class
-     * <br>
-     * Encoded as a {@link #VAR_INT} from the ordinal value, unless the enum has less than 128 values,
-     * in which case it will be encoded as a {@link #BYTE}, which should be a single VarInt value.
-     *
-     * @param enumClass the enum class
-     * @param <E>       the enum type
-     * @return the new enum type
-     */
-    @Contract(pure = true, value = "_ -> new")
-    static <E extends Enum<E>> Type<E> Enum(Class<E> enumClass) {
-        Objects.requireNonNull(enumClass, "enumClass");
-        final E[] values = enumClass.getEnumConstants();
-        // Use byte transform for small enums (likely the case).
-        if (values.length < 128)
-            // 0x7F (127) is the max value for a single byte VarInt.
-            return BYTE.transform(integer -> values[integer], it -> (byte) it.ordinal());
-        // Otherwise use VAR_INT
-        return VAR_INT.transform(integer -> values[integer], Enum::ordinal);
-    }
-
-    /**
-     * Creates an enum set type from the enum class
-     *
-     * @param enumClass the enum class
-     * @param <E>       the enum type
-     * @return the new enum set type
-     */
-    @Contract(pure = true, value = "_ -> new")
-    static <E extends Enum<E>> Type<EnumSet<E>> EnumSet(Class<E> enumClass) {
-        return new NetworkBufferTypeImpl.EnumSetType<>(enumClass, enumClass.getEnumConstants());
-    }
-
-    /**
-     * Creates a fixed bit set type with the specified length.
-     * <br>
-     * Note: If there aren't enough bits set during writing, the value will be padded with 0's.
-     *
-     * @param length the length
-     * @return the type
-     * @throws IllegalArgumentException if {@code length} is less than zero
-     */
-    @Contract(pure = true, value = "_ -> new")
-    static Type<BitSet> FixedBitSet(int length) {
-        return new NetworkBufferTypeImpl.FixedBitSetType(length);
-    }
-
-    /**
-     * Creates a type that reads/writes in {@code length} bytes.
-     *
-     * @param length the length
-     * @return the new type
-     * @throws IllegalArgumentException if {@code length} is less than zero
-     */
-    @Contract(pure = true, value = "_ -> new")
-    static Type<byte[]> FixedRawBytes(int length) {
-        Check.argCondition(length < 0, "Length is negative found {0}", length);
-        return new NetworkBufferTypeImpl.RawBytesType(length); // Cannot check in here since -1 is used for RAW_BYTES.
-    }
-
-    /**
-     * Lazily compute the Type required for serialization.
-     * <br>
-     * Note your implementation should be thread safe, and should normally be called once. This may be updated to become a stable value.
-     *
-     * @param supplier the supplier
-     * @param <T>      the type
-     * @return the new type
-     */
-    @Contract(pure = true, value = "_ -> new")
-    static <T> Type<T> Lazy(Supplier<Type<T>> supplier) {
-        return new NetworkBufferTypeImpl.LazyType<>(supplier);
-    }
-
-    /**
-     * Pass the type required for serialization for an inner part. Useful to break initialization where you only need one layer deep.
-     * <br>
-     * Note your implementation should be thread safe, and should normally be called once. This may be updated to become a stable value.
-     *
-     * @param supplier the supplier
-     * @param <T>      the type
-     * @return the new type
-     */
-    @Contract(pure = true, value = "_ -> new")
-    static <T> Type<T> Recursive(UnaryOperator<Type<T>> supplier) {
-        return new NetworkBufferTypeImpl.RecursiveType<>(supplier).delegate();
-    }
 
     /**
      * Creates a typed NBT serializer using a {@link Codec}
@@ -243,20 +139,6 @@ public interface NetworkBuffer extends StreamTranscoder {
     @Contract(pure = true, value = "_ -> new")
     static <T> Type<T> TypedNBT(Codec<T> serializer) {
         return new NetworkBufferTypeImpl.TypedNbtType<>(serializer);
-    }
-
-    /**
-     * Either type for {@link L} and {@link R}
-     *
-     * @param left  the left type
-     * @param right the right type
-     * @param <L>   left type
-     * @param <R>   right type
-     * @return the new type for Either
-     */
-    @Contract(pure = true, value = "_, _ -> new")
-    static <L, R> Type<Either<L, R>> Either(NetworkBuffer.Type<L> left, NetworkBuffer.Type<R> right) {
-        return new NetworkBufferTypeImpl.EitherType<>(left, right);
     }
 
     /**

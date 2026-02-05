@@ -2,6 +2,7 @@ package net.minestom.server.potion;
 
 import net.minestom.server.codec.Codec;
 import net.minestom.server.codec.StructCodec;
+import net.minestom.server.codec.stream.StreamCodec;
 import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.network.NetworkBufferTemplate;
 import org.jetbrains.annotations.Nullable;
@@ -54,7 +55,7 @@ public record CustomPotionEffect(PotionEffect id, Settings settings) {
             boolean isAmbient, boolean showParticles, boolean showIcon,
             @Nullable Settings hiddenEffect
     ) {
-        public static final NetworkBuffer.Type<Settings> NETWORK_TYPE = NetworkBuffer.Recursive(self -> NetworkBufferTemplate.template(
+        public static final NetworkBuffer.Type<Settings> NETWORK_TYPE = StreamCodec.Recursive(self -> NetworkBufferTemplate.template(
                 VAR_INT, Settings::amplifier,
                 VAR_INT, Settings::duration,
                 BOOLEAN, Settings::isAmbient,

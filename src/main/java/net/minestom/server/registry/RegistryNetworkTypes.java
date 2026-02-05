@@ -10,7 +10,23 @@ import java.util.Objects;
 
 final class RegistryNetworkTypes {
 
-    record RegistryKeyImpl<T>(Registries.Selector<T> selector) implements NetworkBuffer.Type<RegistryKey<T>> {
+    interface RegistryType<T> extends NetworkBuffer.Type<T> {
+        @Override
+        void write(NetworkBuffer buffer, T value);
+
+        @Override
+        T read(NetworkBuffer buffer);
+
+        void write(RegistryBuffer buffer, T value);
+
+        T read(RegistryBuffer buffer);
+    }
+
+    interface RegistryBuffer {
+        Registries registries();
+    }
+
+    record RegistryKeyImpl<T>(Registries.Selector<T> selector) implements RegistryType<RegistryKey<T>> {
         @Override
         public void write(NetworkBuffer buffer, RegistryKey<T> value) {
             final var registries = Objects.requireNonNull(buffer.registries(), "Buffer is missing registries");

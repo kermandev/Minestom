@@ -1,13 +1,14 @@
 package net.minestom.server.utils.nbt;
 
 import net.minestom.server.codec.stream.StreamTranscoder;
+import net.minestom.server.codec.stream.StreamTranscoderProxy;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.nio.ByteOrder;
 
-public record DataIOStreamTranscoder(StreamTranscoder delegate) implements StreamTranscoder.Proxy, DataInput, DataOutput {
+public record DataIOStreamTranscoder(StreamTranscoder delegate) implements StreamTranscoderProxy, DataInput, DataOutput {
     public DataIOStreamTranscoder {
         delegate = delegate.order(ByteOrder.BIG_ENDIAN);
     }

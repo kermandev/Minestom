@@ -7,6 +7,8 @@ import net.kyori.adventure.text.Component;
 import net.minestom.server.codec.Codec;
 import net.minestom.server.codec.Result;
 import net.minestom.server.codec.Transcoder;
+import net.minestom.server.codec.stream.StreamReader;
+import net.minestom.server.codec.stream.StreamWriter;
 import net.minestom.server.coordinate.BlockVec;
 import net.minestom.server.coordinate.Point;
 import net.minestom.server.coordinate.Pos;
@@ -40,20 +42,26 @@ final class NetworkBufferTypeImpl {
         }
 
         @Override
-        public void write(NetworkBuffer buffer, BinaryTag value) {
-            final BinaryTagWriter nbtWriter = new BinaryTagWriter(buffer.ioView());
+        public BinaryTag decode(StreamReader stream) throws RuntimeException {
+            if (!(stream instanceof NetworkBuffer buffer)) {
+                throw new IllegalArgumentException("Stream must be a NetworkBuffer");
+            }
+            final BinaryTagReader nbtReader = new BinaryTagReader(buffer.ioView());
             try {
-                nbtWriter.writeNameless(value);
+                return nbtReader.readNameless();
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         }
 
         @Override
-        public BinaryTag read(NetworkBuffer buffer) {
-            final BinaryTagReader nbtReader = new BinaryTagReader(buffer.ioView());
+        public void encode(StreamWriter stream, BinaryTag value) throws RuntimeException {
+            if (!(stream instanceof NetworkBuffer buffer)) {
+                throw new IllegalArgumentException("Stream must be a NetworkBuffer");
+            }
+            final BinaryTagWriter nbtWriter = new BinaryTagWriter(buffer.ioView());
             try {
-                return nbtReader.readNameless();
+                nbtWriter.writeNameless(value);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -69,43 +77,44 @@ final class NetworkBufferTypeImpl {
         }
 
         @Override
-        public void write(NetworkBuffer buffer, @Nullable BinaryTag value) {
-            if (value != null) {
-                NbtType.TYPE.write(buffer, value);
-            } else {
-                // TAG_END
-                buffer.write(BYTE, (byte) 0x00);
-            }
-        }
-
-        @Override
-        public @Nullable BinaryTag read(NetworkBuffer buffer) {
-            var type = NbtType.TYPE.read(buffer);
+        public @Nullable BinaryTag decode(StreamReader stream) throws RuntimeException {
+            var type = NbtType.TYPE.decode(stream);
             // TAG_END == null
             if (type == EndBinaryTag.endBinaryTag()) return null;
             return type;
         }
+
+        @Override
+        public void encode(StreamWriter stream, @Nullable BinaryTag value) throws RuntimeException {
+            if (value != null) {
+                NbtType.TYPE.encode(stream, value);
+            } else {
+                // TAG_END
+                stream.writeByte((byte) 0x00);
+            }
+        }
     }
 
     record BlockPositionType() implements Type<Point> {
+
         @Override
-        public void write(NetworkBuffer buffer, Point value) {
+        public Point decode(StreamReader stream) throws RuntimeException {
+            final long value = stream.takeLong();
+            final int x = (int) (value >> 38);
+            final int y = (int) (value << 52 >> 52);
+            final int z = (int) (value << 26 >> 38);
+            return new BlockVec(x, y, z);
+        }
+
+        @Override
+        public void encode(StreamWriter stream, Point value) throws RuntimeException {
             final int blockX = value.blockX();
             final int blockY = value.blockY();
             final int blockZ = value.blockZ();
             final long longPos = (((long) blockX & 0x3FFFFFF) << 38) |
                     (((long) blockZ & 0x3FFFFFF) << 12) |
                     ((long) blockY & 0xFFF);
-            buffer.write(LONG, longPos);
-        }
-
-        @Override
-        public Point read(NetworkBuffer buffer) {
-            final long value = buffer.read(LONG);
-            final int x = (int) (value >> 38);
-            final int y = (int) (value << 52 >> 52);
-            final int z = (int) (value << 26 >> 38);
-            return new BlockVec(x, y, z);
+            stream.writeLong(longPos);
         }
     }
 
@@ -473,12 +482,10 @@ final class NetworkBufferTypeImpl {
             buffer.write(UNSIGNED_SHORT, utflen);
             buffer.ensureWritable(utflen); // throw early if possible
             var impl = buffer.direct();
-            long offset = buffer.writeIndex();
             if (copyableBytes > 0) { // write if we have any copyableBytes
                 byte[] ascii = new byte[copyableBytes];
                 value.getBytes(0, copyableBytes, ascii, 0);
                 impl.putBytes(offset, ascii);
-                offset += copyableBytes;
             }
 
             for (int i = copyableBytes; i < strlen; i++) { // Excerpt from ModifiedUtf#putChar
