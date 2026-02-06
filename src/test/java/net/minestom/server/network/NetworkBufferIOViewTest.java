@@ -350,7 +350,7 @@ public class NetworkBufferIOViewTest {
         var buffer = NetworkBuffer.resizableBuffer();
         var view = buffer.ioView();
 
-        assertThrows(NullPointerException.class, () -> view.writeBytes(null));
+        assertThrows(NullPointerException.class, () -> view.writeBytes((String) null));
     }
 
     @Test

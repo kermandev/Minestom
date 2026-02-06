@@ -19,6 +19,7 @@ module net.minestom.server {
     requires jdk.jfr;
     requires java.desktop;
     requires java.management;
+    requires org.jspecify;
 
     // EXPORTS
     exports net.minestom.server;

@@ -1,7 +1,5 @@
 package net.minestom.server.codec.stream;
 
-import java.nio.ByteOrder;
-
 public interface StreamTranscoderProxy extends StreamTranscoder {
     static StreamTranscoder extractDelegate(StreamTranscoder transcoder) {
         if (transcoder instanceof StreamTranscoderProxy proxy) {
@@ -11,16 +9,6 @@ public interface StreamTranscoderProxy extends StreamTranscoder {
     }
 
     StreamTranscoder delegate();
-
-    @Override
-    default ByteOrder order() {
-        return delegate().order();
-    }
-
-    @Override
-    default StreamTranscoder order(ByteOrder order) {
-        return delegate().order(order);
-    }
 
     @Override
     default boolean takeBoolean() {
@@ -34,7 +22,7 @@ public interface StreamTranscoderProxy extends StreamTranscoder {
 
     @Override
     default short takeShort() {
-        return delegate().takeByte();
+        return delegate().takeShort();
     }
 
     @Override
@@ -80,6 +68,36 @@ public interface StreamTranscoderProxy extends StreamTranscoder {
     @Override
     default void takeBytes(byte[] buffer) {
         delegate().takeBytes(buffer);
+    }
+
+    @Override
+    default void takeShorts(short[] buffer) {
+        delegate().takeShorts(buffer);
+    }
+
+    @Override
+    default void takeInts(int[] buffer) {
+        delegate().takeInts(buffer);
+    }
+
+    @Override
+    default void takeLongs(long[] buffer) {
+        delegate().takeLongs(buffer);
+    }
+
+    @Override
+    default void takeFloats(float[] buffer) {
+        delegate().takeFloats(buffer);
+    }
+
+    @Override
+    default void takeDoubles(double[] buffer) {
+        delegate().takeDoubles(buffer);
+    }
+
+    @Override
+    default void voidBytes(long length) {
+        delegate().voidBytes(length);
     }
 
     @Override
@@ -153,6 +171,11 @@ public interface StreamTranscoderProxy extends StreamTranscoder {
     }
 
     @Override
+    default void skipBytes(long length) {
+        delegate().skipBytes(length);
+    }
+
+    @Override
     default void writeVarInt(int value) {
         delegate().writeVarInt(value);
     }
@@ -163,7 +186,7 @@ public interface StreamTranscoderProxy extends StreamTranscoder {
     }
 
     @Override
-    default void voidBytes(long length) {
-        delegate().voidBytes(length);
+    default void flush() {
+        delegate().flush();
     }
 }
