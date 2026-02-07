@@ -5,6 +5,10 @@ import net.kyori.adventure.key.KeyPattern;
 import net.minestom.server.codec.Codec;
 import net.minestom.server.codec.Decoder;
 import net.minestom.server.codec.Encoder;
+import net.minestom.server.codec.stream.StreamCodec;
+import net.minestom.server.codec.stream.StreamDecoder;
+import net.minestom.server.codec.stream.StreamEncoder;
+import net.minestom.server.codec.stream.StreamReader;
 import net.minestom.server.item.enchant.EffectComponent;
 import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.registry.StaticProtocolObject;
@@ -22,9 +26,9 @@ import java.util.function.UnaryOperator;
  * @see net.minestom.server.component.DataComponent
  * @see EffectComponent
  */
-public sealed interface DataComponent<T> extends StaticProtocolObject<DataComponent<T>>, Encoder<T>, Decoder<T>, NetworkBuffer.Reader<T>, NetworkBuffer.Writer<T> permits DataComponentImpl {
+public sealed interface DataComponent<T> extends StaticProtocolObject<DataComponent<T>>, Encoder<T>, Decoder<T>, StreamEncoder<T>, StreamDecoder<T> permits DataComponentImpl {
 
-    NetworkBuffer.Type<DataComponent<?>> NETWORK_TYPE = NetworkBuffer.VAR_INT.transform(DataComponent::fromId, DataComponent::id);
+    NetworkBuffer.Type<DataComponent<?>> NETWORK_TYPE = StreamCodec.VAR_INT.transform(DataComponent::fromId, DataComponent::id);
     Codec<DataComponent<?>> CODEC = Codec.STRING.transform(DataComponent::fromKey, DataComponent::name);
 
     NetworkBuffer.Type<DataComponentMap> MAP_NETWORK_TYPE = DataComponentMap.networkType(DataComponent::fromId);

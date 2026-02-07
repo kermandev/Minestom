@@ -1042,17 +1042,6 @@ public interface NetworkBuffer extends StreamTranscoder {
     @Override
     int hashCode();
 
-    /**
-     * A type is a StreamEncoder/StreamDecoder for {@link T} it attempts to provide a bidirectional guarantee.
-     * Through {@link #write(NetworkBuffer, Object)} and {@link #read(NetworkBuffer)}.
-     * <br>
-     * Unlike {@link net.minestom.server.codec.StructCodec} types are always written linearly into a {@link NetworkBuffer}
-     * <br>
-     * You should use templates wherever possibly to ensure bidirectional serialization.
-     *
-     * @param <T> the type, nullable.
-     */
-    interface Type<T extends @UnknownNullability Object> extends StreamCodec<T> {
         /**
          * Creates a type where it prefixes the length
          *
@@ -1060,10 +1049,10 @@ public interface NetworkBuffer extends StreamTranscoder {
          * @return the new length prefixed type
          */
         @Contract(pure = true, value = "_ -> new")
-        default Type<T> lengthPrefixed(int maxLength) {
-            return new NetworkBufferTypeImpl.LengthPrefixedType<>(this, maxLength);
+        static <T> StreamCodec<T> LengthPrefixed(StreamCodec<T> type, int maxLength) {
+            return new NetworkBufferTypeImpl.LengthPrefixedType<>(type, maxLength);
         }
-    }
+
 
     /**
      * Resize strategy for a {@link NetworkBuffer}.

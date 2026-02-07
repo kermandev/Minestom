@@ -16,28 +16,12 @@ import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 
 public interface StreamCodec<T extends @UnknownNullability Object> extends StreamEncoder<T>, StreamDecoder<T> {
-    StreamCodec<Unit> UNIT = StreamCodecTemplate.template(Unit.INSTANCE);
-    StreamCodec<Boolean> BOOLEAN = new StreamCodecImpl.PrimitiveImpl<>(StreamWriter::writeBoolean, StreamReader::takeBoolean);
-    StreamCodec<Byte> BYTE = new StreamCodecImpl.PrimitiveImpl<>(StreamWriter::writeByte, StreamReader::takeByte);
-    StreamCodec<Short> UNSIGNED_BYTE = BYTE.transform(it -> (short) (it & 0xFF), it -> (byte) (it & 0xFF));
-    StreamCodec<Short> SHORT = new StreamCodecImpl.PrimitiveImpl<>(StreamWriter::writeShort, StreamReader::takeShort);
-    StreamCodec<Integer> UNSIGNED_SHORT = SHORT.transform(it -> (it & 0xFFFF), it -> (short) (it & 0xFFFF));
-    StreamCodec<Integer> INT = new StreamCodecImpl.PrimitiveImpl<>(StreamWriter::writeInt, StreamReader::takeInt);
-    StreamCodec<Long> UNSIGNED_INT = INT.transform(it -> (it & 0xFFFFFFFFL), it -> (int) (it & 0xFFFFFFFFL));
-    StreamCodec<Long> LONG = new StreamCodecImpl.PrimitiveImpl<>(StreamWriter::writeLong, StreamReader::takeLong);
-    StreamCodec<Float> FLOAT = new StreamCodecImpl.PrimitiveImpl<>(StreamWriter::writeFloat, StreamReader::takeFloat);
-    StreamCodec<Double> DOUBLE = new StreamCodecImpl.PrimitiveImpl<>(StreamWriter::writeDouble, StreamReader::takeDouble);
-    StreamCodec<Integer> VAR_INT = new StreamCodecImpl.PrimitiveImpl<>(StreamWriter::writeVarInt, StreamReader::takeVarInt);
-    StreamCodec<Long> VAR_LONG = new StreamCodecImpl.PrimitiveImpl<>(StreamWriter::writeVarLong, StreamReader::takeVarLong);
-    StreamCodec<byte[]> RAW_BYTES = new StreamCodecImpl.PrimitiveImpl<>(StreamWriter::writeBytes, StreamReader::takeBytes);
-    StreamCodec<String> STRING = new StreamCodecImpl.PrimitiveImpl<>(StreamWriter::writeString, StreamReader::takeString);
-    StreamCodec<Key> KEY = STRING.transform(Key::key, Key::asString);
 
     /**
      * Creates an enum type from the enum class
      * <br>
-     * Encoded as a {@link #VAR_INT} from the ordinal value, unless the enum has less than 128 values,
-     * in which case it will be encoded as a {@link #BYTE}, which should be a single VarInt value.
+     * Encoded as a {@link StreamWriter#writeVarInt(int)} from the ordinal value, unless the enum has less than 128 values,
+     * in which case it will be encoded as a {@link StreamWriter#writeByte(byte)}, which should be a single VarInt value.
      *
      * @param enumClass the enum class
      * @param <E>       the enum type
@@ -248,7 +232,7 @@ public interface StreamCodec<T extends @UnknownNullability Object> extends Strea
     /**
      * Creates an optional type for {@link T}, which allows it to have null values.
      * <br>
-     * Note the encoding prefixes all {@link T} behind {@link #BOOLEAN} where its value if {@link T} is not null.
+     * Note the encoding prefixes all {@link T} behind {@link StreamWriter#writeBoolean(boolean)} where its value if {@link T} is not null.
      * For example, a not null {@link T} would be true, and {@code null} would be false.
      *
      * @return the new optional type

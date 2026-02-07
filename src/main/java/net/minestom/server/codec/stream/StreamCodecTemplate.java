@@ -1,6 +1,8 @@
 package net.minestom.server.codec.stream;
 
+import net.kyori.adventure.key.Key;
 import net.minestom.server.utils.Functions.*;
+import net.minestom.server.utils.Unit;
 import org.jetbrains.annotations.UnknownNullability;
 
 import java.util.Objects;
@@ -38,6 +40,23 @@ import java.util.function.Supplier;
  * }</pre>
  */
 public final class StreamCodecTemplate {
+    public static final StreamCodec<Unit> UNIT = StreamCodecTemplate.template(Unit.INSTANCE);
+    public static final StreamCodec<Boolean> BOOLEAN = new StreamCodecImpl.PrimitiveImpl<>(StreamWriter::writeBoolean, StreamReader::takeBoolean);
+    public static final StreamCodec<Byte> BYTE = new StreamCodecImpl.PrimitiveImpl<>(StreamWriter::writeByte, StreamReader::takeByte);
+    public static final StreamCodec<Short> UNSIGNED_BYTE = BYTE.transform(it -> (short) (it & 0xFF), it -> (byte) (it & 0xFF));
+    public static final StreamCodec<Short> SHORT = new StreamCodecImpl.PrimitiveImpl<>(StreamWriter::writeShort, StreamReader::takeShort);
+    public static final StreamCodec<Integer> UNSIGNED_SHORT = SHORT.transform(it -> (it & 0xFFFF), it -> (short) (it & 0xFFFF));
+    public static final StreamCodec<Integer> INT = new StreamCodecImpl.PrimitiveImpl<>(StreamWriter::writeInt, StreamReader::takeInt);
+    public static final StreamCodec<Long> UNSIGNED_INT = INT.transform(it -> (it & 0xFFFFFFFFL), it -> (int) (it & 0xFFFFFFFFL));
+    public static final StreamCodec<Long> LONG = new StreamCodecImpl.PrimitiveImpl<>(StreamWriter::writeLong, StreamReader::takeLong);
+    public static final StreamCodec<Float> FLOAT = new StreamCodecImpl.PrimitiveImpl<>(StreamWriter::writeFloat, StreamReader::takeFloat);
+    public static final StreamCodec<Double> DOUBLE = new StreamCodecImpl.PrimitiveImpl<>(StreamWriter::writeDouble, StreamReader::takeDouble);
+    public static final StreamCodec<Integer> VAR_INT = new StreamCodecImpl.PrimitiveImpl<>(StreamWriter::writeVarInt, StreamReader::takeVarInt);
+    public static final StreamCodec<Long> VAR_LONG = new StreamCodecImpl.PrimitiveImpl<>(StreamWriter::writeVarLong, StreamReader::takeVarLong);
+    public static final StreamCodec<byte[]> RAW_BYTES = new StreamCodecImpl.PrimitiveImpl<>(StreamWriter::writeBytes, StreamReader::takeBytes);
+    public static final StreamCodec<String> STRING = new StreamCodecImpl.PrimitiveImpl<>(StreamWriter::writeString, StreamReader::takeString);
+    public static final StreamCodec<Key> KEY = STRING.transform(Key::key, Key::asString);
+
 
     /**
      * Creates a template that always returns {@link R}

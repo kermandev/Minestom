@@ -7,6 +7,7 @@ import net.kyori.adventure.text.Component;
 import net.minestom.server.codec.Codec;
 import net.minestom.server.codec.Result;
 import net.minestom.server.codec.Transcoder;
+import net.minestom.server.codec.stream.StreamCodec;
 import net.minestom.server.codec.stream.StreamReader;
 import net.minestom.server.codec.stream.StreamWriter;
 import net.minestom.server.coordinate.BlockVec;
@@ -33,12 +34,12 @@ final class NetworkBufferTypeImpl {
     static final int SEGMENT_BITS = 0x7F;
     static final int CONTINUE_BIT = 0x80;
 
-    record NbtType() implements Type<BinaryTag> {
+    record NbtType() implements StreamCodec<BinaryTag> {
         static final NbtType TYPE = new NbtType();
 
         @SuppressWarnings("unchecked")
-        public static <T extends BinaryTag> Type<T> typed() {
-            return (Type<T>) TYPE;
+        public static <T extends BinaryTag> StreamCodec<T> typed() {
+            return (StreamCodec<T>) TYPE;
         }
 
         @Override
@@ -68,12 +69,12 @@ final class NetworkBufferTypeImpl {
         }
     }
 
-    record OptionalNBTType() implements Type<@Nullable BinaryTag> {
+    record OptionalNBTType() implements StreamCodec<@Nullable BinaryTag> {
         static final OptionalNBTType INSTANCE = new OptionalNBTType();
 
         @SuppressWarnings("unchecked")
-        static <T extends @Nullable BinaryTag> Type<T> typed() {
-            return (Type<T>) INSTANCE;
+        static <T extends @Nullable BinaryTag> StreamCodec<T> typed() {
+            return (StreamCodec<T>) INSTANCE;
         }
 
         @Override
@@ -95,7 +96,7 @@ final class NetworkBufferTypeImpl {
         }
     }
 
-    record BlockPositionType() implements Type<Point> {
+    record BlockPositionType() implements StreamCodec<Point> {
 
         @Override
         public Point decode(StreamReader stream) throws RuntimeException {
@@ -118,7 +119,7 @@ final class NetworkBufferTypeImpl {
         }
     }
 
-    record JsonComponentType() implements Type<Component> {
+    record JsonComponentType() implements StreamCodec<Component> {
         @Override
         public void write(NetworkBuffer buffer, Component value) {
             final Registries registries = buffer.registries();
@@ -140,7 +141,7 @@ final class NetworkBufferTypeImpl {
         }
     }
 
-    record UUIDType() implements Type<UUID> {
+    record UUIDType() implements StreamCodec<UUID> {
         @Override
         public void write(NetworkBuffer buffer, java.util.UUID value) {
             buffer.write(LONG, value.getMostSignificantBits());
@@ -155,7 +156,7 @@ final class NetworkBufferTypeImpl {
         }
     }
 
-    record PosType() implements Type<Pos> {
+    record PosType() implements StreamCodec<Pos> {
         @Override
         public void write(NetworkBuffer buffer, Pos value) {
             buffer.write(DOUBLE, value.x());
@@ -176,7 +177,7 @@ final class NetworkBufferTypeImpl {
         }
     }
 
-    record ByteArrayType() implements Type<byte[]> {
+    record ByteArrayType() implements StreamCodec<byte[]> {
         @Override
         public void write(NetworkBuffer buffer, byte[] value) {
             buffer.write(VAR_INT, value.length);
@@ -193,7 +194,7 @@ final class NetworkBufferTypeImpl {
         }
     }
 
-    record LongArrayType() implements Type<long[]> {
+    record LongArrayType() implements StreamCodec<long[]> {
         @Override
         public void write(NetworkBuffer buffer, long[] value) {
             buffer.write(VAR_INT, value.length);
@@ -209,7 +210,7 @@ final class NetworkBufferTypeImpl {
         }
     }
 
-    record VarIntArrayType() implements Type<int[]> {
+    record VarIntArrayType() implements StreamCodec<int[]> {
         @Override
         public void write(NetworkBuffer buffer, int[] value) {
             buffer.write(VAR_INT, value.length);
@@ -225,7 +226,7 @@ final class NetworkBufferTypeImpl {
         }
     }
 
-    record VarLongArrayType() implements Type<long[]> {
+    record VarLongArrayType() implements StreamCodec<long[]> {
         @Override
         public void write(NetworkBuffer buffer, long[] value) {
             buffer.write(VAR_INT, value.length);
@@ -241,7 +242,7 @@ final class NetworkBufferTypeImpl {
         }
     }
 
-    record Vector3Type() implements Type<Point> {
+    record Vector3Type() implements StreamCodec<Point> {
         @Override
         public void write(NetworkBuffer buffer, Point value) {
             buffer.write(FLOAT, (float) value.x());
@@ -309,7 +310,7 @@ final class NetworkBufferTypeImpl {
         }
     }
 
-    record LpVector3Type() implements Type<Vec> {
+    record LpVector3Type() implements StreamCodec<Vec> {
         public static final double ABS_MAX_VALUE = 1.7179869183E10;
         public static final double ABS_MIN_VALUE = 3.051944088384301E-5;
         private static final int DATA_BITS_MASK = 0b111111111111111;
@@ -333,11 +334,31 @@ final class NetworkBufferTypeImpl {
         }
 
         @Override
-        public void write(NetworkBuffer buffer, Vec value) {
+        public Vec decode(StreamReader stream) throws RuntimeException {
+            int flags = Byte.toUnsignedInt(stream.takeByte());
+            if (flags == 0) {
+                return Vec.ZERO;
+            } else {
+                int p2 = Byte.toUnsignedInt(stream.takeByte());
+                long p3 = Integer.toUnsignedLong(stream.takeInt());
+                long value = p3 << 16 | p2 << 8 | flags;
+                long scale = flags & SCALE_BITS_MASK;
+                if ((flags & CONTINUATION_FLAG) == CONTINUATION_FLAG)
+                    scale |= (stream.takeVarInt() & 0xFFFFFFFFL) << 2;
+                return new Vec(
+                        unpack(value >> X_OFFSET) * scale,
+                        unpack(value >> Y_OFFSET) * scale,
+                        unpack(value >> Z_OFFSET) * scale
+                );
+            }
+        }
+
+        @Override
+        public void encode(StreamWriter stream, Vec value) throws RuntimeException {
             double x = sanitize(value.x()), y = sanitize(value.y()), z = sanitize(value.z());
             double max = MathUtils.absMax(x, MathUtils.absMax(y, z));
             if (max < ABS_MIN_VALUE) {
-                buffer.write(BYTE, (byte) 0);
+                stream.writeByte((byte) 0);
             } else {
                 long i = MathUtils.ceilLong(max);
                 boolean hasContinuation = (i & SCALE_BITS_MASK) != i;
@@ -346,51 +367,25 @@ final class NetworkBufferTypeImpl {
                 long py = pack(y / i) << Y_OFFSET;
                 long pz = pack(z / i) << Z_OFFSET;
                 long packed = flags | px | py | pz;
-                buffer.write(BYTE, (byte) packed);
-                buffer.write(BYTE, (byte) (packed >> 8));
-                buffer.write(INT, (int) (packed >> 16));
+                stream.writeByte((byte) packed);
+                stream.writeByte((byte) (packed >> 8));
+                stream.writeInt((int) (packed >> 16));
                 if (hasContinuation)
-                    buffer.write(VAR_INT, (int) (i >> 2));
-            }
-        }
-
-        @Override
-        public Vec read(NetworkBuffer buffer) {
-            int flags = buffer.read(UNSIGNED_BYTE);
-            if (flags == 0) {
-                return Vec.ZERO;
-            } else {
-                int p2 = buffer.read(UNSIGNED_BYTE);
-                long p3 = buffer.read(UNSIGNED_INT);
-                long value = p3 << 16 | p2 << 8 | flags;
-                long scale = flags & SCALE_BITS_MASK;
-                if ((flags & CONTINUATION_FLAG) == CONTINUATION_FLAG)
-                    scale |= (buffer.read(VAR_INT) & 0xFFFFFFFFL) << 2;
-                return new Vec(
-                        unpack(value >> X_OFFSET) * scale,
-                        unpack(value >> Y_OFFSET) * scale,
-                        unpack(value >> Z_OFFSET) * scale
-                );
+                    stream.writeVarInt((int) (i >> 2));
             }
         }
     }
 
-    record QuaternionType() implements Type<float[]> {
+    record QuaternionType() implements StreamCodec<float[]> {
         @Override
-        public void write(NetworkBuffer buffer, float[] value) {
-            buffer.write(FLOAT, value[0]);
-            buffer.write(FLOAT, value[1]);
-            buffer.write(FLOAT, value[2]);
-            buffer.write(FLOAT, value[3]);
+        public float[] decode(StreamReader stream) throws RuntimeException {
+            return stream.takeFloats(4);
         }
 
         @Override
-        public float[] read(NetworkBuffer buffer) {
-            final float x = buffer.read(FLOAT);
-            final float y = buffer.read(FLOAT);
-            final float z = buffer.read(FLOAT);
-            final float w = buffer.read(FLOAT);
-            return new float[]{x, y, z, w};
+        public void encode(StreamWriter stream, float[] value) throws RuntimeException {
+            Check.argCondition(value.length != 4, "Invalid quaternion length: {0}", value.length);
+            stream.writeFloats(value);
         }
     }
 

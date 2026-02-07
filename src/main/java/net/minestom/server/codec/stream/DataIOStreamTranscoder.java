@@ -169,8 +169,6 @@ public interface DataIOStreamTranscoder extends StreamTranscoderProxy, DataInput
         writeString(value);
     }
 
-    static final int MAX_BYTE_LEN = 65535;
-
     // Super special string and read string methods that do NOT pass it through, instead override the existing.
     // Follows java.io.DataOutputStream#writeUTF(DataOutput, String) for JDK 25, not default sadly.
     @SuppressWarnings("deprecation")
@@ -188,7 +186,7 @@ public interface DataIOStreamTranscoder extends StreamTranscoderProxy, DataInput
                 copyableBytes++; // We have no access to JLA for this.
         }
 
-        if (utflen > MAX_BYTE_LEN || /* overflow */ utflen < strlen)
+        if (utflen > 65535 || /* overflow */ utflen < strlen)
             throw new RuntimeException("UTF-8 string too long");
         writeShort(utflen);
         if (copyableBytes > 0) { // write if we have any copyableBytes

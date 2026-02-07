@@ -160,14 +160,14 @@ public interface EndianStreamTranscoder extends StreamTranscoderProxy {
     default void writeLongs(long[] value) {
         long[] buffer = trusted() ? value : new long[value.length];
         for (int i = 0; i < value.length; i++) {
-            value[i] = Long.reverseBytes(value[i]);
+            buffer[i] = Long.reverseBytes(value[i]);
         }
         StreamTranscoderProxy.super.writeLongs(buffer);
     }
 
     @Override
     default void writeFloats(float[] value) {
-        float[] buffer = trusted() ? new float[value.length] : value;
+        float[] buffer = trusted() ? value : new float[value.length];
         for (int i = 0; i < buffer.length; i++) {
             buffer[i] = reverseFloat(value[i]);
         }
@@ -176,7 +176,7 @@ public interface EndianStreamTranscoder extends StreamTranscoderProxy {
 
     @Override
     default void writeDoubles(double[] value) {
-        double[] buffer = trusted() ? new double[value.length] : value;
+        double[] buffer = trusted() ? value : new double[value.length];
         for (int i = 0; i < buffer.length; i++) {
             buffer[i] = reverseDouble(value[i]);
         }
