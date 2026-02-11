@@ -452,6 +452,8 @@ final class NetworkBufferTypeImpl {
         public void writeInt(NetworkBuffer buffer, int value) {
             if (buffer.writableBytes() < 5) {
                 buffer.ensureWritable(sizeOf(value));
+            } else {
+                buffer.ensureWritable(5);
             }
             long index = buffer.writeIndex();
             var nio = buffer.direct();

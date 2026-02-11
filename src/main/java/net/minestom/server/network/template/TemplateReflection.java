@@ -7,6 +7,7 @@ import java.lang.constant.ClassDesc;
 import java.lang.invoke.*;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.List;
 
 // TODO support Optional for BYTE.optional() folding on not null path.
 final class TemplateReflection {
@@ -131,9 +132,9 @@ final class TemplateReflection {
     static Object init(Class<?> caller, byte[] bytes, Object... args) {
         try {
             MethodHandles.Lookup lookup = findLookup(caller);
-            Class<?> clazz = lookup.defineHiddenClass(bytes, true, MethodHandles.Lookup.ClassOption.NESTMATE, MethodHandles.Lookup.ClassOption.STRONG).lookupClass();
-            return clazz.getDeclaredConstructors()[0].newInstance(args);
-        } catch (IllegalAccessException | InvocationTargetException | InstantiationException e) {
+            Class<?> clazz = lookup.defineHiddenClassWithClassData(bytes, List.of(args), true, MethodHandles.Lookup.ClassOption.NESTMATE, MethodHandles.Lookup.ClassOption.STRONG).lookupClass();
+            return clazz.getDeclaredConstructor().newInstance();
+        } catch (IllegalAccessException | InvocationTargetException | InstantiationException | NoSuchMethodException e) {
             throw new RuntimeException(e);
         }
     }
