@@ -119,6 +119,13 @@ final class TemplateGenerator {
 
     public void buildWriteMethod(ClassBuilder cb) {
         cb.withMethodBody(WRITE, MT_WRITE_OBJECT, METHOD_FLAGS, code -> {
+            Class<?> type = ctor.type().returnType();
+            // Insert a check cast for the record instance
+            if (type != Object.class) {
+                code.aload(2);
+                code.checkcast(type.describeConstable().orElseThrow());
+                code.astore(3);
+            }
             for (int i = 0; i < fields.length; i++) {
                 TemplateReflection.FieldAnalysis fa = fields[i];
                 int uniqueIndex = fieldToUniqueIndex[i];
@@ -131,13 +138,7 @@ final class TemplateGenerator {
 
                 // Load Getter
                 code.getstatic(thisClass, "G_" + i, CD_METHOD_HANDLE);
-                code.aload(2); // Record Instance (Object)
-
-                // Checkcast the instance to the type the getter expects
-                Class<?> receiverType = fa.getter().type().parameterType(0);
-                if (receiverType != Object.class) {
-                    code.checkcast(receiverType.describeConstable().orElseThrow());
-                }
+                code.aload(3); // Record Instance (Object)
 
                 // invokeExact: (Receiver) -> Value
                 code.invokevirtual(CD_METHOD_HANDLE, "invokeExact", MethodTypeDesc.ofDescriptor(fa.getter().type().toMethodDescriptorString()));
