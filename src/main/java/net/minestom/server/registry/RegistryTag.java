@@ -19,7 +19,7 @@ import java.util.List;
 public sealed interface RegistryTag<T> extends HolderSet<T>, Iterable<RegistryKey<T>>
         permits RegistryTagImpl.Empty, RegistryTagImpl.Backed, RegistryTagImpl.Direct {
 
-    static <T> NetworkBuffer.Type<RegistryTag<T>> networkType(Registries.Selector<T> selector) {
+    static <T> NetworkBuffer.Type<RegistryTag<T>, RegistryNetworkContext> networkType(Registries.Selector<T> selector) {
         return new RegistryNetworkTypes.RegistryTagImpl<>(selector);
     }
 

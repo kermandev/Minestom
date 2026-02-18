@@ -250,13 +250,13 @@ public class NetworkBufferTest {
     public void sizeOfCompounds() {
         var type = new Type<Integer>() {
             @Override
-            public void write(NetworkBuffer buffer, Integer value) {
+            public void write(NetworkBuffer buffer, Integer value, NetworkContext context) {
                 buffer.write(INT, value);
                 buffer.write(INT, value);
             }
 
             @Override
-            public Integer read(NetworkBuffer buffer) {
+            public Integer read(NetworkBuffer buffer, NetworkContext context) {
                 throw new UnsupportedOperationException();
             }
         };
@@ -273,7 +273,7 @@ public class NetworkBufferTest {
             }
 
             @Override
-            public Integer read(NetworkBuffer buffer) {
+            public Integer read(NetworkBuffer buffer, NetworkContext context) {
                 throw new UnsupportedOperationException();
             }
         };

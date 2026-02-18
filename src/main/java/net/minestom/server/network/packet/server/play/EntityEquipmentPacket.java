@@ -4,6 +4,7 @@ import net.kyori.adventure.text.Component;
 import net.minestom.server.entity.EquipmentSlot;
 import net.minestom.server.item.ItemStack;
 import net.minestom.server.network.NetworkBuffer;
+import net.minestom.server.network.NetworkContext;
 import net.minestom.server.network.packet.server.ServerPacket;
 
 import java.util.*;
@@ -35,7 +36,7 @@ public record EntityEquipmentPacket(int entityId,
         }
 
         @Override
-        public EntityEquipmentPacket read(NetworkBuffer buffer) {
+        public EntityEquipmentPacket read(NetworkBuffer buffer, NetworkContext context) {
             return new EntityEquipmentPacket(buffer.read(VAR_INT), readEquipments(buffer));
         }
     };

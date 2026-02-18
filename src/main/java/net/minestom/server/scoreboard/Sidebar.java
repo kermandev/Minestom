@@ -6,6 +6,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.minestom.server.adventure.ComponentHolder;
 import net.minestom.server.entity.Player;
 import net.minestom.server.network.NetworkBuffer;
+import net.minestom.server.network.NetworkContext;
 import net.minestom.server.network.packet.server.play.*;
 import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.Nullable;
@@ -520,7 +521,7 @@ public class Sidebar implements Scoreboard {
             }
 
             @Override
-            public NumberFormat read(NetworkBuffer buffer) {
+            public NumberFormat read(NetworkBuffer buffer, NetworkContext context) {
                 final FormatType formatType = buffer.read(FormatType.NETWORK_TYPE);
                 final Component content = formatType != FormatType.BLANK ? buffer.read(NetworkBuffer.COMPONENT) : null;
                 return new NumberFormat(formatType, content);

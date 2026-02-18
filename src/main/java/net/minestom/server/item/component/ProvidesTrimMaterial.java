@@ -3,6 +3,7 @@ package net.minestom.server.item.component;
 import net.kyori.adventure.key.Key;
 import net.minestom.server.codec.Codec;
 import net.minestom.server.network.NetworkBuffer;
+import net.minestom.server.network.NetworkContext;
 
 public record ProvidesTrimMaterial(Key key) {
     // This can be either a key or a holder of trim material. we need to support holders better.
@@ -15,7 +16,7 @@ public record ProvidesTrimMaterial(Key key) {
         }
 
         @Override
-        public ProvidesTrimMaterial read(NetworkBuffer buffer) {
+        public ProvidesTrimMaterial read(NetworkBuffer buffer, NetworkContext context) {
             if (buffer.read(NetworkBuffer.BOOLEAN))
                 throw new IllegalArgumentException("Cannot read direct trim material");
             return new ProvidesTrimMaterial(Key.key(buffer.read(NetworkBuffer.STRING)));

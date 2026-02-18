@@ -54,13 +54,13 @@ record DataComponentImpl<T>(
     @Override
     public T read(NetworkBuffer reader) {
         Check.notNull(network, "{0} cannot be deserialized from network", this);
-        return network.read(reader);
+        return network.read(reader, );
     }
 
     @Override
     public void write(NetworkBuffer writer, T value) {
         Check.notNull(network, "{0} cannot be serialized to network", this);
-        network.write(writer, value);
+        network.write(writer, value, );
     }
 
     @Override

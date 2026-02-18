@@ -3,6 +3,7 @@ package net.minestom.server.network.packet.server.play;
 import net.minestom.server.command.ArgumentParserType;
 import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.network.NetworkBufferTemplate;
+import net.minestom.server.network.NetworkContext;
 import net.minestom.server.network.packet.server.ServerPacket;
 import org.jetbrains.annotations.Nullable;
 
@@ -81,7 +82,7 @@ public record DeclareCommandsPacket(List<Node> nodes,
                 }
             }
 
-            public Node read(NetworkBuffer reader) {
+            public Node read(NetworkBuffer reader, NetworkContext context) {
 
                 byte flags = reader.read(BYTE);
                 int[] children = reader.read(VAR_INT_ARRAY);

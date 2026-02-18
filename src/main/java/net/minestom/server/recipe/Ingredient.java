@@ -4,6 +4,7 @@ package net.minestom.server.recipe;
 import net.minestom.server.item.Material;
 import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.network.NetworkBufferTemplate;
+import net.minestom.server.network.NetworkContext;
 import net.minestom.server.recipe.display.SlotDisplay;
 import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.Nullable;
@@ -28,7 +29,7 @@ public record Ingredient(List<Material> items) {
                 }
 
                 @Override
-                public List<Material> read(NetworkBuffer buffer) {
+                public List<Material> read(NetworkBuffer buffer, NetworkContext context) {
                     int size = buffer.read(VAR_INT) - 1;
                     Check.notNull(size > Short.MAX_VALUE, "too many ingredients");
                     if (size == -1) {

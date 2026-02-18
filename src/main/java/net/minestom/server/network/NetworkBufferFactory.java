@@ -87,15 +87,6 @@ public interface NetworkBufferFactory {
     NetworkBufferFactory autoResize(NetworkBuffer.AutoResize autoResize);
 
     /**
-     * Sets a registry for buffers to use.
-     *
-     * @param registries the registry
-     * @return the new factory
-     */
-    @Contract(pure = true, value = "_ -> new")
-    NetworkBufferFactory registry(Registries registries);
-
-    /**
      * Builds a new network buffer from this factory with {@code length} allocated.
      *
      * @param length the size of the buffer, or initial size if {@link NetworkBuffer.AutoResize} is set.

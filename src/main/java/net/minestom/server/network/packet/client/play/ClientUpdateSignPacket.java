@@ -2,6 +2,7 @@ package net.minestom.server.network.packet.client.play;
 
 import net.minestom.server.coordinate.Point;
 import net.minestom.server.network.NetworkBuffer;
+import net.minestom.server.network.NetworkContext;
 import net.minestom.server.network.packet.client.ClientPacket;
 
 import java.util.List;
@@ -37,7 +38,7 @@ public record ClientUpdateSignPacket(
         }
 
         @Override
-        public ClientUpdateSignPacket read(NetworkBuffer buffer) {
+        public ClientUpdateSignPacket read(NetworkBuffer buffer, NetworkContext context) {
             return new ClientUpdateSignPacket(buffer.read(BLOCK_POSITION), buffer.read(BOOLEAN), readLines(buffer));
         }
     };

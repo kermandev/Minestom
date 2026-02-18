@@ -20,10 +20,10 @@ final class NetworkBufferStaticSegmentImpl extends NetworkBufferSegmentImpl {
     private final @Nullable Arena arena;
     private final MemorySegment segment;
 
-    NetworkBufferStaticSegmentImpl(@Nullable Arena arena, MemorySegment segment, long readIndex, long writeIndex, @Nullable Registries registries) {
+    NetworkBufferStaticSegmentImpl(@Nullable Arena arena, MemorySegment segment, long readIndex, long writeIndex) {
         this.arena = arena;
         this.segment = Objects.requireNonNull(segment, "segment");
-        super(readIndex, writeIndex, registries);
+        super(readIndex, writeIndex);
     }
 
     @Override

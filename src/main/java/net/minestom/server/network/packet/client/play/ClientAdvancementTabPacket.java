@@ -2,6 +2,7 @@ package net.minestom.server.network.packet.client.play;
 
 import net.minestom.server.advancements.AdvancementAction;
 import net.minestom.server.network.NetworkBuffer;
+import net.minestom.server.network.NetworkContext;
 import net.minestom.server.network.packet.client.ClientPacket;
 import org.jetbrains.annotations.Nullable;
 
@@ -22,7 +23,7 @@ public record ClientAdvancementTabPacket(AdvancementAction action,
         }
 
         @Override
-        public ClientAdvancementTabPacket read(NetworkBuffer buffer) {
+        public ClientAdvancementTabPacket read(NetworkBuffer buffer, NetworkContext context) {
             var action = buffer.read(ADVANCEMENT_ACTION_TYPE);
             var tabIdentifier = action == AdvancementAction.OPENED_TAB ? buffer.read(STRING) : null;
             return new ClientAdvancementTabPacket(action, tabIdentifier);

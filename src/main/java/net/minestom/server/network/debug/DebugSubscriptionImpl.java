@@ -2,6 +2,7 @@ package net.minestom.server.network.debug;
 
 import net.kyori.adventure.key.Key;
 import net.minestom.server.network.NetworkBuffer;
+import net.minestom.server.network.NetworkContext;
 import net.minestom.server.utils.collection.ObjectArray;
 
 import java.util.HashMap;
@@ -21,11 +22,11 @@ public record DebugSubscriptionImpl<T>(
 
     @Override
     public void write(NetworkBuffer buffer, T value) {
-        networkType.write(buffer, value);
+        networkType.write(buffer, value, );
     }
 
     @Override
-    public T read(NetworkBuffer buffer) {
-        return networkType.read(buffer);
+    public T read(NetworkBuffer buffer, NetworkContext context) {
+        return networkType.read(buffer, );
     }
 }

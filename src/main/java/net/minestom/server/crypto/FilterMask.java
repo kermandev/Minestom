@@ -1,6 +1,7 @@
 package net.minestom.server.crypto;
 
 import net.minestom.server.network.NetworkBuffer;
+import net.minestom.server.network.NetworkContext;
 
 import java.util.BitSet;
 
@@ -17,7 +18,7 @@ public record FilterMask(Type type, BitSet mask) {
         }
 
         @Override
-        public FilterMask read(NetworkBuffer buffer) {
+        public FilterMask read(NetworkBuffer buffer, NetworkContext context) {
             Type type = buffer.read(Type.NETWORK_TYPE);
             BitSet mask = type == Type.PARTIALLY_FILTERED ? buffer.read(BITSET) : new BitSet();
             return new FilterMask(type, mask);

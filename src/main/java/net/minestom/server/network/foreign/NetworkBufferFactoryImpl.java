@@ -15,10 +15,8 @@ import java.util.function.Supplier;
  *
  * @param arenaSupplier the supplier of the {@link Arena} to use for allocations
  * @param autoResize the auto-resize strategy to use, or {@code null} for no auto-resize
- * @param registries the registries to use, or {@code null} for no registries
  */
-record NetworkBufferFactoryImpl(Supplier<? extends Arena> arenaSupplier, @Nullable NetworkBuffer.AutoResize autoResize,
-                                @Nullable Registries registries) implements NetworkBufferFactory {
+record NetworkBufferFactoryImpl(Supplier<? extends Arena> arenaSupplier, @Nullable NetworkBuffer.AutoResize autoResize) implements NetworkBufferFactory {
 
     public NetworkBufferFactoryImpl {
         Objects.requireNonNull(arenaSupplier, "arenaSupplier");
@@ -28,25 +26,19 @@ record NetworkBufferFactoryImpl(Supplier<? extends Arena> arenaSupplier, @Nullab
     public NetworkBufferFactoryImpl arena(Arena arena) {
         Objects.requireNonNull(arena, "arena");
         final Supplier<Arena> arenaSupplier = () -> arena; // stable value/lazy constant
-        return new NetworkBufferFactoryImpl(arenaSupplier, autoResize, registries);
+        return new NetworkBufferFactoryImpl(arenaSupplier, autoResize);
     }
 
     @Override
     public NetworkBufferFactoryImpl arena(Supplier<? extends Arena> arenaSupplier) {
         Objects.requireNonNull(arenaSupplier, "arenaSupplier");
-        return new NetworkBufferFactoryImpl(arenaSupplier, autoResize, registries);
+        return new NetworkBufferFactoryImpl(arenaSupplier, autoResize);
     }
 
     @Override
     public NetworkBufferFactoryImpl autoResize(NetworkBuffer.AutoResize autoResize) {
         Objects.requireNonNull(autoResize, "autoResize");
-        return new NetworkBufferFactoryImpl(arenaSupplier, autoResize, registries);
-    }
-
-    @Override
-    public NetworkBufferFactoryImpl registry(Registries registries) {
-        Objects.requireNonNull(registries, "registries");
-        return new NetworkBufferFactoryImpl(arenaSupplier, autoResize, registries);
+        return new NetworkBufferFactoryImpl(arenaSupplier, autoResize);
     }
 
     @Override
@@ -54,9 +46,9 @@ record NetworkBufferFactoryImpl(Supplier<? extends Arena> arenaSupplier, @Nullab
         final Arena arena = Objects.requireNonNull(arenaSupplier.get(), "arena");
         final MemorySegment segment = NetworkBufferSegmentAllocator.allocate(arena, length);
         if (autoResize != null) {
-            return new NetworkBufferResizeableSegmentImpl(arena, segment, 0, 0, autoResize, arenaSupplier, registries);
+            return new NetworkBufferResizeableSegmentImpl(arena, segment, 0, 0, autoResize, arenaSupplier);
         } else {
-            return new NetworkBufferStaticSegmentImpl(arena, segment, 0, 0, registries);
+            return new NetworkBufferStaticSegmentImpl(arena, segment, 0, 0);
         }
     }
 

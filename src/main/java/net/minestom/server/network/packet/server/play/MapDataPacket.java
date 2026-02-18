@@ -4,6 +4,7 @@ import net.kyori.adventure.text.Component;
 import net.minestom.server.adventure.ComponentHolder;
 import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.network.NetworkBufferTemplate;
+import net.minestom.server.network.NetworkContext;
 import net.minestom.server.network.packet.server.ServerPacket;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
@@ -40,7 +41,7 @@ public record MapDataPacket(int mapId, byte scale, boolean locked,
         }
 
         @Override
-        public MapDataPacket read(NetworkBuffer buffer) {
+        public MapDataPacket read(NetworkBuffer buffer, NetworkContext context) {
             int mapId = buffer.read(VAR_INT);
             byte scale = buffer.read(BYTE);
             boolean locked = buffer.read(BOOLEAN);

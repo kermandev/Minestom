@@ -74,9 +74,9 @@ public class ArgumentNumber<T extends Number> extends Argument<T> {
         return NetworkBuffer.makeArray(buffer -> {
             buffer.write(NetworkBuffer.BYTE, getNumberProperties());
             if (this.hasMin())
-                networkType.write(buffer, getMin());
+                networkType.write(buffer, getMin(), );
             if (this.hasMax())
-                networkType.write(buffer, getMax());
+                networkType.write(buffer, getMax(), );
         });
     }
 

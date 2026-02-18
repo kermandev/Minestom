@@ -7,6 +7,7 @@ import net.minestom.server.codec.Transcoder;
 import net.minestom.server.instance.block.Block;
 import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.network.NetworkBufferTemplate;
+import net.minestom.server.network.NetworkContext;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
@@ -58,7 +59,7 @@ public record PropertiesPredicate(Map<String, ValuePredicate> properties) implem
             }
 
             @Override
-            public ValuePredicate read(NetworkBuffer buffer) {
+            public ValuePredicate read(NetworkBuffer buffer, NetworkContext context) {
                 return buffer.read(NetworkBuffer.BOOLEAN) ? buffer.read(Exact.NETWORK_TYPE) : buffer.read(Range.NETWORK_TYPE);
             }
         };

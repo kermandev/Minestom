@@ -2,6 +2,7 @@ package net.minestom.server.network.debug;
 
 import net.kyori.adventure.key.Key;
 import net.minestom.server.network.NetworkBuffer;
+import net.minestom.server.network.NetworkContext;
 import net.minestom.server.registry.StaticProtocolObject;
 import org.jetbrains.annotations.Nullable;
 
@@ -42,9 +43,9 @@ public sealed interface DebugSubscription<T> extends StaticProtocolObject<DebugS
             }
 
             @Override
-            public Event<?> read(NetworkBuffer buffer) {
+            public Event<?> read(NetworkBuffer buffer, NetworkContext context) {
                 var subscription = (DebugSubscriptionImpl<Object>) buffer.read(DebugSubscription.NETWORK_TYPE);
-                Object value = subscription.read(buffer);
+                Object value = subscription.read(buffer, );
                 return new Event<>(subscription, value);
             }
         };
@@ -61,10 +62,10 @@ public sealed interface DebugSubscription<T> extends StaticProtocolObject<DebugS
             }
 
             @Override
-            public Update<?> read(NetworkBuffer buffer) {
+            public Update<?> read(NetworkBuffer buffer, NetworkContext context) {
                 var subscription = (DebugSubscriptionImpl<Object>) buffer.read(DebugSubscription.NETWORK_TYPE);
                 boolean hasValue = buffer.read(NetworkBuffer.BOOLEAN);
-                Object value = hasValue ? subscription.read(buffer) : null;
+                Object value = hasValue ? subscription.read(buffer, ) : null;
                 return new Update<>(subscription, value);
             }
         };

@@ -13,6 +13,7 @@ import net.minestom.server.entity.metadata.villager.VillagerMeta;
 import net.minestom.server.instance.block.Block;
 import net.minestom.server.item.ItemStack;
 import net.minestom.server.network.NetworkBuffer;
+import net.minestom.server.network.NetworkContext;
 import net.minestom.server.network.player.ResolvableProfile;
 import net.minestom.server.particle.Particle;
 import net.minestom.server.utils.Direction;
@@ -75,11 +76,11 @@ final class MetadataImpl {
             }
 
             @Override
-            public EntryImpl read(NetworkBuffer buffer) {
+            public EntryImpl read(NetworkBuffer buffer, NetworkContext context) {
                 final int type = buffer.read(VAR_INT);
                 final EntryImpl<?> value = (EntryImpl<?>) EMPTY_VALUES.get(type);
                 if (value == null) throw new UnsupportedOperationException("Unknown value type: " + type);
-                return new EntryImpl(type, value.serializer.read(buffer), value.serializer);
+                return new EntryImpl(type, value.serializer.read(buffer, ), value.serializer);
             }
         };
     }

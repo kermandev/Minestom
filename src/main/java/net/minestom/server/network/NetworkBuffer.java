@@ -6,6 +6,7 @@ import net.kyori.adventure.nbt.CompoundBinaryTag;
 import net.kyori.adventure.text.Component;
 import net.minestom.server.ServerFlag;
 import net.minestom.server.codec.Codec;
+import net.minestom.server.codec.StructCodec;
 import net.minestom.server.coordinate.Point;
 import net.minestom.server.coordinate.Pos;
 import net.minestom.server.coordinate.Vec;
@@ -38,6 +39,8 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import java.util.zip.DataFormatException;
+import java.util.zip.Deflater;
+import java.util.zip.Inflater;
 
 /**
  * A mutable byte buffer for reading and writing network protocol data with type-safe operations.
@@ -87,42 +90,42 @@ import java.util.zip.DataFormatException;
  * @see IOView to interface with existing code
  */
 public interface NetworkBuffer {
-    Type<Unit> UNIT = NetworkBufferTemplate.template(Unit.INSTANCE);
-    Type<Boolean> BOOLEAN = NetworkBufferTypeImpl.BOOLEAN;
-    Type<Byte> BYTE = NetworkBufferTypeImpl.BYTE;
-    Type<Short> UNSIGNED_BYTE = NetworkBufferTypeImpl.UNSIGNED_BYTE;
-    Type<Short> SHORT = NetworkBufferTypeImpl.SHORT;
-    Type<Integer> UNSIGNED_SHORT = NetworkBufferTypeImpl.UNSIGNED_SHORT;
-    Type<Integer> INT = NetworkBufferTypeImpl.INT;
-    Type<Long> UNSIGNED_INT = NetworkBufferTypeImpl.UNSIGNED_INT;
-    Type<Long> LONG = NetworkBufferTypeImpl.LONG;
-    Type<Float> FLOAT = NetworkBufferTypeImpl.FLOAT;
-    Type<Double> DOUBLE = NetworkBufferTypeImpl.DOUBLE;
-    Type<Integer> VAR_INT = NetworkBufferTypeImpl.VAR_INT;
-    Type<@Nullable Integer> OPTIONAL_VAR_INT = new NetworkBufferTypeImpl.OptionalVarIntType();
-    Type<Integer> VAR_INT_3 = NetworkBufferTypeImpl.VAR_INT_3;
-    Type<Long> VAR_LONG = NetworkBufferTypeImpl.VAR_LONG;
-    Type<byte[]> RAW_BYTES = new NetworkBufferTypeImpl.RawBytesType(NetworkBufferTypeImpl.RawBytesType.ALL);
-    Type<String> STRING = new NetworkBufferTypeImpl.StringType();
-    Type<Key> KEY = STRING.transform(Key::key, Key::asString);
-    Type<String> STRING_TERMINATED = new NetworkBufferTypeImpl.StringTerminatedType();
-    Type<String> STRING_IO_UTF8 = new NetworkBufferTypeImpl.StringIOUTFType();
-    Type<BinaryTag> NBT = NetworkBufferTypeImpl.NbtType.typed();
-    Type<CompoundBinaryTag> NBT_COMPOUND = NetworkBufferTypeImpl.NbtType.typed();
+    Type<Unit, NetworkContext> UNIT = NetworkBufferTemplate.template(Unit.INSTANCE);
+    Type<Boolean, NetworkContext> BOOLEAN = NetworkBufferTypeImpl.BOOLEAN;
+    Type<Byte, NetworkContext> BYTE = NetworkBufferTypeImpl.BYTE;
+    Type<Short, NetworkContext> UNSIGNED_BYTE = NetworkBufferTypeImpl.UNSIGNED_BYTE;
+    Type<Short, NetworkContext> SHORT = NetworkBufferTypeImpl.SHORT;
+    Type<Integer, NetworkContext> UNSIGNED_SHORT = NetworkBufferTypeImpl.UNSIGNED_SHORT;
+    Type<Integer, NetworkContext> INT = NetworkBufferTypeImpl.INT;
+    Type<Long, NetworkContext> UNSIGNED_INT = NetworkBufferTypeImpl.UNSIGNED_INT;
+    Type<Long, NetworkContext> LONG = NetworkBufferTypeImpl.LONG;
+    Type<Float, NetworkContext> FLOAT = NetworkBufferTypeImpl.FLOAT;
+    Type<Double, NetworkContext> DOUBLE = NetworkBufferTypeImpl.DOUBLE;
+    Type<Integer, NetworkContext> VAR_INT = NetworkBufferTypeImpl.VAR_INT;
+    Type<@Nullable Integer, NetworkContext> OPTIONAL_VAR_INT = new NetworkBufferTypeImpl.OptionalVarIntType();
+    Type<Integer, NetworkContext> VAR_INT_3 = NetworkBufferTypeImpl.VAR_INT_3;
+    Type<Long, NetworkContext> VAR_LONG = NetworkBufferTypeImpl.VAR_LONG;
+    Type<byte[], NetworkContext> RAW_BYTES = new NetworkBufferTypeImpl.RawBytesType(NetworkBufferTypeImpl.RawBytesType.ALL);
+    Type<String, NetworkContext> STRING = new NetworkBufferTypeImpl.StringType();
+    Type<Key, NetworkContext> KEY = STRING.transform(Key::key, Key::asString);
+    Type<String, NetworkContext> STRING_TERMINATED = new NetworkBufferTypeImpl.StringTerminatedType();
+    Type<String, NetworkContext> STRING_IO_UTF8 = new NetworkBufferTypeImpl.StringIOUTFType();
+    Type<BinaryTag, NetworkContext> NBT = NetworkBufferTypeImpl.NbtType.typed();
+    Type<CompoundBinaryTag, NetworkContext> NBT_COMPOUND = NetworkBufferTypeImpl.NbtType.typed();
     // TAG_END special encoding for nullables.
-    Type<@Nullable BinaryTag> OPTIONAL_NBT = NetworkBufferTypeImpl.OptionalNBTType.typed();
+    Type<@Nullable BinaryTag, NetworkContext> OPTIONAL_NBT = NetworkBufferTypeImpl.OptionalNBTType.typed();
     // TAG_END special encoding for nullables.
-    Type<@Nullable CompoundBinaryTag> OPTIONAL_NBT_COMPOUND = NetworkBufferTypeImpl.OptionalNBTType.typed();
-    Type<Point> BLOCK_POSITION = new NetworkBufferTypeImpl.BlockPositionType();
-    Type<Component> COMPONENT = new ComponentNetworkBufferTypeImpl();
-    Type<Component> JSON_COMPONENT = new NetworkBufferTypeImpl.JsonComponentType();
-    Type<UUID> UUID = new NetworkBufferTypeImpl.UUIDType();
-    Type<Pos> POS = new NetworkBufferTypeImpl.PosType();
+    Type<@Nullable CompoundBinaryTag, NetworkContext> OPTIONAL_NBT_COMPOUND = NetworkBufferTypeImpl.OptionalNBTType.typed();
+    Type<Point, NetworkContext> BLOCK_POSITION = new NetworkBufferTypeImpl.BlockPositionType();
+    Type<Component, NetworkContext> COMPONENT = new ComponentNetworkBufferTypeImpl();
+    Type<Component, NetworkContext> JSON_COMPONENT = new NetworkBufferTypeImpl.JsonComponentType();
+    Type<UUID, NetworkContext> UUID = new NetworkBufferTypeImpl.UUIDType();
+    Type<Pos, NetworkContext> POS = new NetworkBufferTypeImpl.PosType();
 
-    Type<byte[]> BYTE_ARRAY = new NetworkBufferTypeImpl.ByteArrayType();
-    Type<long[]> LONG_ARRAY = new NetworkBufferTypeImpl.LongArrayType();
-    Type<int[]> VAR_INT_ARRAY = new NetworkBufferTypeImpl.VarIntArrayType();
-    Type<long[]> VAR_LONG_ARRAY = new NetworkBufferTypeImpl.VarLongArrayType();
+    Type<byte[], NetworkContext> BYTE_ARRAY = new NetworkBufferTypeImpl.ByteArrayType();
+    Type<long[], NetworkContext> LONG_ARRAY = new NetworkBufferTypeImpl.LongArrayType();
+    Type<int[], NetworkContext> VAR_INT_ARRAY = new NetworkBufferTypeImpl.VarIntArrayType();
+    Type<long[], NetworkContext> VAR_LONG_ARRAY = new NetworkBufferTypeImpl.VarLongArrayType();
 
     Type<BitSet> BITSET = LONG_ARRAY.transform(BitSet::valueOf, BitSet::toLongArray);
     Type<Instant> INSTANT_MS = LONG.transform(Instant::ofEpochMilli, Instant::toEpochMilli);
@@ -216,7 +219,7 @@ public interface NetworkBuffer {
      * @return the new type
      */
     @Contract(pure = true, value = "_ -> new")
-    static <T> Type<T> Lazy(Supplier<Type<T>> supplier) {
+    static <T extends @UnknownNullability Object, C extends NetworkContext> Type<T, C> Lazy(Supplier<Type<T, C>> supplier) {
         return new NetworkBufferTypeImpl.LazyType<>(supplier);
     }
 
@@ -230,7 +233,7 @@ public interface NetworkBuffer {
      * @return the new type
      */
     @Contract(pure = true, value = "_ -> new")
-    static <T> Type<T> Recursive(UnaryOperator<Type<T>> supplier) {
+    static <T extends @UnknownNullability Object, C extends NetworkContext> Type<T, C> Recursive(UnaryOperator<Type<T, C>> supplier) {
         return new NetworkBufferTypeImpl.RecursiveType<>(supplier).delegate();
     }
 
@@ -242,7 +245,7 @@ public interface NetworkBuffer {
      * @return the new type
      */
     @Contract(pure = true, value = "_ -> new")
-    static <T> Type<T> TypedNBT(Codec<T> serializer) {
+    static <T extends @UnknownNullability Object, C extends NetworkContext & Registries.Provider> Type<T, C> TypedNBT(Codec<T> serializer) {
         return new NetworkBufferTypeImpl.TypedNbtType<>(serializer);
     }
 
@@ -256,7 +259,7 @@ public interface NetworkBuffer {
      * @return the new type for Either
      */
     @Contract(pure = true, value = "_, _ -> new")
-    static <L, R> Type<Either<L, R>> Either(NetworkBuffer.Type<L> left, NetworkBuffer.Type<R> right) {
+    static <L, R, C extends NetworkContext> Type<Either<L, R>, C> Either(Type<L, ? super C> left, Type<R, ? super C> right) {
         return new NetworkBufferTypeImpl.EitherType<>(left, right);
     }
 
@@ -268,18 +271,6 @@ public interface NetworkBuffer {
      * @return the new network buffer
      */
     @Contract("_, _ -> new")
-    static NetworkBuffer staticBuffer(long size, Registries registries) {
-        Objects.requireNonNull(registries, "registries");
-        return NetworkBufferFactory.staticFactory().registry(registries).allocate(size);
-    }
-
-    /**
-     * Creates a new static buffer using {@link NetworkBufferFactory#staticFactory()}.
-     *
-     * @param size the size to use for {@link NetworkBufferFactory#allocate(long)}
-     * @return the new network buffer
-     */
-    @Contract("_ -> new")
     static NetworkBuffer staticBuffer(long size) {
         return NetworkBufferFactory.staticFactory().allocate(size);
     }
@@ -288,39 +279,11 @@ public interface NetworkBuffer {
      * Creates a resizeable buffer using {@link NetworkBufferFactory#resizeableFactory()}
      *
      * @param initialSize the initial size to use for {@link NetworkBufferFactory#allocate(long)}
-     * @param registries  the registries to use
-     * @return the new buffer
-     */
-    @Contract("_, _ -> new")
-    static NetworkBuffer resizableBuffer(long initialSize, Registries registries) {
-        Objects.requireNonNull(registries, "registries");
-        return NetworkBufferFactory.resizeableFactory()
-                .registry(registries)
-                .allocate(initialSize);
-    }
-
-    /**
-     * Creates a resizeable buffer using {@link NetworkBufferFactory#resizeableFactory()}
-     *
-     * @param initialSize the initial size to use for {@link NetworkBufferFactory#allocate(long)}
      * @return the new buffer
      */
     @Contract("_ -> new")
-    static NetworkBuffer resizableBuffer(int initialSize) {
+    static NetworkBuffer resizableBuffer(long initialSize) {
         return NetworkBufferFactory.resizeableFactory().allocate(initialSize);
-    }
-
-    /**
-     * Creates a resizeable buffer using {@link #resizableBuffer(long, Registries)}
-     * with an initial size of 256, determined by {@link ServerFlag#DEFAULT_RESIZEABLE_SIZE}.
-     *
-     * @param registries the registries to use if required during encoding/decoding.
-     * @return the new buffer
-     */
-    @Contract("_ -> new")
-    static NetworkBuffer resizableBuffer(Registries registries) {
-        Objects.requireNonNull(registries, "registries");
-        return resizableBuffer(ServerFlag.DEFAULT_RESIZEABLE_SIZE, registries);
     }
 
     /**
@@ -368,7 +331,7 @@ public interface NetworkBuffer {
     }
 
     /**
-     * Wrap the byte array into a {@link NetworkBuffer} with the registries.
+     * Wrap the byte array into a {@link NetworkBuffer} with the regstries.
      * Useful when you already have a {@code byte[]}.
      *
      * @param bytes      the bytes
@@ -378,23 +341,9 @@ public interface NetworkBuffer {
      * @return the new {@link NetworkBuffer}
      */
     @Contract("_, _, _, _ -> new")
-    static NetworkBuffer wrap(byte[] bytes, int readIndex, int writeIndex, @Nullable Registries registries) {
-        Objects.requireNonNull(bytes, "bytes");
-        return NetworkBufferSegmentProvider.INSTANCE.wrap(bytes, readIndex, writeIndex, registries);
-    }
-
-    /**
-     * Wrap the byte array into a {@link NetworkBuffer}.
-     * Useful when you already have a {@code byte[]}.
-     *
-     * @param bytes      the bytes
-     * @param readIndex  the {@link #readIndex()}
-     * @param writeIndex the {@link #writeIndex()}
-     * @return the new {@link NetworkBuffer}
-     */
-    @Contract("_, _, _ -> new")
     static NetworkBuffer wrap(byte[] bytes, int readIndex, int writeIndex) {
-        return wrap(bytes, readIndex, writeIndex, null);
+        Objects.requireNonNull(bytes, "bytes");
+        return NetworkBufferSegmentProvider.INSTANCE.wrap(bytes, readIndex, writeIndex);
     }
 
     /**
@@ -403,27 +352,12 @@ public interface NetworkBuffer {
      * Note: only the current thread can use the buffer.
      *
      * @param writing    consumer of the {@link NetworkBuffer}
-     * @param registries the registries to use in serialization
      * @return the smallest byte array to represent the contents of {@link NetworkBuffer}
      */
     @Contract("_, _ -> new")
-    static byte[] makeArray(Consumer<? super NetworkBuffer> writing, @Nullable Registries registries) {
-        Objects.requireNonNull(writing, "writing");
-        return NetworkBufferSegmentProvider.INSTANCE.makeArray(writing, registries);
-    }
-
-    /**
-     * Creates a byte array from the consumer and without registries.
-     * <br>
-     * Note: only the current thread can use the buffer.
-     * Similar to {@link NetworkBuffer#makeArray(Consumer, Registries)}
-     *
-     * @param writing consumer of the {@link NetworkBuffer}
-     * @return the smallest byte array to represent the contents of {@link NetworkBuffer}
-     */
-    @Contract("_ -> new")
     static byte[] makeArray(Consumer<? super NetworkBuffer> writing) {
-        return makeArray(writing, null);
+        Objects.requireNonNull(writing, "writing");
+        return NetworkBufferSegmentProvider.INSTANCE.makeArray(writing);
     }
 
     /**
@@ -434,30 +368,14 @@ public interface NetworkBuffer {
      *
      * @param type       the {@link Type} for {@link T}
      * @param value      the value
-     * @param registries the registries to use in serialization
+     * @param context    the context to use in serialization
      * @param <T>        the type
      * @return the smallest byte array to represent {@link T}
      */
     @Contract("_ ,_, _ -> new")
-    static <T extends @UnknownNullability Object> byte[] makeArray(Type<T> type, T value, @Nullable Registries registries) {
+    static <T extends @UnknownNullability Object, C extends NetworkContext> byte[] makeArray(Type<T, ? super C> type, T value, C context) {
         Objects.requireNonNull(type, "type");
-        return NetworkBufferSegmentProvider.INSTANCE.makeArray(type, value, registries);
-    }
-
-    /**
-     * Creates a byte array from the type and value without registries.
-     * <br>
-     * Note: only the current thread can use the buffer.
-     * Similar to {@link NetworkBuffer#makeArray(Consumer, Registries)}
-     *
-     * @param type  the {@link Type} for {@link T}
-     * @param value the value
-     * @param <T>   the type
-     * @return the smallest byte array to represent {@link T}
-     */
-    @Contract("_, _ -> new")
-    static <T extends @UnknownNullability Object> byte[] makeArray(Type<T> type, T value) {
-        return makeArray(type, value, null);
+        return NetworkBufferSegmentProvider.INSTANCE.makeArray(type, value, context);
     }
 
     /**
@@ -517,14 +435,13 @@ public interface NetworkBuffer {
      * <br>
      * Operations that require the dummy buffer to be read or passed into logic where it's required will throw an exception.
      *
-     * @param registries the registries to use if applicable
      * @return the new dummy buffer
      * @throws UnsupportedOperationException during usage, if directly called to read.
      * @throws RuntimeException if used on another implementation, that requires more underlying access.
      */
-    @Contract(pure = true, value = "_ -> new")
-    static NetworkBuffer dummy(@Nullable Registries registries) {
-        return new NetworkBufferDummy(0, registries);
+    @Contract(pure = true, value = "-> new")
+    static NetworkBuffer dummy() {
+        return new NetworkBufferDummy(0);
     }
 
     /**
@@ -538,8 +455,8 @@ public interface NetworkBuffer {
      * @throws IndexOutOfBoundsException if the write index is out of bounds.
      */
     @Contract(mutates = "this")
-    default <T extends @UnknownNullability Object> void write(Type<T> type, T value) throws IndexOutOfBoundsException {
-        type.write(this, value);
+    default <T extends @UnknownNullability Object, C extends NetworkContext> void write(Type<T, ? super C> type, T value, C context) throws IndexOutOfBoundsException {
+        type.write(this, value, context);
     }
 
     /**
@@ -551,8 +468,8 @@ public interface NetworkBuffer {
      * @throws IndexOutOfBoundsException if the read index is out of bounds.
      */
     @Contract(mutates = "this")
-    default <T extends @UnknownNullability Object> T read(Type<T> type) throws IndexOutOfBoundsException {
-        return type.read(this);
+    default <T extends @UnknownNullability Object, C extends NetworkContext> T read(Type<T, ? super C> type, C context) throws IndexOutOfBoundsException {
+        return type.read(this, context);
     }
 
     /**
@@ -567,11 +484,11 @@ public interface NetworkBuffer {
      * @throws IndexOutOfBoundsException if the index is out of bounds.
      */
     @Contract(mutates = "this")
-    default <T extends @UnknownNullability Object> void writeAt(long index, Type<T> type, T value) throws IndexOutOfBoundsException {
+    default <T extends @UnknownNullability Object, C extends NetworkContext> void writeAt(long index, Type<T, ? super C> type, T value, C context) throws IndexOutOfBoundsException {
         final long oldWriteIndex = writeIndex();
         writeIndex(index);
         try {
-            write(type, value);
+            write(type, value, context);
         } finally {
             writeIndex(oldWriteIndex);
         }
@@ -588,12 +505,12 @@ public interface NetworkBuffer {
      * @return the value {@link T}
      * @throws IndexOutOfBoundsException if the index is out of bounds.
      */
-    @Contract(mutates = "this", value = "_, _ -> new")
-    default <T extends @UnknownNullability Object> T readAt(long index, Type<T> type) throws IndexOutOfBoundsException {
+    @Contract(mutates = "this", value = "_, _, _ -> new")
+    default <T extends @UnknownNullability Object, C extends NetworkContext> T readAt(long index, Type<T, ? super C> type, C context) throws IndexOutOfBoundsException {
         final long oldReadIndex = readIndex();
         readIndex(index);
         try {
-            return read(type);
+            return read(type, context);
         } finally {
             readIndex(oldReadIndex);
         }
@@ -674,9 +591,10 @@ public interface NetworkBuffer {
      * @return the bytes extracted
      */
     @Contract(mutates = "this", value = "_ -> new")
-    default byte[] extractReadBytes(Type<?> type) {
+    default <C extends NetworkContext> byte[] extractReadBytes(Type<?, C> type, C context) {
         Objects.requireNonNull(type, "type");
-        return extractReadBytes(buffer -> buffer.read(type));
+        Objects.requireNonNull(context, "context");
+        return extractReadBytes(buffer -> buffer.read(type, context));
     }
 
     /**
@@ -699,9 +617,10 @@ public interface NetworkBuffer {
      * @return the bytes extracted
      */
     @Contract(mutates = "this", value = "_, _ -> new")
-    default <T extends @UnknownNullability Object> byte[] extractWrittenBytes(Type<T> type, T value) {
+    default <T extends @UnknownNullability Object, C extends NetworkContext> byte[] extractWrittenBytes(Type<T, C> type, T value, C context) {
         Objects.requireNonNull(type, "type");
-        return extractWrittenBytes(buffer -> buffer.write(type, value));
+        Objects.requireNonNull(context, "context");
+        return extractWrittenBytes(buffer -> buffer.write(type, value, context));
     }
 
     /**
@@ -1088,7 +1007,7 @@ public interface NetworkBuffer {
     void cipher(Cipher cipher, long start, long length);
 
     /**
-     * Compress this buffer into the output using {@link java.util.zip.Deflater}
+     * Compress this buffer into the output using {@link Deflater}
      *
      * @param start  the start index
      * @param length the length
@@ -1098,7 +1017,7 @@ public interface NetworkBuffer {
     long compress(long start, long length, NetworkBuffer output);
 
     /**
-     * Decompress this buffer into the output using {@link java.util.zip.Inflater}
+     * Decompress this buffer into the output using {@link Inflater}
      *
      * @param start  the start index
      * @param length the length
@@ -1107,13 +1026,6 @@ public interface NetworkBuffer {
      * @throws DataFormatException if the data is invalid
      */
     long decompress(long start, long length, NetworkBuffer output) throws DataFormatException;
-
-    /**
-     * The registries used when creating with {@link NetworkBufferFactory#registry(Registries)}
-     *
-     * @return the registries
-     */
-    @Nullable Registries registries();
 
     /**
      * Creates a new {@link IOView} of this buffer.
@@ -1174,66 +1086,53 @@ public interface NetworkBuffer {
 
     /**
      * A type is a writer/reader for {@link T} it attempts to provide a bidirectional guarantee.
-     * Through {@link #write(NetworkBuffer, Object)} and {@link #read(NetworkBuffer)}.
+     * Through {@link #write(NetworkBuffer, Object, NetworkContext)} and {@link #read(NetworkBuffer, NetworkContext)}.
      * <br>
-     * Unlike {@link net.minestom.server.codec.StructCodec} types are always written linearly into a {@link NetworkBuffer}
+     * Unlike {@link StructCodec} types are always written linearly into a {@link NetworkBuffer}
      * <br>
      * You should use templates wherever possibly to ensure bidirectional serialization.
      *
      * @param <T> the type, nullable.
      */
-    interface Type<T extends @UnknownNullability Object> {
+    interface Type<T extends @UnknownNullability Object, C extends NetworkContext> {
         /**
          * Write {@link T} to a {@link NetworkBuffer}.
          *
-         * @param buffer the buffer to use
-         * @param value  the value
+         * @param buffer  the buffer to use
+         * @param value   the value
+         * @param context the context
          */
         @Contract(mutates = "param1")
-        void write(NetworkBuffer buffer, T value);
+        void write(NetworkBuffer buffer, T value, C context);
 
         /**
          * Read the value from the {@link NetworkBuffer}
          *
-         * @param buffer the buffer
+         * @param buffer  the buffer
+         * @param context the context
          * @return {@link T}
          */
         @Contract(mutates = "param1")
-        T read(NetworkBuffer buffer);
+        T read(NetworkBuffer buffer, C context);
 
         /**
          * Determines the sizeOf {@link T} using the registries provided.
          * <br>
          * Consider overriding this version as {@link #sizeOf(Object)} calls into this.
          *
-         * @param value      the value to get the size of
-         * @param registries the registries
+         * @param value   the value to get the size of
+         * @param context the registries
          * @return the size
          */
         @Contract(pure = true)
         @Range(from = 0, to = Long.MAX_VALUE)
-        default long sizeOf(T value, @Nullable Registries registries) {
-            final NetworkBuffer dummy = NetworkBuffer.dummy(registries);
-            dummy.write(this, value);
+        default long sizeOf(T value, C context) {
+            final NetworkBuffer dummy = NetworkBuffer.dummy();
+            this.write(dummy, value, context);
             return dummy.writeIndex();
         }
 
         /**
-         * Determines the sizeOf {@link T}.
-         * <br>
-         * Consider overriding {@link #sizeOf(Object, Registries)} instead if applicable.
-         *
-         * @param value the value to get the size of
-         * @return the size
-         * @see #sizeOf(Object, Registries)
-         */
-        @Contract(pure = true)
-        @Range(from = 0, to = Long.MAX_VALUE)
-        default long sizeOf(T value) {
-            return sizeOf(value, null);
-        }
-
-        /**
          * Transform the current type {@link T} to {@link S} and {@link S} to {@link T}.
          *
          * @param to   the function to call when reading your value
@@ -1242,24 +1141,8 @@ public interface NetworkBuffer {
          * @return the new type that transforms {@link T}
          */
         @Contract(pure = true, value = "_, _ -> new")
-        default <S extends @UnknownNullability Object> Type<S> transform(Function<? super T, ? extends S> to, Function<? super S, ? extends T> from) {
+        default <S extends @UnknownNullability Object> Type<S, C> transform(Function<? super T, ? extends S> to, Function<? super S, ? extends T> from) {
             return new NetworkBufferTypeImpl.TransformType<>(this, to, from);
-        }
-
-        /**
-         * Transform the current type {@link T} to {@link S} and {@link S} to {@link T}.
-         * <br>
-         * This call site is more optimized as we can look at the underlying implementation, please use this for templates.
-         *
-         * @param to   the function to call when reading your value
-         * @param from the function to call when writing your value
-         * @param <S>  type to
-         * @return the new type that transforms {@link T}
-         */
-        @Contract(pure = true, value = "_, _ -> new")
-        default <S extends @UnknownNullability Object> Type<S> transform(Functions.SF1<? super T, ? extends S> to, Functions.SF1<? super S, ? extends T> from) {
-            // Delegate back, we just want them to use the SF1 if possible.
-            return transform((Function<? super T, ? extends S>) to, from);
         }
 
         /**
@@ -1271,7 +1154,7 @@ public interface NetworkBuffer {
          * @return the type
          */
         @Contract(pure = true, value = "_, _ -> new")
-        default <V> Type<@Unmodifiable Map<T, V>> mapValue(Type<V> valueType, int maxSize) {
+        default <V, X extends C> Type<@Unmodifiable Map<T, V>, X> mapValue(Type<V, ? super X> valueType, int maxSize) {
             return new NetworkBufferTypeImpl.MapType<>(this, valueType, maxSize);
         }
 
@@ -1282,10 +1165,11 @@ public interface NetworkBuffer {
          *
          * @param valueType the value type
          * @param <V>       the value type
+         * @param <X>       the context type
          * @return the type
          */
         @Contract(pure = true, value = "_ -> new")
-        default <V> Type<@Unmodifiable Map<T, V>> mapValue(Type<V> valueType) {
+        default <V, X extends C>  Type<@Unmodifiable Map<T, V>, X> mapValue(Type<V, ? super X> valueType) {
             return mapValue(valueType, Integer.MAX_VALUE);
         }
 
@@ -1298,7 +1182,7 @@ public interface NetworkBuffer {
          * @return the list type for {@link T}
          */
         @Contract(pure = true, value = "_ -> new")
-        default Type<@Unmodifiable @UnknownNullability List<T>> list(int maxSize) {
+        default Type<@Unmodifiable @UnknownNullability List<T>, C> list(int maxSize) {
             return new NetworkBufferTypeImpl.ListType<>(this, maxSize);
         }
 
@@ -1312,7 +1196,7 @@ public interface NetworkBuffer {
          * @return the list type for {@link T}
          */
         @Contract(pure = true, value = "-> new")
-        default Type<@Unmodifiable @UnknownNullability List<T>> list() {
+        default Type<@Unmodifiable @UnknownNullability List<T>, C> list() {
             return list(Integer.MAX_VALUE);
         }
 
@@ -1326,7 +1210,7 @@ public interface NetworkBuffer {
          * @return the list type for {@link T}
          */
         @Contract(pure = true, value = "_ -> new")
-        default Type<@Unmodifiable @UnknownNullability Set<T>> set(int maxSize) {
+        default Type<@Unmodifiable @UnknownNullability Set<T>, C> set(int maxSize) {
             return new NetworkBufferTypeImpl.SetType<>(this, maxSize);
         }
 
@@ -1340,7 +1224,7 @@ public interface NetworkBuffer {
          * @return the list type for {@link T}
          */
         @Contract(pure = true, value = "-> new")
-        default Type<@Unmodifiable @UnknownNullability Set<T>> set() {
+        default Type<@Unmodifiable @UnknownNullability Set<T>, C> set() {
             return set(Integer.MAX_VALUE);
         }
 
@@ -1353,7 +1237,7 @@ public interface NetworkBuffer {
          * @return the new optional type
          */
         @Contract(pure = true, value = "-> new")
-        default Type<@Nullable T> optional() {
+        default Type<@Nullable T, C> optional() {
             return new NetworkBufferTypeImpl.OptionalType<>(this);
         }
 
@@ -1366,7 +1250,7 @@ public interface NetworkBuffer {
          * @return the new union type for {@link T} using {@link R}
          */
         @Contract(pure = true, value = "_, _ -> new")
-        default <R> Type<R> unionType(Function<T, NetworkBuffer.Type<? extends R>> serializers, Function<? super R, ? extends T> keyFunc) {
+        default <R, U extends C> Type<R, U> unionType(Function<T, Type<? extends R, ? super U>> serializers, Function<? super R, ? extends T> keyFunc) {
             return new NetworkBufferTypeImpl.UnionType<>(this, keyFunc, serializers);
         }
 
@@ -1377,7 +1261,7 @@ public interface NetworkBuffer {
          * @return the new length prefixed type
          */
         @Contract(pure = true, value = "_ -> new")
-        default Type<T> lengthPrefixed(int maxLength) {
+        default Type<T, C> lengthPrefixed(int maxLength) {
             return new NetworkBufferTypeImpl.LengthPrefixedType<>(this, maxLength);
         }
     }
@@ -1451,27 +1335,27 @@ public interface NetworkBuffer {
 
         @Override
         default boolean readBoolean() {
-            return buffer().read(BOOLEAN);
+            return buffer().read(BOOLEAN, NetworkContext.empty());
         }
 
         @Override
         default byte readByte() {
-            return buffer().read(BYTE);
+            return buffer().read(BYTE, NetworkContext.empty());
         }
 
         @Override
         default int readUnsignedByte() {
-            return buffer().read(UNSIGNED_BYTE);
+            return buffer().read(UNSIGNED_BYTE, NetworkContext.empty());
         }
 
         @Override
         default short readShort() {
-            return buffer().read(SHORT);
+            return buffer().read(SHORT, NetworkContext.empty());
         }
 
         @Override
         default int readUnsignedShort() {
-            return buffer().read(UNSIGNED_SHORT);
+            return buffer().read(UNSIGNED_SHORT, NetworkContext.empty());
         }
 
         @Override
@@ -1481,84 +1365,84 @@ public interface NetworkBuffer {
 
         @Override
         default int readInt() {
-            return buffer().read(INT);
+            return buffer().read(INT, NetworkContext.empty());
         }
 
         @Override
         default long readLong() {
-            return buffer().read(LONG);
+            return buffer().read(LONG, NetworkContext.empty());
         }
 
         @Override
         default float readFloat() {
-            return buffer().read(FLOAT);
+            return buffer().read(FLOAT, NetworkContext.empty());
         }
 
         @Override
         default double readDouble() {
-            return buffer().read(DOUBLE);
+            return buffer().read(DOUBLE, NetworkContext.empty());
         }
 
         @Override
         default String readUTF() {
-            return buffer().read(STRING_IO_UTF8);
+            return buffer().read(STRING_IO_UTF8, NetworkContext.empty());
         }
 
         @Override
         default void write(int lower) {
-            buffer().write(BYTE, (byte) lower);
+            buffer().write(BYTE, (byte) lower, NetworkContext.empty());
         }
 
         @Override
         default void write(byte[] bytes) {
             Objects.requireNonNull(bytes, "bytes");
-            buffer().write(RAW_BYTES, bytes);
+            buffer().write(RAW_BYTES, bytes, NetworkContext.empty());
         }
 
         @Override
         default void write(byte[] bytes, int off, int len) {
             Objects.requireNonNull(bytes, "bytes");
-            buffer().write(RAW_BYTES, Arrays.copyOfRange(bytes, off, off + len));
+            buffer().write(RAW_BYTES, Arrays.copyOfRange(bytes, off, off + len), NetworkContext.empty());
         }
 
         @Override
         default void writeBoolean(boolean value) {
-            buffer().write(BOOLEAN, value);
+            buffer().write(BOOLEAN, value, NetworkContext.empty());
         }
 
         @Override
         default void writeByte(int value) {
-            buffer().write(BYTE, (byte) value);
+            buffer().write(BYTE, (byte) value, NetworkContext.empty());
         }
 
         @Override
         default void writeShort(int value) {
-            buffer().write(UNSIGNED_SHORT, value);
+            buffer().write(UNSIGNED_SHORT, value, NetworkContext.empty());
         }
 
         @Override
         default void writeChar(int value) {
-            buffer().write(UNSIGNED_SHORT, value);
+            buffer().write(UNSIGNED_SHORT, value, NetworkContext.empty());
         }
 
         @Override
         default void writeInt(int value) {
-            buffer().write(INT, value);
+            buffer().write(INT, value, NetworkContext.empty());
         }
 
         @Override
         default void writeLong(long value) {
-            buffer().write(LONG, value);
+            buffer().write(LONG, value, NetworkContext.empty());
         }
 
         @Override
         default void writeFloat(float value) {
-            buffer().write(FLOAT, value);
+            buffer().write(FLOAT, value, NetworkContext.empty());
         }
 
         @Override
         default void writeDouble(double value) {
-            buffer().write(DOUBLE, value);
+            buffer().write(DOUBLE, value, NetworkContext.empty());
         }
 
         @Override
@@ -1566,7 +1450,7 @@ public interface NetworkBuffer {
             Objects.requireNonNull(value, "value");
             NetworkBuffer buffer = buffer();
             for (int i = 0; i < value.length(); i++) {
-                buffer.write(BYTE, (byte) value.charAt(i)); // Low byte only
+                buffer.write(BYTE, (byte) value.charAt(i), NetworkContext.empty()); // Low byte only
             }
         }
 
@@ -1575,14 +1459,14 @@ public interface NetworkBuffer {
             Objects.requireNonNull(value, "value");
             NetworkBuffer buffer = buffer();
             for (int i = 0; i < value.length(); i++) {
-                buffer.write(UNSIGNED_SHORT, (int) value.charAt(i));
+                buffer.write(UNSIGNED_SHORT, (int) value.charAt(i), NetworkContext.empty());
             }
         }
 
         @Override
         default void writeUTF(String value) {
             Objects.requireNonNull(value, "value");
-            buffer().write(STRING_IO_UTF8, value);
+            buffer().write(STRING_IO_UTF8, value, NetworkContext.empty());
         }
 
         /**

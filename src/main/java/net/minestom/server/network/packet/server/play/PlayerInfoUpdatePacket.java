@@ -4,6 +4,7 @@ import net.kyori.adventure.text.Component;
 import net.minestom.server.crypto.ChatSession;
 import net.minestom.server.entity.GameMode;
 import net.minestom.server.network.NetworkBuffer;
+import net.minestom.server.network.NetworkContext;
 import net.minestom.server.network.packet.server.ServerPacket;
 import net.minestom.server.network.player.GameProfile;
 import org.jetbrains.annotations.Nullable;
@@ -45,7 +46,7 @@ public record PlayerInfoUpdatePacket(
         }
 
         @Override
-        public PlayerInfoUpdatePacket read(NetworkBuffer reader) {
+        public PlayerInfoUpdatePacket read(NetworkBuffer reader, NetworkContext context) {
             var actions = reader.read(ACTION_ENUM_SET);
             var entries = reader.read(Entry.serializer(actions).list(MAX_ENTRIES));
             return new PlayerInfoUpdatePacket(actions, entries);
@@ -96,7 +97,7 @@ public record PlayerInfoUpdatePacket(
                 }
 
                 @Override
-                public Entry read(NetworkBuffer buffer) {
+                public Entry read(NetworkBuffer buffer, NetworkContext context) {
                     UUID uuid = buffer.read(NetworkBuffer.UUID);
                     String username = null;
                     List<GameProfile.Property> properties = null;
@@ -113,7 +114,7 @@ public record PlayerInfoUpdatePacket(
                                 username = buffer.read(STRING);
                                 properties = buffer.read(GameProfile.Property.SERIALIZER.list(GameProfile.MAX_PROPERTIES));
                             }
-                            case INITIALIZE_CHAT -> chatSession = ChatSession.SERIALIZER.optional().read(buffer);
+                            case INITIALIZE_CHAT -> chatSession = ChatSession.SERIALIZER.optional().read(buffer, );
                             case UPDATE_GAME_MODE -> gameMode = buffer.read(GameMode.NETWORK_TYPE);
                             case UPDATE_LISTED -> listed = buffer.read(BOOLEAN);
                             case UPDATE_LATENCY -> latency = buffer.read(VAR_INT);

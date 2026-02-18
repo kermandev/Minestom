@@ -10,7 +10,7 @@ public class EntityVillagerMetaTest {
     @Test
     void levelNetworkSerialization() {
         NetworkBuffer buffer = NetworkBuffer.staticBuffer(5);
-        VillagerMeta.Level.NETWORK_TYPE.write(buffer, VillagerMeta.Level.NOVICE);
+        VillagerMeta.Level.NETWORK_TYPE.write(buffer, VillagerMeta.Level.NOVICE, );
 
         int expected = VillagerMeta.Level.NOVICE.ordinal() + 1;  // Network representation is ordinal + 1
         int readValue = buffer.read(NetworkBuffer.VAR_INT);
@@ -23,7 +23,7 @@ public class EntityVillagerMetaTest {
         NetworkBuffer buffer = NetworkBuffer.staticBuffer(5);
         buffer.write(NetworkBuffer.VAR_INT, networkValue);
 
-        VillagerMeta.Level level = VillagerMeta.Level.NETWORK_TYPE.read(buffer);
+        VillagerMeta.Level level = VillagerMeta.Level.NETWORK_TYPE.read(buffer, );
         assertEquals(VillagerMeta.Level.NOVICE, level);
     }
 }

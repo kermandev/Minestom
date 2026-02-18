@@ -12,6 +12,7 @@ import net.minestom.server.color.Color;
 import net.minestom.server.coordinate.Point;
 import net.minestom.server.item.ItemStack;
 import net.minestom.server.network.NetworkBuffer;
+import net.minestom.server.network.NetworkContext;
 import net.minestom.server.registry.StaticProtocolObject;
 import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.Contract;
@@ -34,7 +35,7 @@ public sealed interface Particle extends StaticProtocolObject<Particle>, Particl
         }
 
         @Override
-        public Particle read(NetworkBuffer buffer) {
+        public Particle read(NetworkBuffer buffer, NetworkContext context) {
             final int id = buffer.read(VAR_INT);
             final Particle particle = Objects.requireNonNull(fromId(id), () -> "unknown particle id: " + id);
             return particle.readData(buffer);

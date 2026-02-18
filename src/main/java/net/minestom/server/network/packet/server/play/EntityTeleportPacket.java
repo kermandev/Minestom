@@ -4,6 +4,7 @@ import net.minestom.server.coordinate.Point;
 import net.minestom.server.coordinate.Pos;
 import net.minestom.server.entity.RelativeFlags;
 import net.minestom.server.network.NetworkBuffer;
+import net.minestom.server.network.NetworkContext;
 import net.minestom.server.network.packet.server.ServerPacket;
 import org.intellij.lang.annotations.MagicConstant;
 
@@ -26,7 +27,7 @@ public record EntityTeleportPacket(
         }
 
         @Override
-        public EntityTeleportPacket read(NetworkBuffer buffer) {
+        public EntityTeleportPacket read(NetworkBuffer buffer, NetworkContext context) {
             int entityId = buffer.read(VAR_INT);
             // Order is x,y,z for position, then x,y,z for delta move, then yaw and pitch
             Point absPosition = buffer.read(VECTOR3D);

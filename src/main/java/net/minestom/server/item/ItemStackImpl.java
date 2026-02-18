@@ -10,6 +10,7 @@ import net.minestom.server.component.DataComponents;
 import net.minestom.server.item.component.CustomData;
 import net.minestom.server.item.component.TooltipDisplay;
 import net.minestom.server.network.NetworkBuffer;
+import net.minestom.server.network.NetworkContext;
 import net.minestom.server.registry.RegistryTranscoder;
 import net.minestom.server.tag.Tag;
 import net.minestom.server.utils.validate.Check;
@@ -40,7 +41,7 @@ record ItemStackImpl(Material material, int amount, DataComponentMap components)
             }
 
             @Override
-            public ItemStack read(NetworkBuffer buffer) {
+            public ItemStack read(NetworkBuffer buffer, NetworkContext context) {
                 int amount = buffer.read(NetworkBuffer.VAR_INT);
                 if (amount <= 0) return ItemStack.AIR;
                 Material material = Material.fromId(buffer.read(NetworkBuffer.VAR_INT));

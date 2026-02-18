@@ -3,6 +3,7 @@ package net.minestom.server.network.packet.server.play;
 import net.kyori.adventure.text.Component;
 import net.minestom.server.entity.Metadata;
 import net.minestom.server.network.NetworkBuffer;
+import net.minestom.server.network.NetworkContext;
 import net.minestom.server.network.packet.server.ServerPacket;
 
 import java.util.Collection;
@@ -31,7 +32,7 @@ public record EntityMetaDataPacket(int entityId,
         }
 
         @Override
-        public EntityMetaDataPacket read(NetworkBuffer buffer) {
+        public EntityMetaDataPacket read(NetworkBuffer buffer, NetworkContext context) {
             return new EntityMetaDataPacket(buffer.read(VAR_INT), readEntries(buffer));
         }
     };
@@ -43,7 +44,7 @@ public record EntityMetaDataPacket(int entityId,
             if (index == (byte) 0xFF) { // reached the end
                 break;
             }
-            Metadata.Entry<?> entry = Metadata.Entry.SERIALIZER.read(reader);
+            Metadata.Entry<?> entry = Metadata.Entry.SERIALIZER.read(reader, );
             entries.put((int) index, entry);
         }
         return entries;

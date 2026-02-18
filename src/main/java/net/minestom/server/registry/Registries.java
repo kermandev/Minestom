@@ -281,4 +281,8 @@ public interface Registries {
             return delegate.enchantmentLocationEffects();
         }
     }
+
+    interface Provider {
+        Registries registries();
+    }
 }

@@ -14,16 +14,12 @@ import java.util.function.Consumer;
  * A Dummy buffer is known as the dry run buffer for size calculations. It should support all write operations and fail on reads.
  * <br>
  * Note: A lot of runtime checks are removed, as this is not meant to catch exceptions.
- *
- * @see NetworkBuffer#dummy(Registries)
  */
 final class NetworkBufferDummy implements NetworkBuffer, NetworkBuffer.Direct {
-    private final @Nullable Registries registries;
     private long writeIndex;
 
-    NetworkBufferDummy(long writeIndex, @Nullable Registries registries) {
+    NetworkBufferDummy(long writeIndex) {
         this.writeIndex = writeIndex;
-        this.registries = registries;
         super();
     }
 
@@ -134,7 +130,7 @@ final class NetworkBufferDummy implements NetworkBuffer, NetworkBuffer.Direct {
 
     @Override
     public NetworkBuffer slice(long index, long length, long readIndex, long writeIndex) {
-        return new NetworkBufferDummy(writeIndex, registries);
+        return new NetworkBufferDummy(writeIndex);
     }
 
     @Override
@@ -166,11 +162,6 @@ final class NetworkBufferDummy implements NetworkBuffer, NetworkBuffer.Direct {
         if (output instanceof NetworkBufferDummy) return length;
         assertDummy();
         return 0;
-    }
-
-    @Override
-    public @Nullable Registries registries() {
-        return registries;
     }
 
     @Override

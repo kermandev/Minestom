@@ -6,6 +6,7 @@ import net.minestom.server.coordinate.Point;
 import net.minestom.server.coordinate.Vec;
 import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.network.NetworkBufferTemplate;
+import net.minestom.server.network.NetworkContext;
 import net.minestom.server.network.packet.server.ServerPacket;
 import net.minestom.server.sound.SoundEvent;
 
@@ -30,7 +31,7 @@ public record SoundEffectPacket(
         }
 
         @Override
-        public Point read(NetworkBuffer buffer) {
+        public Point read(NetworkBuffer buffer, NetworkContext context) {
             return new Vec(buffer.read(INT), buffer.read(INT), buffer.read(INT));
         }
     };

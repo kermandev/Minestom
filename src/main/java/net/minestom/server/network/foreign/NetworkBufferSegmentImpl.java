@@ -3,6 +3,7 @@ package net.minestom.server.network.foreign;
 import net.minestom.server.ServerFlag;
 import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.network.NetworkBufferFactory;
+import net.minestom.server.network.NetworkContext;
 import net.minestom.server.registry.Registries;
 import net.minestom.server.utils.collection.ObjectPool;
 import org.jetbrains.annotations.Contract;
@@ -37,14 +38,11 @@ sealed abstract class NetworkBufferSegmentImpl implements NetworkBuffer, Network
     private static final ValueLayout.OfFloat JAVA_FLOAT = ValueLayout.JAVA_FLOAT_UNALIGNED.withOrder(BYTE_ORDER);
     private static final ValueLayout.OfDouble JAVA_DOUBLE = ValueLayout.JAVA_DOUBLE_UNALIGNED.withOrder(BYTE_ORDER);
 
-    private final @Nullable Registries registries;
-
     private long readIndex, writeIndex;
 
-    protected NetworkBufferSegmentImpl(long readIndex, long writeIndex, @Nullable Registries registries) {
+    protected NetworkBufferSegmentImpl(long readIndex, long writeIndex) {
         this.readIndex = readIndex;
         this.writeIndex = writeIndex;
-        this.registries = registries;
         super();
     }
 
@@ -61,9 +59,9 @@ sealed abstract class NetworkBufferSegmentImpl implements NetworkBuffer, Network
     protected abstract @Nullable Arena arena();
 
     @Override
-    public final <T> void write(Type<T> type, @UnknownNullability T value) {
+    public <T, C extends NetworkContext> void write(Type<T, ? super C> type, T value, C context) throws IndexOutOfBoundsException {
         assertReadOnly();
-        type.write(this, value);
+        NetworkBuffer.super.write(type, value, context);
     }
 
     @Override
@@ -184,7 +182,7 @@ sealed abstract class NetworkBufferSegmentImpl implements NetworkBuffer, Network
     @Override
     public final NetworkBuffer readOnly() {
         if (isReadOnly()) return this; // Should we warn? (also here cause asReadOnly does not check for this)
-        return new NetworkBufferStaticSegmentImpl(arena(), segment().asReadOnly(), readIndex, writeIndex, registries);
+        return new NetworkBufferStaticSegmentImpl(arena(), segment().asReadOnly(), readIndex, writeIndex);
     }
 
     @Override
@@ -208,7 +206,7 @@ sealed abstract class NetworkBufferSegmentImpl implements NetworkBuffer, Network
     public final NetworkBuffer slice(long index, long length, long readIndex, long writeIndex) {
         final MemorySegment sliceSegment = this.segment().asSlice(index, length);
         // This region will live as long as the backing segment is alive, no reason to create another arena.
-        return new NetworkBufferStaticSegmentImpl(arena(), sliceSegment, readIndex, writeIndex, registries);
+        return new NetworkBufferStaticSegmentImpl(arena(), sliceSegment, readIndex, writeIndex);
     }
 
     @Override
@@ -296,14 +294,9 @@ sealed abstract class NetworkBufferSegmentImpl implements NetworkBuffer, Network
     }
 
     @Override
-    public final @Nullable Registries registries() {
-        return this.registries;
-    }
-
-    @Override
     public final String toString() {
-        return String.format("NetworkBufferSegment{r%d|w%d->%d, registries=%b, autoResize=%b, readOnly=%b, segment=%s, arena=%s}",
-                readIndex(), writeIndex(), capacity(), registries() != null, isResizable(), isReadOnly(), segment(), arena());
+        return String.format("NetworkBufferSegment{r%d|w%d->%d, autoResize=%b, readOnly=%b, segment=%s, arena=%s}",
+                readIndex(), writeIndex(), capacity(), isResizable(), isReadOnly(), segment(), arena());
     }
 
     // Internal writing methods

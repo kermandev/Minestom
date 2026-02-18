@@ -24,12 +24,12 @@ final class NetworkBufferResizeableSegmentImpl extends NetworkBufferSegmentImpl 
     private Arena arena;
     private MemorySegment segment;
 
-    NetworkBufferResizeableSegmentImpl(Arena arena, MemorySegment segment, long readIndex, long writeIndex, AutoResize autoResize, Supplier<? extends Arena> arenaSupplier, @Nullable Registries registries) {
+    NetworkBufferResizeableSegmentImpl(Arena arena, MemorySegment segment, long readIndex, long writeIndex, AutoResize autoResize, Supplier<? extends Arena> arenaSupplier) {
         this.arena = Objects.requireNonNull(arena, "arena");
         this.segment = Objects.requireNonNull(segment, "segment");
         this.autoResize = Objects.requireNonNull(autoResize, "autoResize");
         this.arenaSupplier = Objects.requireNonNull(arenaSupplier, "arenaSupplier");
-        super(readIndex, writeIndex, registries);
+        super(readIndex, writeIndex);
     }
 
     @Override

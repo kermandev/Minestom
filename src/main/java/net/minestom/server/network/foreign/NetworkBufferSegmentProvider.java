@@ -3,6 +3,7 @@ package net.minestom.server.network.foreign;
 import net.minestom.server.ServerFlag;
 import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.network.NetworkBufferFactory;
+import net.minestom.server.network.NetworkContext;
 import net.minestom.server.registry.Registries;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Contract;
@@ -58,8 +59,8 @@ public final class NetworkBufferSegmentProvider {
      */
     @Contract("_, _, _, _ -> new")
     @ApiStatus.Experimental
-    public NetworkBuffer wrap(MemorySegment segment, long readIndex, long writeIndex, @Nullable Registries registries) {
-        return new NetworkBufferStaticSegmentImpl(null, segment, readIndex, writeIndex, registries);
+    public NetworkBuffer wrap(MemorySegment segment, long readIndex, long writeIndex) {
+        return new NetworkBufferStaticSegmentImpl(null, segment, readIndex, writeIndex);
     }
 
     /**
@@ -73,8 +74,8 @@ public final class NetworkBufferSegmentProvider {
      * @return the new {@link NetworkBuffer}
      */
     @Contract("_, _, _, _ -> new")
-    public NetworkBuffer wrap(byte[] bytes, int readIndex, int writeIndex, @Nullable Registries registries) {
-        return wrap(MemorySegment.ofArray(bytes), readIndex, writeIndex, registries);
+    public NetworkBuffer wrap(byte[] bytes, int readIndex, int writeIndex) {
+        return wrap(MemorySegment.ofArray(bytes), readIndex, writeIndex);
     }
 
     /**
@@ -86,11 +87,10 @@ public final class NetworkBufferSegmentProvider {
      * @param registries the registries to use in serialization
      * @return the smallest byte array to represent the contents of {@link NetworkBuffer}
      */
-    @Contract("_, _ -> new")
-    public byte[] makeArray(Consumer<? super NetworkBuffer> writing, @Nullable Registries registries) {
+    @Contract("_ -> new")
+    public byte[] makeArray(Consumer<? super NetworkBuffer> writing) {
         try (Arena arena = Arena.ofConfined()) {
             NetworkBufferFactory factory = NetworkBufferFactory.resizeableFactory().arena(arena);
-            factory = registries != null ? factory.registry(registries) : factory;
             final NetworkBuffer buffer = factory.allocate(ServerFlag.DEFAULT_RESIZEABLE_SIZE);
             return buffer.extractWrittenBytes(writing);
         }
@@ -109,12 +109,11 @@ public final class NetworkBufferSegmentProvider {
      * @return the smallest byte array to represent {@link T}
      */
     @Contract("_ ,_, _ -> new")
-    public <T extends @UnknownNullability Object> byte[] makeArray(NetworkBuffer.Type<T> type, T value, @Nullable Registries registries) {
+    public <T extends @UnknownNullability Object, C extends NetworkContext> byte[] makeArray(NetworkBuffer.Type<T, ? super C> type, T value, C context) {
         try (Arena arena = Arena.ofConfined()) {
             NetworkBufferFactory factory = NetworkBufferFactory.resizeableFactory().arena(arena);
-            factory = registries != null ? factory.registry(registries) : factory;
             final NetworkBuffer buffer = factory.allocate(ServerFlag.DEFAULT_RESIZEABLE_SIZE);
-            return buffer.extractWrittenBytes(type, value);
+            return buffer.extractWrittenBytes(type, value, context);
         }
     }
 

@@ -4,6 +4,7 @@ import net.kyori.adventure.key.Key;
 import net.kyori.adventure.key.Keyed;
 import net.minestom.server.codec.Codec;
 import net.minestom.server.network.NetworkBuffer;
+import net.minestom.server.network.NetworkContext;
 import org.jetbrains.annotations.ApiStatus;
 
 /**
@@ -22,7 +23,7 @@ public non-sealed interface RegistryKey<T> extends Holder<T>, Keyed {
         return new RegistryCodecs.RegistryKeyImpl<>(selector);
     }
 
-    static <T> NetworkBuffer.Type<RegistryKey<T>> uncheckedNetworkType() {
+    static <T> NetworkBuffer.Type<RegistryKey<T>, NetworkContext> uncheckedNetworkType() {
         return NetworkBuffer.KEY.transform(RegistryKeyImpl::new, RegistryKey::key);
     }
 

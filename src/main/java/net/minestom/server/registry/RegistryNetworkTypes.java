@@ -1,6 +1,7 @@
 package net.minestom.server.registry;
 
 import net.minestom.server.network.NetworkBuffer;
+import net.minestom.server.network.NetworkContext;
 import net.minestom.server.utils.Either;
 import net.minestom.server.utils.validate.Check;
 
@@ -10,55 +11,51 @@ import java.util.Objects;
 
 final class RegistryNetworkTypes {
 
-    record RegistryKeyImpl<T>(Registries.Selector<T> selector) implements NetworkBuffer.Type<RegistryKey<T>> {
+    record RegistryKeyImpl<T>(Registries.Selector<T> selector) implements NetworkBuffer.Type<RegistryKey<T>, RegistryNetworkContext> {
         @Override
-        public void write(NetworkBuffer buffer, RegistryKey<T> value) {
-            final var registries = Objects.requireNonNull(buffer.registries(), "Buffer is missing registries");
-            final var registry = selector.select(registries);
+        public void write(NetworkBuffer buffer, RegistryKey<T> value, RegistryNetworkContext context) {
+            final var registry = selector.select(context.registries());
             final int id = registry.getId(value);
             Check.stateCondition(id == -1, "Key {0} is not registered in registry {1}", value, registry.key());
-            buffer.write(NetworkBuffer.VAR_INT, id);
+            buffer.write(NetworkBuffer.VAR_INT, id, context);
         }
 
         @Override
-        public RegistryKey<T> read(NetworkBuffer buffer) {
-            final var registries = Objects.requireNonNull(buffer.registries(), "Buffer is missing registries");
-            final var registry = selector.select(registries);
-            final int id = buffer.read(NetworkBuffer.VAR_INT);
+        public RegistryKey<T> read(NetworkBuffer buffer, RegistryNetworkContext context) {
+            final var registry = selector.select(context.registries());
+            final int id = buffer.read(NetworkBuffer.VAR_INT, context);
             final var key = registry.getKey(id);
             Check.stateCondition(key == null, "Unknown id {0} for registry {1}", id - 1, registry.key());
             return key;
         }
     }
 
-    record HolderNetworkTypeImpl<T>(
+    record HolderNetworkTypeImpl<T, C extends NetworkContext & Registries.Provider>(
             Registries.Selector<T> selector,
-            NetworkBuffer.Type<T> registryNetworkType
-    ) implements NetworkBuffer.Type<Holder<T>> {
+            NetworkBuffer.Type<T, ? super C> registryNetworkType
+    ) implements NetworkBuffer.Type<Holder<T>, C> {
         @Override
-        public void write(NetworkBuffer buffer, Holder<T> value) {
-            final var registries = Objects.requireNonNull(buffer.registries(), "Buffer is missing registries");
-            final var registry = selector.select(registries);
+        public void write(NetworkBuffer buffer, Holder<T> value, C context) {
+            final var registry = selector.select(context.registries());
             switch (value.unwrap()) {
                 case Either.Left(RegistryKey<T> key) -> {
                     final int id = registry.getId(key);
                     Check.stateCondition(id == -1, "Key {0} is not registered in registry {1}", key, registry.key());
-                    buffer.write(NetworkBuffer.VAR_INT, id + 1);
+                    buffer.write(NetworkBuffer.VAR_INT, id + 1, context);
                 }
                 case Either.Right(T direct) -> {
-                    buffer.write(NetworkBuffer.VAR_INT, 0);
-                    buffer.write(registryNetworkType, direct);
+                    buffer.write(NetworkBuffer.VAR_INT, 0, context);
+                    buffer.write(registryNetworkType, direct, context);
                 }
             }
         }
 
         @Override
-        public Holder<T> read(NetworkBuffer buffer) {
-            final var registries = Objects.requireNonNull(buffer.registries(), "Buffer is missing registries");
-            final var registry = selector.select(registries);
-            final int id = buffer.read(NetworkBuffer.VAR_INT);
+        public Holder<T> read(NetworkBuffer buffer, C context) {
+            final var registry = selector.select(context.registries());
+            final int id = buffer.read(NetworkBuffer.VAR_INT, context);
             if (id == 0) //noinspection unchecked
-                return (Holder<T>) buffer.read(registryNetworkType);
+                return (Holder<T>) buffer.read(registryNetworkType, context);
 
             final var key = registry.getKey(id - 1);
             Check.stateCondition(key == null, "Unknown id {0} for registry {1}", id - 1, registry.key());
@@ -66,9 +63,9 @@ final class RegistryNetworkTypes {
         }
     }
 
-    record RegistryTagImpl<T>(Registries.Selector<T> selector) implements NetworkBuffer.Type<RegistryTag<T>> {
+    record RegistryTagImpl<T>(Registries.Selector<T> selector) implements NetworkBuffer.Type<RegistryTag<T>, RegistryNetworkContext> {
         @Override
-        public void write(NetworkBuffer buffer, RegistryTag<T> value) {
+        public void write(NetworkBuffer buffer, RegistryTag<T> value, RegistryNetworkContext context) {
             switch (value) {
                 case net.minestom.server.registry.RegistryTagImpl.Backed<T> backed -> {
                     buffer.write(NetworkBuffer.VAR_INT, 0);
@@ -76,8 +73,7 @@ final class RegistryNetworkTypes {
                 }
                 case net.minestom.server.registry.RegistryTagImpl.Empty() -> buffer.write(NetworkBuffer.VAR_INT, 1);
                 case net.minestom.server.registry.RegistryTagImpl.Direct(var entries) -> {
-                    final var registries = Objects.requireNonNull(buffer.registries(), "Buffer is missing registries");
-                    final var registry = selector.select(registries);
+                    final var registry = selector.select(context.registries());
                     buffer.write(NetworkBuffer.VAR_INT, entries.size() + 1);
                     for (RegistryKey<T> key : entries) {
                         final int id = registry.getId(key);
@@ -89,9 +85,8 @@ final class RegistryNetworkTypes {
         }
 
         @Override
-        public RegistryTag<T> read(NetworkBuffer buffer) {
-            final var registries = Objects.requireNonNull(buffer.registries(), "Buffer is missing registries");
-            final var registry = selector.select(registries);
+        public RegistryTag<T> read(NetworkBuffer buffer, RegistryNetworkContext context) {
+            final var registry = selector.select(context.registries());
             int count = buffer.read(NetworkBuffer.VAR_INT) - 1;
             if (count < 0) {
                 final var key = buffer.read(NetworkBuffer.KEY);

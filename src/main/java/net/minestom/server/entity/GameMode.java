@@ -1,6 +1,7 @@
 package net.minestom.server.entity;
 
 import net.minestom.server.network.NetworkBuffer;
+import net.minestom.server.network.NetworkContext;
 import org.jetbrains.annotations.Nullable;
 
 import static net.minestom.server.network.NetworkBuffer.BYTE;
@@ -49,7 +50,7 @@ public enum GameMode {
         }
 
         @Override
-        public @Nullable GameMode read(NetworkBuffer buffer) {
+        public @Nullable GameMode read(NetworkBuffer buffer, NetworkContext context) {
             final byte id = buffer.read(BYTE);
             return id != -1 ? VALUES[id] : null;
         }

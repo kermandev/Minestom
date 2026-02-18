@@ -22,9 +22,9 @@ public sealed interface Dialog extends Holder.Direct<Dialog>, DialogLike {
             Map.entry(Key.key("multi_action"), MultiAction.CODEC),
             Map.entry(Key.key("confirmation"), Confirmation.CODEC));
     Codec<Dialog> REGISTRY_CODEC = Codec.RegistryTaggedUnion(REGISTRY, Dialog::codec);
-    NetworkBuffer.Type<Dialog> REGISTRY_NETWORK_TYPE = NetworkBuffer.TypedNBT(REGISTRY_CODEC);
+    NetworkBuffer.Type<Dialog, RegistryNetworkContext> REGISTRY_NETWORK_TYPE = NetworkBuffer.TypedNBT(REGISTRY_CODEC);
 
-    NetworkBuffer.Type<Holder<Dialog>> NETWORK_TYPE = Holder.networkType(Registries::dialog, REGISTRY_NETWORK_TYPE);
+    NetworkBuffer.Type<Holder<Dialog>, RegistryNetworkContext> NETWORK_TYPE = Holder.networkType(Registries::dialog, REGISTRY_NETWORK_TYPE);
     Codec<Holder<Dialog>> CODEC = Holder.codec(Registries::dialog, REGISTRY_CODEC);
 
     /**

@@ -2,12 +2,11 @@ package net.minestom.server.crypto;
 
 import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.network.NetworkBufferTemplate;
+import net.minestom.server.network.NetworkContext;
 import net.minestom.server.utils.validate.Check;
-import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.UnknownNullability;
 
 import java.util.Arrays;
-import java.util.Objects;
 
 import static net.minestom.server.network.NetworkBuffer.FixedRawBytes;
 import static net.minestom.server.network.NetworkBuffer.VAR_INT;
@@ -45,7 +44,7 @@ public record MessageSignature(byte[] signature) {
             }
 
             @Override
-            public Packed read(NetworkBuffer buffer) {
+            public Packed read(NetworkBuffer buffer, NetworkContext context) {
                 final int id = buffer.read(VAR_INT) - 1;
                 return id == FULL_SIGNATURE ? new MessageSignature.Packed(buffer.read(MessageSignature.SERIALIZER))
                         : new MessageSignature.Packed(id, null);

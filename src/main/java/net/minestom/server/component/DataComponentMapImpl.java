@@ -7,6 +7,7 @@ import net.minestom.server.codec.Result;
 import net.minestom.server.codec.Transcoder;
 import net.minestom.server.codec.Transcoder.MapLike;
 import net.minestom.server.network.NetworkBuffer;
+import net.minestom.server.network.NetworkContext;
 import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -157,7 +158,7 @@ record DataComponentMapImpl(Int2ObjectMap<@Nullable Object> components) implemen
             boolean isPatch, boolean isTrusted
     ) implements NetworkBuffer.Type<DataComponentMap> {
         @Override
-        public void write(NetworkBuffer buffer, DataComponentMap value) {
+        public void write(NetworkBuffer buffer, DataComponentMap value, NetworkContext context) {
             final DataComponentMapImpl patch = (DataComponentMapImpl) value;
             int added = 0;
             for (Object o : patch.components.values()) {
@@ -193,7 +194,7 @@ record DataComponentMapImpl(Int2ObjectMap<@Nullable Object> components) implemen
         }
 
         @Override
-        public DataComponentMap read(NetworkBuffer buffer) {
+        public DataComponentMap read(NetworkBuffer buffer, NetworkContext context) {
             int added = buffer.read(NetworkBuffer.VAR_INT);
             int removed = isPatch ? buffer.read(NetworkBuffer.VAR_INT) : 0;
             Check.stateCondition(added + removed > 256, "Data component map too large: {0}", added + removed);

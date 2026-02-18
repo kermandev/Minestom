@@ -3,6 +3,7 @@ package net.minestom.server.extras.query.response;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.network.NetworkBuffer;
+import net.minestom.server.network.NetworkContext;
 
 import java.util.*;
 
@@ -141,7 +142,7 @@ public class FullQueryResponse {
         }
 
         @Override
-        public FullQueryResponse read(NetworkBuffer buffer) {
+        public FullQueryResponse read(NetworkBuffer buffer, NetworkContext context) {
             throw new UnsupportedOperationException("FullQueryResponse is write-only");
         }
     };

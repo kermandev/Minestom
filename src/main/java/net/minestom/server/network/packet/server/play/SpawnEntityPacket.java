@@ -5,6 +5,7 @@ import net.minestom.server.coordinate.Pos;
 import net.minestom.server.coordinate.Vec;
 import net.minestom.server.entity.EntityType;
 import net.minestom.server.network.NetworkBuffer;
+import net.minestom.server.network.NetworkContext;
 import net.minestom.server.network.packet.server.ServerPacket;
 
 import java.util.UUID;
@@ -31,7 +32,7 @@ public record SpawnEntityPacket(
         }
 
         @Override
-        public SpawnEntityPacket read(NetworkBuffer buffer) {
+        public SpawnEntityPacket read(NetworkBuffer buffer, NetworkContext context) {
             int entityId = buffer.read(VAR_INT);
             UUID uuid = buffer.read(UUID);
             EntityType type = buffer.read(EntityType.NETWORK_TYPE);

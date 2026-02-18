@@ -3,6 +3,7 @@ package net.minestom.server.instance.palette;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import net.minestom.server.network.NetworkBuffer;
+import net.minestom.server.network.NetworkContext;
 import net.minestom.server.utils.MathUtils;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
@@ -250,7 +251,7 @@ public sealed interface Palette permits PaletteImpl {
             }
 
             @Override
-            public Palette read(NetworkBuffer buffer) {
+            public Palette read(NetworkBuffer buffer, NetworkContext context) {
                 final byte bitsPerEntry = buffer.read(BYTE);
                 PaletteImpl result = new PaletteImpl((byte) dimension, (byte) minIndirect, (byte) maxIndirect, (byte) directBits);
                 result.bitsPerEntry = bitsPerEntry;

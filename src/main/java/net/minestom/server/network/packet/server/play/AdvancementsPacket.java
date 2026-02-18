@@ -6,6 +6,7 @@ import net.minestom.server.adventure.ComponentHolder;
 import net.minestom.server.item.ItemStack;
 import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.network.NetworkBufferTemplate;
+import net.minestom.server.network.NetworkContext;
 import net.minestom.server.network.packet.server.ServerPacket;
 import org.jetbrains.annotations.Nullable;
 
@@ -139,7 +140,7 @@ public record AdvancementsPacket(
             }
 
             @Override
-            public DisplayData read(NetworkBuffer buffer) {
+            public DisplayData read(NetworkBuffer buffer, NetworkContext context) {
                 var title = buffer.read(NetworkBuffer.COMPONENT);
                 var description = buffer.read(NetworkBuffer.COMPONENT);
                 var icon = buffer.read(ItemStack.NETWORK_TYPE);

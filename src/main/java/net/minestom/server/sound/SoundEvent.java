@@ -8,6 +8,7 @@ import net.minestom.server.codec.Codec;
 import net.minestom.server.codec.Result;
 import net.minestom.server.codec.Transcoder;
 import net.minestom.server.network.NetworkBuffer;
+import net.minestom.server.network.NetworkContext;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.Nullable;
 
@@ -32,7 +33,7 @@ public sealed interface SoundEvent extends Keyed, Sound.Type, SoundEvents permit
         }
 
         @Override
-        public SoundEvent read(NetworkBuffer buffer) {
+        public SoundEvent read(NetworkBuffer buffer, NetworkContext context) {
             int id = buffer.read(NetworkBuffer.VAR_INT) - 1;
             if (id != -1) return BuiltinSoundEvent.REGISTRY.get(id);
 

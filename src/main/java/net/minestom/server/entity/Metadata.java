@@ -12,6 +12,7 @@ import net.minestom.server.entity.metadata.villager.VillagerMeta;
 import net.minestom.server.instance.block.Block;
 import net.minestom.server.item.ItemStack;
 import net.minestom.server.network.NetworkBuffer;
+import net.minestom.server.network.NetworkContext;
 import net.minestom.server.network.player.ResolvableProfile;
 import net.minestom.server.particle.Particle;
 import net.minestom.server.registry.Holder;
@@ -93,7 +94,7 @@ public final class Metadata {
             }
 
             @Override
-            public @Nullable Block read(NetworkBuffer buffer) {
+            public @Nullable Block read(NetworkBuffer buffer, NetworkContext context) {
                 int value = buffer.read(NetworkBuffer.VAR_INT);
                 return value == 0 ? null : Block.fromStateId(value);
             }
@@ -120,7 +121,7 @@ public final class Metadata {
             }
 
             @Override
-            public Integer read(NetworkBuffer buffer) {
+            public Integer read(NetworkBuffer buffer, NetworkContext context) {
                 int value = buffer.read(NetworkBuffer.VAR_INT);
                 return value == 0 ? null : value - 1;
             }

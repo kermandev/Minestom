@@ -4,6 +4,7 @@ import net.minestom.server.codec.Transcoder;
 import net.minestom.server.component.DataComponent;
 import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.network.NetworkBufferTemplate;
+import net.minestom.server.network.NetworkContext;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -47,7 +48,7 @@ final class ItemStackHashImpl {
         }
 
         @Override
-        public ItemStack.Hash read(NetworkBuffer buffer) {
+        public ItemStack.Hash read(NetworkBuffer buffer, NetworkContext context) {
             if (!buffer.read(NetworkBuffer.BOOLEAN))
                 return ItemStack.Hash.AIR;
             return buffer.read(Item.NETWORK_TYPE);

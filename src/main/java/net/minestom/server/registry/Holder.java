@@ -19,9 +19,9 @@ public sealed interface Holder<T> permits RegistryKey, Holder.Direct {
     non-sealed interface Direct<T> extends Holder<T> {
     }
 
-    static <T extends Holder<T>> NetworkBuffer.Type<Holder<T>> networkType(
+    static <T extends Holder<T>, C extends RegistryNetworkContext> NetworkBuffer.Type<Holder<T>, C> networkType(
             Registries.Selector<T> selector,
-            NetworkBuffer.Type<T> registryNetworkType
+            NetworkBuffer.Type<T, ? super C> registryNetworkType
     ) {
         return new RegistryNetworkTypes.HolderNetworkTypeImpl<>(selector, registryNetworkType);
     }

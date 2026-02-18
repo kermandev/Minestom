@@ -180,7 +180,7 @@ public final class LoginListener {
                 }
                 final int port = ((java.net.InetSocketAddress) socketConnection.getRemoteAddress()).getPort();
                 socketAddress = new InetSocketAddress(address, port);
-                gameProfile = GameProfile.SERIALIZER.read(buffer);
+                gameProfile = GameProfile.SERIALIZER.read(buffer, );
             }
         }
         if (!success) {
