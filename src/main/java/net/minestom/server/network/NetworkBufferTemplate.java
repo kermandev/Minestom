@@ -8,6 +8,7 @@ import org.jetbrains.annotations.Range;
 import org.jetbrains.annotations.UnknownNullability;
 
 import java.util.Objects;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -240,7 +241,7 @@ public final class NetworkBufferTemplate {
      */
     public static <P1 extends @UnknownNullability Object, P2 extends @UnknownNullability Object, R extends @UnknownNullability Object> Type<R> template(
             Type<P1> p1, Function<? super R, ? extends P1> g1, Type<P2> p2, Function<? super R, ? extends P2> g2,
-            F2<? super P1, ? super P2, ? extends R> ctor
+            BiFunction<? super P1, ? super P2, ? extends R> ctor
     ) {
         Objects.requireNonNull(p1, "p1");
         Objects.requireNonNull(g1, "g1");
