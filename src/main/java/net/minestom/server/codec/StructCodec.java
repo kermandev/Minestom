@@ -15,7 +15,7 @@ import java.util.function.Supplier;
  * A struct codec is a map backed {@link Codec}, where the keys are strings.
  * See {@link Codec}, {@link Decoder} and {@link Encoder}
  * <br>
- * You can also use {@link #struct(String, Codec, Function, F1)} to create as templating
+ * You can also use {@link #struct(String, Codec, Function, Function)} to create as templating
  * similar to {@link net.minestom.server.network.NetworkBufferTemplate}
  * <p>
  * {@inheritDoc}
