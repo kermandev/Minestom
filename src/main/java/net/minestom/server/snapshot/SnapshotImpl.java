@@ -1,6 +1,6 @@
 package net.minestom.server.snapshot;
 
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.coordinate.Pos;
 import net.minestom.server.coordinate.Vec;
@@ -31,7 +31,7 @@ import static net.minestom.server.coordinate.CoordConversion.*;
 @ApiStatus.Internal
 public final class SnapshotImpl {
     public record Server(Collection<InstanceSnapshot> instances,
-                         Int2ObjectOpenHashMap<AtomicReference<EntitySnapshot>> entityRefs) implements ServerSnapshot {
+                         Int2ObjectMap<AtomicReference<EntitySnapshot>> entityRefs) implements ServerSnapshot {
         @Override
         public Collection<EntitySnapshot> entities() {
             return MappedCollection.plainReferences(entityRefs.values());
@@ -78,7 +78,7 @@ public final class SnapshotImpl {
 
     public record Chunk(int minSection, int chunkX, int chunkZ,
                         Section[] sections,
-                        Int2ObjectOpenHashMap<Block> blockEntries,
+                        Int2ObjectMap<Block> blockEntries,
                         int[] entitiesIds,
                         AtomicReference<InstanceSnapshot> instanceRef,
                         TagReadable tagReadable) implements ChunkSnapshot {

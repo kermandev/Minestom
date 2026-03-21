@@ -2,6 +2,8 @@
 
 package net.minestom.server.snapshot;
 
+import org.jetbrains.annotations.Nullable;
+
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -10,9 +12,10 @@ import java.util.concurrent.atomic.AtomicReference;
 
 final class SnapshotUpdaterImpl implements SnapshotUpdater {
     private final IdentityHashMap<Snapshotable, AtomicReference<Snapshot>> referenceMap = new IdentityHashMap<>();
-    private IdentityHashMap<Snapshotable, AtomicReference<Snapshot>> readOnlyReferenceMap;
+    private @Nullable IdentityHashMap<Snapshotable, AtomicReference<Snapshot>> readOnlyReferenceMap;
     private List<Entry> queue = new ArrayList<>();
 
+    @SuppressWarnings("unchecked")
     static <T extends Snapshot> T update(Snapshotable snapshotable) {
         var updater = new SnapshotUpdaterImpl();
         var ref = updater.reference(snapshotable);
@@ -21,8 +24,9 @@ final class SnapshotUpdaterImpl implements SnapshotUpdater {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public <T extends Snapshot> AtomicReference<T> reference(Snapshotable snapshotable) {
-        AtomicReference<Snapshot> ref;
+        AtomicReference<@Nullable Snapshot> ref;
         // Very often the same snapshotable is referenced multiple times.
         var readOnly = this.readOnlyReferenceMap;
         if (readOnly != null && (ref = readOnly.get(snapshotable)) != null) {
@@ -41,6 +45,7 @@ final class SnapshotUpdaterImpl implements SnapshotUpdater {
     record Entry(Snapshotable snapshotable, AtomicReference<Snapshot> ref) {
     }
 
+    @SuppressWarnings("unchecked")
     void update() {
         List<Entry> temp;
         while (!(temp = new ArrayList<>(queue)).isEmpty()) {

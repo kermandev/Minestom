@@ -128,8 +128,10 @@ public sealed interface Tag<T extends @UnknownNullability Object> permits TagImp
      * @return the key
      * @deprecated misleading non-record component, use {@link #key()} instead.
      */
-    @Deprecated
-    String getKey();
+    @Deprecated(forRemoval = true)
+    default String getKey() {
+        return key();
+    }
 
     /**
      * Returns the key for the Tag

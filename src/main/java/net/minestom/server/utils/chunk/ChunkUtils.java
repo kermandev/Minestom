@@ -70,7 +70,7 @@ public final class ChunkUtils {
         return isLoaded(chunk);
     }
 
-    public static Chunk retrieve(Instance instance, Chunk originChunk, double x, double z) {
+    public static @Nullable Chunk retrieve(Instance instance, @Nullable Chunk originChunk, double x, double z) {
         final int chunkX = CoordConversion.globalToChunk(x);
         final int chunkZ = CoordConversion.globalToChunk(z);
         final boolean sameChunk = originChunk != null &&
@@ -78,7 +78,7 @@ public final class ChunkUtils {
         return sameChunk ? originChunk : instance.getChunk(chunkX, chunkZ);
     }
 
-    public static Chunk retrieve(Instance instance, Chunk originChunk, Point position) {
+    public static @Nullable Chunk retrieve(Instance instance, @Nullable Chunk originChunk, Point position) {
         return retrieve(instance, originChunk, position.x(), position.z());
     }
 }

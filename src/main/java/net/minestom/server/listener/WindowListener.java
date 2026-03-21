@@ -7,7 +7,6 @@ import net.minestom.server.event.inventory.InventoryPreClickEvent;
 import net.minestom.server.inventory.AbstractInventory;
 import net.minestom.server.inventory.click.Click;
 import net.minestom.server.item.ItemStack;
-import net.minestom.server.network.packet.client.common.ClientPongPacket;
 import net.minestom.server.network.packet.client.play.ClientClickWindowPacket;
 import net.minestom.server.network.packet.client.play.ClientCloseWindowPacket;
 import net.minestom.server.network.packet.server.play.SetCursorItemPacket;
@@ -52,14 +51,14 @@ public class WindowListener {
                 player.UNSAFE_changeDidCloseInventory(false);
                 successful = false;
             } else if (inventoryPreClickEvent.isCancelled()) {
-                // Cancel it if the event is cancelled and we haven't already done that
+                // Cancel it if the event is canceled and we haven't yet done that
                 successful = false;
             } else {
                 successful = inventory.handleClick(player, click);
             }
         }
 
-        // Prevent ghost item when the click is cancelled
+        // Prevent ghost item when the click is canceled
         if (!successful) {
             player.getInventory().update(player);
             if (!playerInventory) {
@@ -71,10 +70,6 @@ public class WindowListener {
         ItemStack cursorItem = player.getInventory().getCursorItem();
         if (!ItemStack.Hash.of(cursorItem).equals(packet.clickedItem()))
             player.sendPacket(new SetCursorItemPacket(cursorItem));
-    }
-
-    public static void pong(ClientPongPacket packet, Player player) {
-        // Empty
     }
 
     public static void closeWindowListener(ClientCloseWindowPacket packet, Player player) {

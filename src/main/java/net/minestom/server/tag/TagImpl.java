@@ -42,11 +42,6 @@ public record TagImpl<T>(int index, String key,
     }
 
     @Override
-    public String getKey() {
-        return key;
-    }
-
-    @Override
     public String key() {
         return key;
     }

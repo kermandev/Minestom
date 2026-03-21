@@ -42,12 +42,12 @@ public interface Light {
 
     @ApiStatus.Internal
     Set<Point> calculateExternal(Palette blockPalette,
-                                 Point[] neighbors,
+                                 @Nullable Point[] neighbors,
                                  LightLookup lightLookup,
                                  PaletteLookup paletteLookup);
 
     @ApiStatus.Internal
-    static Point[] getNeighbors(Chunk chunk, int sectionY) {
+    static @Nullable Point[] getNeighbors(Chunk chunk, int sectionY) {
         final int chunkX = chunk.getChunkX(), chunkZ = chunk.getChunkZ();
 
         Point[] links = new BlockVec[LightCompute.DIRECTIONS.length];

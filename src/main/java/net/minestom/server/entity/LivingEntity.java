@@ -31,7 +31,10 @@ import net.minestom.server.item.component.AttributeList;
 import net.minestom.server.network.ConnectionState;
 import net.minestom.server.network.packet.server.LazyPacket;
 import net.minestom.server.network.packet.server.ServerPacket;
-import net.minestom.server.network.packet.server.play.*;
+import net.minestom.server.network.packet.server.play.CollectItemPacket;
+import net.minestom.server.network.packet.server.play.DamageEventPacket;
+import net.minestom.server.network.packet.server.play.EntityAnimationPacket;
+import net.minestom.server.network.packet.server.play.EntityAttributesPacket;
 import net.minestom.server.network.player.PlayerConnection;
 import net.minestom.server.registry.RegistryKey;
 import net.minestom.server.scoreboard.Team;
@@ -64,10 +67,10 @@ public class LivingEntity extends Entity implements EquipmentHandler {
 
     protected boolean isDead;
 
-    protected Damage lastDamage;
+    protected @Nullable Damage lastDamage;
 
     // Bounding box used for items' pickup (see LivingEntity#setBoundingBox)
-    protected BoundingBox expandedBoundingBox;
+    protected @Nullable BoundingBox expandedBoundingBox;
 
     private final Map<String, AttributeInstance> attributeModifiers = new ConcurrentHashMap<>();
     private final Collection<AttributeInstance> unmodifiableModifiers =
@@ -81,7 +84,7 @@ public class LivingEntity extends Entity implements EquipmentHandler {
      */
     private int remainingFireTicks;
 
-    private Team team;
+    private @Nullable Team team;
 
     private int arrowCount;
     private float health = 1F;
@@ -203,7 +206,7 @@ public class LivingEntity extends Entity implements EquipmentHandler {
         // Items picking
         if (canPickupItem() && itemPickupCooldown.isReady(time)) {
             itemPickupCooldown.refreshLastUpdate(time);
-            this.instance.getEntityTracker().nearbyEntities(position, expandedBoundingBox.width(),
+            this.getInstance().getEntityTracker().nearbyEntities(position, expandedBoundingBox.width(),
                     EntityTracker.Target.ITEMS, itemEntity -> {
                         if (this instanceof Player player && !itemEntity.isViewer(player)) return;
                         if (!itemEntity.isPickable()) return;

@@ -3,12 +3,13 @@ package net.minestom.server.network.packet.server.play;
 import net.minestom.server.coordinate.Point;
 import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.network.packet.server.ServerPacket;
+import org.jetbrains.annotations.UnknownNullability;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
 public record FacePlayerPacket(FacePosition facePosition,
                                Point target, int entityId,
-                               FacePosition entityFacePosition) implements ServerPacket.Play {
+                               @UnknownNullability FacePosition entityFacePosition) implements ServerPacket.Play {
 
     public static final NetworkBuffer.Type<FacePlayerPacket> SERIALIZER = new NetworkBuffer.Type<>() {
         @Override

@@ -33,6 +33,7 @@ import net.minestom.server.utils.validate.Check;
 import org.jctools.queues.MessagePassingQueue;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.UnknownNullability;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
@@ -73,13 +74,13 @@ public class PlayerSocketConnection extends PlayerConnection {
     private SocketAddress remoteAddress;
 
     //Could be null. Only used for Mojang Auth
-    private volatile EncryptionContext encryptionContext;
+    private @Nullable volatile EncryptionContext encryptionContext;
     private byte[] nonce = new byte[4];
 
     // Data from client packets
-    private String loginUsername;
-    private GameProfile gameProfile;
-    private String serverAddress;
+    private @UnknownNullability String loginUsername;
+    private @UnknownNullability GameProfile gameProfile;
+    private @UnknownNullability String serverAddress;
     private int serverPort;
     private int protocolVersion;
 
@@ -91,6 +92,8 @@ public class PlayerSocketConnection extends PlayerConnection {
     // Index where compression starts, linked to `sentPacketCounter`
     // Used instead of a simple boolean so we can get proper timing for serialization
     private volatile long compressionStart = Long.MAX_VALUE;
+    // Used to write leftover data when the socket is not accepting the full amount.
+    private @Nullable NetworkBuffer writeLeftover = null;
 
     // Write lock as the default behavior of the writing thread is to park itself
     // Requires ServerFlag.FASTER_SOCKET_WRITES to be enabled
@@ -405,8 +408,6 @@ public class PlayerSocketConnection extends PlayerConnection {
         buffer.advanceWrite(length);
         return true;
     }
-
-    private NetworkBuffer writeLeftover = null;
 
     public void flushSync() throws IOException {
         // Write leftover if any

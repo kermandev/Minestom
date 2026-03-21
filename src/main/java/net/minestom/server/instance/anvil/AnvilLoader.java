@@ -505,18 +505,22 @@ public class AnvilLoader implements ChunkLoader {
         final CompoundBinaryTag.Builder tag = CompoundBinaryTag.builder();
         tag.putString("Name", block.name());
         if (!block.properties().isEmpty()) {
-            final Map<String, String> defaultProperties = block.defaultState().properties();
-            final CompoundBinaryTag.Builder propertiesTag = CompoundBinaryTag.builder();
-            for (Map.Entry<String, String> entry : block.properties().entrySet()) {
-                final String key = entry.getKey(), value = entry.getValue();
-                if (defaultProperties.get(key).equals(value))
-                    continue; // Skip default values
-                propertiesTag.putString(key, value);
-            }
-            CompoundBinaryTag properties = propertiesTag.build();
+            final CompoundBinaryTag properties = getPropertiesTag(block);
             if (!properties.isEmpty()) tag.put("Properties", properties);
         }
         return tag.build();
+    }
+
+    private static CompoundBinaryTag getPropertiesTag(Block block) {
+        final Map<String, String> defaultProperties = block.defaultState().properties();
+        final CompoundBinaryTag.Builder propertiesTag = CompoundBinaryTag.builder();
+        for (Map.Entry<String, String> entry : block.properties().entrySet()) {
+            final String key = entry.getKey(), value = entry.getValue();
+            if (defaultProperties.get(key).equals(value))
+                continue; // Skip default values
+            propertiesTag.putString(key, value);
+        }
+        return propertiesTag.build();
     }
 
     /**

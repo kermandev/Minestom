@@ -37,7 +37,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * It can be extended to create a new kind of player (NPC for instance).
  */
 public abstract class PlayerConnection {
-    private Player player;
+    private @Nullable Player player;
 
     // Server & client states can differ during configuration.
     // "server" state means the state the server thinks its in.
@@ -46,13 +46,13 @@ public abstract class PlayerConnection {
     // the server will be in CONFIGURATION while the client is still in PLAY.
     private volatile ConnectionState serverState, clientState;
 
-    private PlayerPublicKey playerPublicKey;
+    private @Nullable PlayerPublicKey playerPublicKey;
     volatile boolean online;
     private volatile boolean wasTransferred;
 
-    private LoginPluginMessageProcessor loginPluginMessageProcessor = new LoginPluginMessageProcessor(this);
+    private @Nullable LoginPluginMessageProcessor loginPluginMessageProcessor = new LoginPluginMessageProcessor(this);
 
-    private CompletableFuture<List<SelectKnownPacksPacket.Entry>> knownPacksFuture = null; // Present only when waiting for a response from the client.
+    private @Nullable CompletableFuture<List<SelectKnownPacksPacket.Entry>> knownPacksFuture = null; // Present only when waiting for a response from the client.
 
     private final Map<Key, CompletableFuture<byte @Nullable []>> pendingCookieRequests = new ConcurrentHashMap<>();
 
@@ -223,12 +223,12 @@ public abstract class PlayerConnection {
         }
     }
 
-    public PlayerPublicKey playerPublicKey() {
+    public @Nullable PlayerPublicKey playerPublicKey() {
         return playerPublicKey;
     }
 
     public void setPlayerPublicKey(PlayerPublicKey playerPublicKey) {
-        this.playerPublicKey = playerPublicKey;
+        this.playerPublicKey = Objects.requireNonNull(playerPublicKey, "playerPublicKey");
     }
 
     public void storeCookie(String key, byte[] data) {
@@ -291,7 +291,7 @@ public abstract class PlayerConnection {
      * @param port the port, usually 25565.
      */
     public void transfer(String host, int port) {
-        OutgoingTransferEvent event = new OutgoingTransferEvent(this.player, host, port);
+        OutgoingTransferEvent event = new OutgoingTransferEvent(this.player, host, port); //TODO breaking null player may not exist here
         EventDispatcher.callCancellable(event, () -> this.sendPacket(new TransferPacket(event.getHost(), event.getPort())));
     }
 

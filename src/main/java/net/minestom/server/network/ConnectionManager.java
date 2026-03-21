@@ -51,7 +51,7 @@ public final class ConnectionManager {
     private final CachedPacket cachedTagsPacket = new CachedPacket(this::createTagsPacket);
 
     // All players once their Player object has been instantiated.
-    private final Map<PlayerConnection, Player> connectionPlayerMap = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<PlayerConnection, Player> connectionPlayerMap = new ConcurrentHashMap<>();
     // Players waiting to be spawned (post configuration state)
     private final MessagePassingQueue<Player> playWaitingPlayers = ConcurrentMessageQueues.mpscUnboundedArrayQueue(64);
     // Players waiting to be (re) configured
@@ -105,7 +105,7 @@ public final class ConnectionManager {
      * @param connection the player connection
      * @return the player linked to the connection
      */
-    public Player getPlayer(PlayerConnection connection) {
+    public @Nullable Player getPlayer(PlayerConnection connection) {
         return connectionPlayerMap.get(connection);
     }
 

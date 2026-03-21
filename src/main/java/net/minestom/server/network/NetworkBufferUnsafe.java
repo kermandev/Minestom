@@ -6,6 +6,7 @@ import java.lang.reflect.Field;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 
+@SuppressWarnings("removal")
 final class NetworkBufferUnsafe {
     static final Unsafe UNSAFE;
 

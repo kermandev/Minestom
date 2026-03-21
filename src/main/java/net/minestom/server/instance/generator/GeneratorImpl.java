@@ -2,8 +2,8 @@ package net.minestom.server.instance.generator;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import net.minestom.server.coordinate.BlockVec;
 import net.minestom.server.coordinate.Point;
-import net.minestom.server.coordinate.Vec;
 import net.minestom.server.instance.block.Block;
 import net.minestom.server.instance.palette.Palette;
 import net.minestom.server.registry.DynamicRegistry;
@@ -11,6 +11,7 @@ import net.minestom.server.registry.RegistryKey;
 import net.minestom.server.utils.validate.Check;
 import net.minestom.server.world.biome.Biome;
 import org.jetbrains.annotations.ApiStatus;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Objects;
@@ -34,8 +35,8 @@ public final class GeneratorImpl {
     static GenerationUnit section(DynamicRegistry<Biome> biomeRegistry, GenSection section,
                                   int sectionX, int sectionY, int sectionZ,
                                   boolean fork) {
-        final Vec start = Vec.SECTION.mul(sectionX, sectionY, sectionZ);
-        final Vec end = start.add(Vec.SECTION);
+        final BlockVec start = BlockVec.SECTION.mul(sectionX, sectionY, sectionZ);
+        final BlockVec end = start.add(BlockVec.SECTION);
         final UnitModifier modifier = new SectionModifierImpl(biomeRegistry, start, end, section, fork);
         return unit(biomeRegistry, modifier, start, end, null);
     }
@@ -45,11 +46,11 @@ public final class GeneratorImpl {
     }
 
     public static UnitImpl chunk(DynamicRegistry<Biome> biomeRegistry, GenSection[] chunkSections, int chunkX, int minSection, int chunkZ) {
-        final Vec start = Vec.SECTION.mul(chunkX, minSection, chunkZ);
+        final BlockVec start = BlockVec.SECTION.mul(chunkX, minSection, chunkZ);
         return area(biomeRegistry, start, 1, chunkSections.length, 1, chunkSections);
     }
 
-    public static UnitImpl area(DynamicRegistry<Biome> biomeRegistry, Vec start, int width, int height, int depth, GenSection[] areaSections) {
+    public static UnitImpl area(DynamicRegistry<Biome> biomeRegistry, BlockVec start, int width, int height, int depth, GenSection[] areaSections) {
         if (width == 0 || height == 0 || depth == 0) {
             throw new IllegalArgumentException("Width, height and depth must be greater than 0, got " + width + ", " + height + ", " + depth);
         }
@@ -61,40 +62,40 @@ public final class GeneratorImpl {
         GenerationUnit[] sectionsArray = new GenerationUnit[sectionCount];
         for (int i = 0; i < sectionCount; i++) {
             GenSection section = areaSections[i];
-            final Vec point = to3D(i, width, height, depth);
-            final int sectionX = (int) point.x() + start.sectionX();
-            final int sectionY = (int) point.y() + start.sectionY();
-            final int sectionZ = (int) point.z() + start.sectionZ();
+            final BlockVec point = to3D(i, width, height, depth);
+            final int sectionX = point.blockX() + start.sectionX();
+            final int sectionY = point.blockY() + start.sectionY();
+            final int sectionZ = point.blockZ() + start.sectionZ();
             final GenerationUnit sectionUnit = section(biomeRegistry, section, sectionX, sectionY, sectionZ);
             sectionsArray[i] = sectionUnit;
         }
         final List<GenerationUnit> sections = List.of(sectionsArray);
-        final Vec size = Vec.SECTION.mul(width, height, depth);
-        final Vec end = start.add(size);
+        final BlockVec size = BlockVec.SECTION.mul(width, height, depth);
+        final BlockVec end = start.add(size);
         final UnitModifier modifier = new AreaModifierImpl(size, start, end, width, height, depth, sections);
         return unit(biomeRegistry, modifier, start, end, sections);
     }
 
-    public static UnitImpl unit(DynamicRegistry<Biome> biomeRegistry, UnitModifier modifier, Vec start, Vec end,
-                                List<GenerationUnit> divided) {
-        if (start.x() > end.x() || start.y() > end.y() || start.z() > end.z()) {
+    public static UnitImpl unit(DynamicRegistry<Biome> biomeRegistry, UnitModifier modifier, BlockVec start, BlockVec end,
+                                @Nullable List<GenerationUnit> divided) {
+        if (start.blockX() > end.blockX() || start.blockY() > end.blockY() || start.blockZ() > end.blockZ()) {
             throw new IllegalArgumentException("absoluteStart must be before absoluteEnd");
         }
-        if (start.x() % 16 != 0 || start.y() % 16 != 0 || start.z() % 16 != 0) {
+        if (start.blockX() % SECTION_SIZE != 0 || start.blockY() % SECTION_SIZE != 0 || start.blockZ() % SECTION_SIZE != 0) {
             throw new IllegalArgumentException("absoluteStart must be a multiple of 16");
         }
-        if (end.x() % 16 != 0 || end.y() % 16 != 0 || end.z() % 16 != 0) {
+        if (end.blockX() % SECTION_SIZE != 0 || end.blockY() % SECTION_SIZE != 0 || end.blockZ() % SECTION_SIZE != 0) {
             throw new IllegalArgumentException("absoluteEnd must be a multiple of 16");
         }
-        final Vec size = end.sub(start);
+        final BlockVec size = end.sub(start);
         return new UnitImpl(biomeRegistry, modifier, size, start, end, divided, new CopyOnWriteArrayList<>());
     }
 
     static final class DynamicFork implements Block.Setter {
         final DynamicRegistry<Biome> biomeRegistry;
-        Vec minSection;
-        int width, height, depth;
-        List<GenerationUnit> sections;
+        private @Nullable Unit unit;
+
+        record Unit(BlockVec minSection, List<GenerationUnit> sections, int width, int height, int depth) {}
 
         DynamicFork(DynamicRegistry<Biome> biomeRegistry) {
             this.biomeRegistry = biomeRegistry;
@@ -102,8 +103,8 @@ public final class GeneratorImpl {
 
         @Override
         public void setBlock(int x, int y, int z, Block block) {
-            resize(x, y, z);
-            GenerationUnit section = findAbsolute(sections, minSection, width, height, depth, x, y, z);
+            final Unit fork = resize(x, y, z);
+            GenerationUnit section = findAbsolute(fork.sections(), fork.minSection(), fork.width(), fork.height(), fork.depth(), x, y, z);
             assert section.absoluteStart().sectionX() == globalToChunk(x) &&
                     section.absoluteStart().sectionY() == globalToChunk(y) &&
                     section.absoluteStart().sectionZ() == globalToChunk(z) :
@@ -111,75 +112,82 @@ public final class GeneratorImpl {
             section.modifier().setBlock(x, y, z, block);
         }
 
-        private void resize(int x, int y, int z) {
+        private Unit resize(int x, int y, int z) {
             final int sectionX = globalToChunk(x);
             final int sectionY = globalToChunk(y);
             final int sectionZ = globalToChunk(z);
-            if (sections == null) {
-                this.minSection = Vec.SECTION.mul(sectionX, sectionY, sectionZ);
-                this.width = 1;
-                this.height = 1;
-                this.depth = 1;
-                this.sections = List.of(section(biomeRegistry, new GenSection(), sectionX, sectionY, sectionZ, true));
-            } else if (x < minSection.x() || y < minSection.y() || z < minSection.z() ||
-                    x >= minSection.x() + width * 16 || y >= minSection.y() + height * 16 || z >= minSection.z() + depth * 16) {
-                // Resize necessary
-                final Vec newMin = new Vec(Math.min(minSection.x(), sectionX * 16),
-                        Math.min(minSection.y(), sectionY * 16),
-                        Math.min(minSection.z(), sectionZ * 16));
-                final Vec newMax = new Vec(Math.max(minSection.x() + width * 16, sectionX * 16 + 16),
-                        Math.max(minSection.y() + height * 16, sectionY * 16 + 16),
-                        Math.max(minSection.z() + depth * 16, sectionZ * 16 + 16));
-                final int newWidth = globalToChunk(newMax.x() - newMin.x());
-                final int newHeight = globalToChunk(newMax.y() - newMin.y());
-                final int newDepth = globalToChunk(newMax.z() - newMin.z());
-                // Resize
-                GenerationUnit[] newSections = new GenerationUnit[newWidth * newHeight * newDepth];
-                // Copy old sections
-                for (GenerationUnit s : sections) {
-                    final Point start = s.absoluteStart();
-                    final int newX = globalToChunk(start.x() - newMin.x());
-                    final int newY = globalToChunk(start.y() - newMin.y());
-                    final int newZ = globalToChunk(start.z() - newMin.z());
-                    final int index = findIndex(newWidth, newHeight, newDepth, newX, newY, newZ);
-                    newSections[index] = s;
-                }
-                // Fill new sections
-                final int startX = newMin.sectionX();
-                final int startY = newMin.sectionY();
-                final int startZ = newMin.sectionZ();
-                for (int i = 0; i < newSections.length; i++) {
-                    if (newSections[i] == null) {
-                        final Vec coordinates = to3D(i, newWidth, newHeight, newDepth);
-                        final int newX = coordinates.blockX() + startX;
-                        final int newY = coordinates.blockY() + startY;
-                        final int newZ = coordinates.blockZ() + startZ;
-                        final GenerationUnit unit = section(biomeRegistry, new GenSection(), newX, newY, newZ, true);
-                        newSections[i] = unit;
-                    }
-                }
-                this.sections = List.of(newSections);
-                this.minSection = newMin;
-                this.width = newWidth;
-                this.height = newHeight;
-                this.depth = newDepth;
+            final Unit unit = this.unit;
+            if (unit == null) {
+                final BlockVec minSection = BlockVec.SECTION.mul(sectionX, sectionY, sectionZ);
+                final List<GenerationUnit> sections = List.of(section(biomeRegistry, new GenSection(), sectionX, sectionY, sectionZ, true));
+                return this.unit = new Unit(minSection, sections, 1, 1, 1);
             }
+            final BlockVec minSection = unit.minSection();
+            final int width = unit.width(), height = unit.height(), depth = unit.depth();
+            if (!outsideBounds(x, y, z, minSection.blockX(), minSection.blockY(), minSection.blockZ(), width, height, depth)) {
+                // Within bounds
+                return unit;
+            }
+            // Resize necessary
+            final BlockVec newMin = new BlockVec(Math.min(minSection.blockX(), sectionX * SECTION_SIZE),
+                    Math.min(minSection.blockY(), sectionY * SECTION_SIZE),
+                    Math.min(minSection.blockZ(), sectionZ * SECTION_SIZE));
+            final BlockVec newMax = new BlockVec(Math.max(minSection.blockX() + width * SECTION_SIZE, sectionX * SECTION_SIZE + SECTION_SIZE),
+                    Math.max(minSection.blockY() + height * SECTION_SIZE, sectionY * SECTION_SIZE + SECTION_SIZE),
+                    Math.max(minSection.blockZ() + depth * SECTION_SIZE, sectionZ * SECTION_SIZE + SECTION_SIZE));
+            final int newWidth = globalToChunk(newMax.blockX() - newMin.blockX());
+            final int newHeight = globalToChunk(newMax.blockY() - newMin.blockY());
+            final int newDepth = globalToChunk(newMax.blockZ() - newMin.blockZ());
+            // Resize
+            GenerationUnit[] newSections = new GenerationUnit[newWidth * newHeight * newDepth];
+            // Copy old sections
+            for (GenerationUnit s : unit.sections()) {
+                final Point start = s.absoluteStart();
+                final int newX = globalToChunk(start.blockX() - newMin.blockX());
+                final int newY = globalToChunk(start.blockY() - newMin.blockY());
+                final int newZ = globalToChunk(start.blockZ() - newMin.blockZ());
+                final int index = findIndex(newWidth, newHeight, newDepth, newX, newY, newZ);
+                newSections[index] = s;
+            }
+            // Fill new sections
+            final int startX = newMin.sectionX();
+            final int startY = newMin.sectionY();
+            final int startZ = newMin.sectionZ();
+            for (int i = 0; i < newSections.length; i++) {
+                //noinspection ConstantValue new sections are null when expanded
+                if (newSections[i] == null) {
+                    final BlockVec coordinates = to3D(i, newWidth, newHeight, newDepth);
+                    final int newX = coordinates.blockX() + startX;
+                    final int newY = coordinates.blockY() + startY;
+                    final int newZ = coordinates.blockZ() + startZ;
+                    newSections[i] = section(biomeRegistry, new GenSection(), newX, newY, newZ, true);
+                }
+            }
+            return this.unit = new Unit(newMin, List.of(newSections), newWidth, newHeight, newDepth);
+        }
+
+        // Assume sectionX/Y/Z are the minSection
+        private boolean outsideBounds(int x, int y, int z, int sectionX, int sectionY, int sectionZ, int width, int height, int depth) {
+            return x < sectionX || y < sectionY || z < sectionZ
+                    || x >= sectionZ + width * SECTION_SIZE
+                    || y >= sectionY + height * SECTION_SIZE
+                    || z >= sectionZ + depth * SECTION_SIZE;
         }
     }
 
     public record UnitImpl(DynamicRegistry<Biome> biomeRegistry, UnitModifier modifier,
-                           Vec size, Vec absoluteStart, Vec absoluteEnd,
-                           List<GenerationUnit> divided,
+                           BlockVec size, BlockVec absoluteStart, BlockVec absoluteEnd,
+                           @Nullable List<GenerationUnit> divided,
                            List<UnitImpl> forks) implements GenerationUnit {
         @Override
         public GenerationUnit fork(Point start, Point end) {
-            final int minSectionX = floorSection(start.blockX()) / 16;
-            final int minSectionY = floorSection(start.blockY()) / 16;
-            final int minSectionZ = floorSection(start.blockZ()) / 16;
+            final int minSectionX = floorSection(start.blockX()) / SECTION_SIZE;
+            final int minSectionY = floorSection(start.blockY()) / SECTION_SIZE;
+            final int minSectionZ = floorSection(start.blockZ()) / SECTION_SIZE;
 
-            final int maxSectionX = ceilSection(end.blockX()) / 16;
-            final int maxSectionY = ceilSection(end.blockY()) / 16;
-            final int maxSectionZ = ceilSection(end.blockZ()) / 16;
+            final int maxSectionX = ceilSection(end.blockX()) / SECTION_SIZE;
+            final int maxSectionY = ceilSection(end.blockY()) / SECTION_SIZE;
+            final int maxSectionZ = ceilSection(end.blockZ()) / SECTION_SIZE;
 
             final int width = maxSectionX - minSectionX;
             final int height = maxSectionY - minSectionY;
@@ -197,7 +205,7 @@ public final class GeneratorImpl {
                 }
             }
             final List<GenerationUnit> sections = List.of(units);
-            final Vec startSection = Vec.SECTION.mul(minSectionX, minSectionY, minSectionZ);
+            final BlockVec startSection = BlockVec.SECTION.mul(minSectionX, minSectionY, minSectionZ);
             return registerFork(startSection, sections, width, height, depth);
         }
 
@@ -205,14 +213,10 @@ public final class GeneratorImpl {
         public void fork(Consumer<Block.Setter> consumer) {
             DynamicFork dynamicFork = new DynamicFork(biomeRegistry);
             consumer.accept(dynamicFork);
-            final Vec startSection = dynamicFork.minSection;
-            if (startSection == null)
+            final DynamicFork.Unit unit = dynamicFork.unit;
+            if (unit == null)
                 return; // No block has been placed
-            final int width = dynamicFork.width;
-            final int height = dynamicFork.height;
-            final int depth = dynamicFork.depth;
-            final List<GenerationUnit> sections = dynamicFork.sections;
-            registerFork(startSection, sections, width, height, depth);
+            registerFork(unit.minSection(), unit.sections(), unit.width(), unit.height(), unit.depth());
         }
 
         @Override
@@ -220,10 +224,10 @@ public final class GeneratorImpl {
             return Objects.requireNonNullElseGet(divided, GenerationUnit.super::subdivide);
         }
 
-        private GenerationUnit registerFork(Vec start, List<GenerationUnit> sections,
+        private GenerationUnit registerFork(BlockVec start, List<GenerationUnit> sections,
                                             int width, int height, int depth) {
-            final Vec end = start.add(width * 16, height * 16, depth * 16);
-            final Vec size = end.sub(start);
+            final BlockVec end = start.add(width * SECTION_SIZE, height * SECTION_SIZE, depth * SECTION_SIZE);
+            final BlockVec size = end.sub(start);
             final AreaModifierImpl modifier = new AreaModifierImpl(size, start, end, width, height, depth, sections);
             final UnitImpl fork = new UnitImpl(biomeRegistry, modifier, size, start, end, sections, forks);
             forks.add(fork);
@@ -231,7 +235,7 @@ public final class GeneratorImpl {
         }
     }
 
-    public record SectionModifierImpl(DynamicRegistry<Biome> biomeRegistry, Vec start, Vec end,
+    public record SectionModifierImpl(DynamicRegistry<Biome> biomeRegistry, BlockVec start, BlockVec end,
                                       GenSection genSection, boolean fork) implements GenericModifier {
 
         @Override
@@ -272,9 +276,9 @@ public final class GeneratorImpl {
         @Override
         public void fill(Block block) {
             if (requireCache(block)) {
-                for (int x = 0; x < 16; x++) {
-                    for (int y = 0; y < 16; y++) {
-                        for (int z = 0; z < 16; z++) {
+                for (int x = 0; x < SECTION_SIZE; x++) {
+                    for (int y = 0; y < SECTION_SIZE; y++) {
+                        for (int z = 0; z < SECTION_SIZE; z++) {
                             this.genSection.specials.put(chunkBlockIndex(x, y, z), block);
                         }
                     }
@@ -292,8 +296,8 @@ public final class GeneratorImpl {
         }
 
         @Override
-        public Vec size() {
-            return Vec.SECTION;
+        public BlockVec size() {
+            return BlockVec.SECTION;
         }
 
         private int retrieveBlockId(Block block) {
@@ -314,14 +318,14 @@ public final class GeneratorImpl {
         }
     }
 
-    public record AreaModifierImpl(Vec size, Vec start, Vec end,
+    public record AreaModifierImpl(BlockVec size, BlockVec start, BlockVec end,
                                    int width, int height, int depth,
                                    List<GenerationUnit> sections) implements GenericModifier {
         @Override
         public void setBlock(int x, int y, int z, Block block) {
             checkBorder(x, y, z);
             final GenerationUnit section = findAbsoluteSection(x, y, z);
-            y -= start.y();
+            y -= start.blockY();
             section.modifier().setBlock(x, y, z, block);
         }
 
@@ -329,13 +333,13 @@ public final class GeneratorImpl {
         public void setBiome(int x, int y, int z, RegistryKey<Biome> biome) {
             checkBorder(x, y, z);
             final GenerationUnit section = findAbsoluteSection(x, y, z);
-            y -= start.y();
+            y -= start.blockY();
             section.modifier().setBiome(x, y, z, biome);
         }
 
         @Override
         public void setRelative(int x, int y, int z, Block block) {
-            if (x < 0 || x >= size.x() || y < 0 || y >= size.y() || z < 0 || z >= size.z()) {
+            if (x < 0 || x >= size.blockX() || y < 0 || y >= size.blockY() || z < 0 || z >= size.blockZ()) {
                 throw new IllegalArgumentException("x, y and z must be in the chunk: " + x + ", " + y + ", " + z);
             }
             final GenerationUnit section = findRelativeSection(x, y, z);
@@ -386,7 +390,7 @@ public final class GeneratorImpl {
 
         @Override
         public void fillHeight(int minHeight, int maxHeight, Block block) {
-            final Vec start = this.start;
+            final BlockVec start = this.start;
             final int width = this.width, depth = this.depth;
             final int startX = start.blockX(), startZ = start.blockZ();
             final int minMultiple = floorSection(minHeight);
@@ -394,12 +398,12 @@ public final class GeneratorImpl {
             final boolean startOffset = minMultiple != minHeight;
             final boolean endOffset = maxMultiple != maxHeight;
             if (startOffset || endOffset) {
-                final int firstFill = Math.min(minMultiple + 16, maxHeight);
+                final int firstFill = Math.min(minMultiple + SECTION_SIZE, maxHeight);
                 final int lastFill = startOffset ? Math.max(firstFill, floorSection(maxHeight)) : floorSection(maxHeight);
                 for (int x = 0; x < width; x++) {
                     for (int z = 0; z < depth; z++) {
-                        final int sectionX = startX + x * 16;
-                        final int sectionZ = startZ + z * 16;
+                        final int sectionX = startX + x * SECTION_SIZE;
+                        final int sectionZ = startZ + z * SECTION_SIZE;
                         // Fill start
                         if (startOffset) {
                             final GenerationUnit section = findAbsoluteSection(sectionX, minMultiple, sectionZ);
@@ -414,12 +418,12 @@ public final class GeneratorImpl {
                 }
             }
             // Middle sections (to fill)
-            final int startSection = (minMultiple) / 16 + (startOffset ? 1 : 0);
-            final int endSection = (maxMultiple) / 16 + (endOffset ? -1 : 0);
+            final int startSection = (minMultiple) / SECTION_SIZE + (startOffset ? 1 : 0);
+            final int endSection = (maxMultiple) / SECTION_SIZE + (endOffset ? -1 : 0);
             for (int i = startSection; i < endSection; i++) {
                 for (int x = 0; x < width; x++) {
                     for (int z = 0; z < depth; z++) {
-                        final GenerationUnit section = findAbsoluteSection(startX + x * 16, i * 16, startZ + z * 16);
+                        final GenerationUnit section = findAbsoluteSection(startX + x * SECTION_SIZE, i * SECTION_SIZE, startZ + z * SECTION_SIZE);
                         section.modifier().fill(block);
                     }
                 }
@@ -431,13 +435,13 @@ public final class GeneratorImpl {
         }
 
         private GenerationUnit findRelativeSection(int x, int y, int z) {
-            return findAbsolute(sections, Vec.ZERO, width, height, depth, x, y, z);
+            return findAbsolute(sections, BlockVec.ZERO, width, height, depth, x, y, z);
         }
 
         private void checkBorder(int x, int y, int z) {
-            if (x < start.x() || x >= end.x() ||
-                    y < start.y() || y >= end.y() ||
-                    z < start.z() || z >= end.z()) {
+            if (x < start.blockX() || x >= end.blockX() ||
+                    y < start.blockY() || y >= end.blockY() ||
+                    z < start.blockZ() || z >= end.blockZ()) {
                 final String format = String.format("Invalid coordinates: %d, %d, %d for area %s %s", x, y, z, start, end);
                 throw new IllegalArgumentException(format);
             }
@@ -446,15 +450,15 @@ public final class GeneratorImpl {
 
     sealed interface GenericModifier extends UnitModifier
             permits AreaModifierImpl, SectionModifierImpl {
-        Vec size();
+        BlockVec size();
 
-        Vec start();
+        BlockVec start();
 
-        Vec end();
+        BlockVec end();
 
         @Override
         default void setAll(Supplier supplier) {
-            final Vec start = start(), end = end();
+            final BlockVec start = start(), end = end();
             final int endX = end.blockX();
             final int endY = end.blockY();
             final int endZ = end.blockZ();
@@ -469,7 +473,7 @@ public final class GeneratorImpl {
 
         @Override
         default void setAllRelative(Supplier supplier) {
-            final Vec size = size();
+            final BlockVec size = size();
             final int endX = size.blockX();
             final int endY = size.blockY();
             final int endZ = size.blockZ();
@@ -502,10 +506,8 @@ public final class GeneratorImpl {
 
         @Override
         default void fillHeight(int minHeight, int maxHeight, Block block) {
-            final Vec start = start();
-            final Vec end = end();
-            final int startY = start.blockY();
-            final int endY = end.blockY();
+            final BlockVec start = start(), end = end();
+            final int startY = start.blockY(), endY = end.blockY();
             if (startY >= minHeight && endY <= maxHeight) {
                 // Fast path if the unit is fully contained in the height range
                 fill(start, end, block);
@@ -516,12 +518,12 @@ public final class GeneratorImpl {
         }
     }
 
-    private static GenerationUnit findAbsolute(List<GenerationUnit> units, Vec start,
+    private static GenerationUnit findAbsolute(List<GenerationUnit> units, BlockVec start,
                                                int width, int height, int depth,
                                                int x, int y, int z) {
-        final int sectionX = globalToChunk(x - start.x());
-        final int sectionY = globalToChunk(y - start.y());
-        final int sectionZ = globalToChunk(z - start.z());
+        final int sectionX = globalToChunk(x - start.blockX());
+        final int sectionY = globalToChunk(y - start.blockY());
+        final int sectionZ = globalToChunk(z - start.blockZ());
         final int index = findIndex(width, height, depth, sectionX, sectionY, sectionZ);
         return units.get(index);
     }
@@ -532,11 +534,11 @@ public final class GeneratorImpl {
         return (z * width * height) + (y * width) + x;
     }
 
-    private static Vec to3D(int idx, int width, int height, int depth) {
+    private static BlockVec to3D(int idx, int width, int height, int depth) {
         final int z = idx / (width * height);
         idx -= (z * width * height);
         final int y = idx / width;
         final int x = idx % width;
-        return new Vec(x, y, z);
+        return new BlockVec(x, y, z);
     }
 }

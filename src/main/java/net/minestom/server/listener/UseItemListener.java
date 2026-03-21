@@ -26,7 +26,6 @@ public class UseItemListener {
         final PlayerHand hand = packet.hand();
         final ItemStack itemStack = player.getItemInHand(hand);
         final Material material = itemStack.material();
-        final Consumable consumable = itemStack.get(DataComponents.CONSUMABLE);
 
         // The following item animations and use item times come from vanilla.
         // These items do not yet use components, but hopefully they will in the future
@@ -56,13 +55,16 @@ public class UseItemListener {
         } else if (material == Material.BRUSH) {
             useItemTime = 200;
             useAnimation = ItemAnimation.BRUSH;
-        } else if (material.name().contains("bundle")) {
+        } else if (material.name().endsWith("bundle")) {
             // Why is a bundle usable???
             useItemTime = 200;
             useAnimation = ItemAnimation.BUNDLE;
-        } else if (consumable != null) {
-            useItemTime = consumable.consumeTicks();
-            useAnimation = consumable.animation();
+        } else {
+            final Consumable consumable = itemStack.get(DataComponents.CONSUMABLE);
+            if (consumable != null) {
+                useItemTime = consumable.consumeTicks();
+                useAnimation = consumable.animation();
+            }
         }
 
         boolean usingMainHand = player.getItemUseHand() == PlayerHand.MAIN && hand == PlayerHand.OFF;

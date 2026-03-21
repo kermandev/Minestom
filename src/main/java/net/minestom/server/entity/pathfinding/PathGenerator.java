@@ -60,10 +60,6 @@ public final class PathGenerator {
 
             PNode current = open.dequeue();
 
-            //var chunk = instance.getChunkAt(current.x(), current.z());
-            //if (chunk == null) continue;
-            //if (!chunk.isLoaded()) continue;
-
             if (((current.g() + current.h()) - straightDistance) > pathVariance) continue;
             if (!withinDistance(current, start, maxDistance)) continue;
             if (withinDistance(current, target, closeDistance)) {

@@ -6,6 +6,7 @@ import net.minestom.server.coordinate.Point;
 import net.minestom.server.instance.block.BlockFace;
 import net.minestom.server.instance.palette.Palette;
 import org.jetbrains.annotations.ApiStatus;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -15,9 +16,9 @@ import static net.minestom.server.coordinate.CoordConversion.SECTION_BLOCK_COUNT
 import static net.minestom.server.instance.light.LightCompute.*;
 
 final class SkyLight implements Light {
-    private byte[] content;
-    private byte[] contentPropagation;
-    private byte[] contentPropagationSwap;
+    private byte @Nullable [] content;
+    private byte @Nullable [] contentPropagation;
+    private byte @Nullable [] contentPropagationSwap;
 
     private volatile boolean isValidBorders = true;
     private final AtomicBoolean needsSend = new AtomicBoolean(false);
@@ -133,7 +134,7 @@ final class SkyLight implements Light {
 
     @Override
     public Set<Point> calculateExternal(Palette blockPalette,
-                                        Point[] neighbors,
+                                        @Nullable Point[] neighbors,
                                         LightLookup lightLookup,
                                         PaletteLookup paletteLookup) {
         if (!isValidBorders) return Set.of();

@@ -33,6 +33,7 @@ public class EntityProjectileDamage extends Damage {
 
     @Override
     public Entity getSource() {
+        //noinspection ConstantConditions
         return super.getSource();
     }
 }

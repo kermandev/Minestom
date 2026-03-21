@@ -3,13 +3,14 @@ package net.minestom.server.entity;
 import net.minestom.server.coordinate.Vec;
 import net.minestom.server.thread.Acquirable;
 import org.jetbrains.annotations.ApiStatus;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Comparator;
 
 public class ExperienceOrb extends Entity {
 
     private short experienceCount;
-    private Player target;
+    private @Nullable Player target;
     private long lastTargetUpdateTick;
 
     public ExperienceOrb(short experienceCount) {
@@ -69,11 +70,6 @@ public class ExperienceOrb extends Entity {
         }
     }
 
-    @Override
-    public void spawn() {
-
-    }
-
     /**
      * Gets the experience count.
      *
@@ -97,7 +93,7 @@ public class ExperienceOrb extends Entity {
         getViewers().forEach(this::addViewer);
     }
 
-    private Player getClosestPlayer(Entity entity, float maxDistance) {
+    private @Nullable Player getClosestPlayer(Entity entity, float maxDistance) {
         Player closest = entity.getInstance()
                 .getPlayers()
                 .stream()

@@ -286,7 +286,7 @@ final class TagHandlerImpl implements TagHandler {
                     final TagImpl<?> tag = entry.tag;
                     final BinaryTag nbt = entry.updatedNbt();
                     if (nbt != null && (!tag.entry().isPath() || ServerFlag.SERIALIZE_EMPTY_COMPOUND || !((CompoundBinaryTag) nbt).isEmpty())) {
-                        tmp.put(tag.getKey(), nbt);
+                        tmp.put(tag.key(), nbt);
                     }
                 });
                 this.compound = compound = tmp.build();
@@ -315,7 +315,7 @@ final class TagHandlerImpl implements TagHandler {
                 }
 
                 if (nbt != null)
-                    tmp.put(tag.getKey(), nbt);
+                    tmp.put(tag.key(), nbt);
                 entries.put(tag.index(), valueToEntry(result, (Tag<Object>) tag, value));
             });
             var compound = tmp.build();
@@ -348,7 +348,7 @@ final class TagHandlerImpl implements TagHandler {
         }
 
         static Entry<?> makePathEntry(Tag<?> tag, Node node) {
-            return makePathEntry(tag.getKey(), node);
+            return makePathEntry(tag.key(), node);
         }
 
         @Nullable BinaryTag updatedNbt() {

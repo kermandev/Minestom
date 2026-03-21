@@ -2,7 +2,6 @@ package net.minestom.server.entity;
 
 import net.kyori.adventure.identity.Identified;
 import net.kyori.adventure.identity.Identity;
-import net.kyori.adventure.nbt.CompoundBinaryTag;
 import net.kyori.adventure.pointer.Pointered;
 import net.kyori.adventure.pointer.Pointers;
 import net.kyori.adventure.pointer.PointersSupplier;
@@ -117,8 +116,8 @@ public class Entity implements Viewable, Tickable, Schedulable, Snapshotable, Ev
             EntityType.BLOCK_DISPLAY);
     private final CachedPacket destroyPacketCache = new CachedPacket(() -> new DestroyEntitiesPacket(getEntityId()));
 
-    protected Instance instance;
-    protected Chunk currentChunk;
+    protected @Nullable Instance instance; // Better to use nullable here, even if its unknown nullability.
+    protected @Nullable Chunk currentChunk;
     protected Pos position; // Should be updated by setPositionInternal only.
     protected float headRotation;
     protected Pos previousPosition;
@@ -126,13 +125,12 @@ public class Entity implements Viewable, Tickable, Schedulable, Snapshotable, Ev
     protected boolean onGround;
 
     protected BoundingBox boundingBox;
-    private PhysicsResult previousPhysicsResult = null;
+    private @Nullable PhysicsResult previousPhysicsResult = null;
 
-    protected Entity vehicle;
+    protected @Nullable Entity vehicle;
 
     // Velocity
     protected Vec velocity = Vec.ZERO; // Movement in block per second
-    protected boolean lastVelocityWasZero = true;
     protected boolean hasPhysics = true;
     protected boolean collidesWithEntities = true;
     protected boolean preventBlockPlacement = true;
@@ -169,7 +167,7 @@ public class Entity implements Viewable, Tickable, Schedulable, Snapshotable, Ev
     protected final Set<Player> viewers = viewEngine.set;
     private final TagHandler tagHandler = TagHandler.newHandler();
     private final Scheduler scheduler = Scheduler.newScheduler();
-    private final EventNode<EntityEvent> eventNode;
+    private final @UnknownNullability EventNode<EntityEvent> eventNode; // null without a server process.
 
     private final UUID uuid;
     private boolean isActive; // False if entity has only been instanced without being added somewhere
@@ -178,7 +176,7 @@ public class Entity implements Viewable, Tickable, Schedulable, Snapshotable, Ev
     private final Set<Entity> passengers = new CopyOnWriteArraySet<>();
 
     private final Set<Entity> leashedEntities = new CopyOnWriteArraySet<>();
-    private Entity leashHolder;
+    private @Nullable Entity leashHolder;
 
     protected EntityType entityType; // UNSAFE to change, modify at your own risk
 
@@ -649,6 +647,8 @@ public class Entity implements Viewable, Tickable, Schedulable, Snapshotable, Ev
     protected void movementTick() {
         this.gravityTickCount = onGround ? 0 : gravityTickCount + 1;
         if (vehicle != null) return;
+        final Instance instance = getInstance();
+        final Chunk currentChunk = getChunk();
 
         boolean entityIsPlayer = this instanceof Player;
         boolean entityFlying = entityIsPlayer && ((Player) this).isFlying();
@@ -671,6 +671,7 @@ public class Entity implements Viewable, Tickable, Schedulable, Snapshotable, Ev
         if (!hasPhysics) return;
 
         // TODO do not call every tick (it is pretty expensive)
+        final Instance instance = getInstance();
         final Pos position = this.position;
         final BoundingBox boundingBox = this.boundingBox;
         ChunkCache cache = new ChunkCache(instance, currentChunk);
@@ -840,6 +841,7 @@ public class Entity implements Viewable, Tickable, Schedulable, Snapshotable, Ev
      *
      * @return the entity instance, can be null if the entity doesn't have an instance yet
      */
+    @SuppressWarnings("NullableProblems") // We want to downgrade it to unknown for setInstance followed by getInstance.
     public @UnknownNullability Instance getInstance() {
         return instance;
     }
@@ -862,7 +864,7 @@ public class Entity implements Viewable, Tickable, Schedulable, Snapshotable, Ev
         }
         AddEntityToInstanceEvent event = new AddEntityToInstanceEvent(instance, this);
         EventDispatcher.call(event);
-        if (event.isCancelled()) return null; // TODO what to return?
+        if (event.isCancelled()) return AsyncUtils.empty();
 
         if (previousInstance != null) removeFromInstance(previousInstance);
         if (this instanceof Player player) instance.bossBars().forEach(player::showBossBar);
@@ -1414,7 +1416,9 @@ public class Entity implements Viewable, Tickable, Schedulable, Snapshotable, Ev
         }
         // Handle chunk switch
         final Instance instance = getInstance();
+        final Chunk currentChunk = getChunk();
         assert instance != null;
+        assert currentChunk != null;
         instance.getEntityTracker().move(this, newPosition, trackingTarget, trackingUpdate);
         final int lastChunkX = currentChunk.getChunkX();
         final int lastChunkZ = currentChunk.getChunkZ();
@@ -1821,6 +1825,7 @@ public class Entity implements Viewable, Tickable, Schedulable, Snapshotable, Ev
             return null;
         }
 
+        final Pos position = this.position;
         final Pos start = position.withY(position.y() + getEyeHeight());
         final Vec startAsVec = start.asVec();
         final Predicate<Entity> finalPredicate = e -> e != this

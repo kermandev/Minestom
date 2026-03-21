@@ -7,6 +7,7 @@ import net.minestom.server.instance.block.Block;
 import net.minestom.server.instance.block.BlockFace;
 import net.minestom.server.instance.palette.Palette;
 import net.minestom.server.utils.Direction;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -27,7 +28,7 @@ public final class LightCompute {
         Arrays.fill(CONTENT_FULLY_LIT, (byte) -1);
     }
 
-    static byte[] lazyArray(byte[] content) {
+    static byte[] lazyArray(byte @Nullable [] content) {
         if (content == null || content.length == 0) return EMPTY_CONTENT;
         else if (Arrays.equals(content, EMPTY_CONTENT)) return EMPTY_CONTENT;
         else if (Arrays.equals(content, CONTENT_FULLY_LIT)) return CONTENT_FULLY_LIT;
@@ -35,7 +36,7 @@ public final class LightCompute {
     }
 
     static ShortArrayFIFOQueue buildExternalQueue(Palette blockPalette,
-                                                  Point[] neighbors, byte[] content,
+                                                  @Nullable Point[] neighbors, byte @Nullable [] content,
                                                   Light.LightLookup lightLookup,
                                                   Light.PaletteLookup paletteLookup) {
         ShortArrayFIFOQueue lightSources = new ShortArrayFIFOQueue();
@@ -189,11 +190,11 @@ public final class LightCompute {
         return ((value >>> ((index & 1) << 2)) & 0xF);
     }
 
-    public static Block getBlock(Palette palette, int x, int y, int z) {
+    public static @Nullable Block getBlock(Palette palette, int x, int y, int z) {
         return Block.fromStateId(palette.get(x, y, z));
     }
 
-    public static byte[] bake(byte[] content1, byte[] content2) {
+    public static byte[] bake(byte @Nullable [] content1, byte @Nullable [] content2) {
         if (content1 == null && content2 == null) return EMPTY_CONTENT;
         if (content1 == EMPTY_CONTENT && content2 == EMPTY_CONTENT) return EMPTY_CONTENT;
 
@@ -231,8 +232,7 @@ public final class LightCompute {
         return lightMax;
     }
 
-    public static boolean compareBorders(byte[] content, byte[] contentPropagation, byte[] contentPropagationTemp, BlockFace face) {
-        if (content == null && contentPropagation == null && contentPropagationTemp == null) return true;
+    public static boolean compareBorders(byte @Nullable [] content, byte @Nullable [] contentPropagation, byte[] contentPropagationTemp, BlockFace face) {
 
         final int k = switch (face) {
             case WEST, BOTTOM, NORTH -> 0;

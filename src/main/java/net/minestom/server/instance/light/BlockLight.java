@@ -131,7 +131,7 @@ final class BlockLight implements Light {
 
     @Override
     public Set<Point> calculateExternal(Palette blockPalette,
-                                        Point[] neighbors,
+                                        @Nullable Point[] neighbors,
                                         LightLookup lightLookup,
                                         PaletteLookup paletteLookup) {
         if (!isValidBorders) return Set.of();

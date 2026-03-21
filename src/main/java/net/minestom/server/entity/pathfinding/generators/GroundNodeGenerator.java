@@ -111,9 +111,6 @@ public class GroundNodeGenerator implements NodeGenerator {
         final double pointY = (int) Math.floor(pointOrgY);
         final double pointZ = (int) Math.floor(pointOrgZ) + 0.5;
 
-        //Chunk c = instance.getChunkAt(pointX, pointZ);
-        //if (c == null) return OptionalDouble.of(pointY);
-
         for (int axis = 1; axis <= maxFall; ++axis) {
             pointIterator.reset(boundingBox, pointX, pointY, pointZ, BoundingBox.AxisMask.Y, -axis);
 

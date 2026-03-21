@@ -4,6 +4,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Map;
@@ -38,7 +39,7 @@ public sealed interface SnapshotUpdater permits SnapshotUpdaterImpl {
     <T extends Snapshot> AtomicReference<T> reference(Snapshotable snapshotable);
 
     @Contract("!null -> !null")
-    default <T extends Snapshot> AtomicReference<T> optionalReference(Snapshotable snapshotable) {
+    default <T extends Snapshot> @Nullable AtomicReference<T> optionalReference(@Nullable Snapshotable snapshotable) {
         return snapshotable != null ? reference(snapshotable) : null;
     }
 

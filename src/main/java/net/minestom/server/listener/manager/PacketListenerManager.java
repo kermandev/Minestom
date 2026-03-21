@@ -1,6 +1,7 @@
 package net.minestom.server.listener.manager;
 
 import net.minestom.server.MinecraftServer;
+import net.minestom.server.entity.Player;
 import net.minestom.server.event.EventDispatcher;
 import net.minestom.server.event.player.PlayerPacketEvent;
 import net.minestom.server.listener.*;
@@ -26,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class PacketListenerManager {
@@ -66,7 +68,7 @@ public final class PacketListenerManager {
         setPlayListener(ClientClickWindowPacket.class, WindowListener::clickWindowListener);
         setPlayListener(ClientCloseWindowPacket.class, WindowListener::closeWindowListener);
         setPlayListener(ClientConfigurationAckPacket.class, LoginListener::configAckListener);
-        setPlayListener(ClientPongPacket.class, WindowListener::pong);
+        setPlayListener(ClientPongPacket.class, (_, _) -> {/* empty */});
         setPlayListener(ClientEntityActionPacket.class, EntityActionListener::listener);
         setPlayListener(ClientHeldItemChangePacket.class, PlayerHeldListener::heldListener);
         setPlayListener(ClientPlayerBlockPlacementPacket.class, BlockPlacementListener::listener);
@@ -125,7 +127,7 @@ public final class PacketListenerManager {
         final ConnectionState nextState = PacketVanilla.nextClientState(packet, currState);
         if (nextState != currState) connection.setClientState(nextState);
 
-        final Class clazz = packet.getClass();
+        final Class<? extends ClientPacket> clazz = packet.getClass();
         PacketPrePlayListenerConsumer<T> packetListenerConsumer = listeners[currState.ordinal()].get(clazz);
 
         // Listener can be null if none has been set before, call PacketConsumer anyway
@@ -136,6 +138,8 @@ public final class PacketListenerManager {
 
         // Event
         if (currState == ConnectionState.PLAY) {
+            final Player player = connection.getPlayer();
+            Objects.requireNonNull(player, "Player cannot be null in PLAY state");
             PlayerPacketEvent playerPacketEvent = new PlayerPacketEvent(connection.getPlayer(), packet);
             EventDispatcher.call(playerPacketEvent);
             if (playerPacketEvent.isCancelled()) {
@@ -143,7 +147,7 @@ public final class PacketListenerManager {
             }
         }
 
-        // Finally execute the listener
+        // Finally, execute the listener
         try {
             packetListenerConsumer.accept(packet, connection);
         } catch (Exception e) {

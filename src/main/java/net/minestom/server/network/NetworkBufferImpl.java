@@ -24,6 +24,7 @@ import java.util.zip.Inflater;
 
 import static net.minestom.server.network.NetworkBufferUnsafe.*;
 
+@SuppressWarnings("removal")
 final class NetworkBufferImpl implements NetworkBuffer {
     private static final Cleaner CLEANER = Cleaner.create();
     private static final long DUMMY_ADDRESS = -1;
@@ -35,13 +36,13 @@ final class NetworkBufferImpl implements NetworkBuffer {
     private long readIndex, writeIndex;
     boolean readOnly;
 
-    private BinaryTagWriter nbtWriter;
-    private BinaryTagReader nbtReader;
+    private @Nullable BinaryTagWriter nbtWriter;
+    private @Nullable BinaryTagReader nbtReader;
 
     final @Nullable AutoResize autoResize;
     final @Nullable Registries registries;
 
-    ByteBuffer nioBuffer = null;
+    @Nullable ByteBuffer nioBuffer = null;
 
     NetworkBufferImpl(long address, long capacity,
                       long readIndex, long writeIndex,
@@ -514,8 +515,8 @@ final class NetworkBufferImpl implements NetworkBuffer {
 
     static final class Builder implements NetworkBuffer.Builder {
         private final long initialSize;
-        private AutoResize autoResize;
-        private Registries registries;
+        private @Nullable AutoResize autoResize;
+        private @Nullable Registries registries;
 
         public Builder(long initialSize) {
             this.initialSize = initialSize;
@@ -528,7 +529,7 @@ final class NetworkBufferImpl implements NetworkBuffer {
         }
 
         @Override
-        public NetworkBuffer.Builder registry(Registries registries) {
+        public NetworkBuffer.Builder registry(@Nullable Registries registries) {
             this.registries = registries;
             return this;
         }
@@ -543,7 +544,7 @@ final class NetworkBufferImpl implements NetworkBuffer {
         }
     }
 
-    static NetworkBufferImpl dummy(Registries registries) {
+    static NetworkBufferImpl dummy(@Nullable Registries registries) {
         // Dummy buffer with no memory allocated
         // Useful for size calculations
         return new NetworkBufferImpl(
@@ -585,11 +586,12 @@ final class NetworkBufferImpl implements NetworkBuffer {
         return nbtReader;
     }
 
+    // Check if long is within the bounds of an int
     private static void assertOverflow(long value) {
         try {
-            Math.toIntExact(value); // Check if long is within the bounds of an int
+            var ignored = Math.toIntExact(value);
         } catch (ArithmeticException e) {
-            throw new RuntimeException("Method does not support long values: " + value);
+            throw new RuntimeException("Method does not support long values: " + value, e);
         }
     }
 }

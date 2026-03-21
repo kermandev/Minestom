@@ -1077,7 +1077,7 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    static <T> long sizeOf(Type<T> type, T value, Registries registries) {
+    static <T> long sizeOf(Type<T> type, T value, @Nullable Registries registries) {
         NetworkBuffer buffer = NetworkBufferImpl.dummy(registries);
         type.write(buffer, value);
         return buffer.writeIndex();

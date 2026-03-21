@@ -8,6 +8,8 @@ import net.minestom.server.network.packet.client.ClientPacket;
 import net.minestom.server.network.player.PlayerSocketConnection;
 import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.ApiStatus;
+import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.UnknownNullability;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -17,6 +19,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.file.Files;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 
 public final class Server {
@@ -24,9 +27,9 @@ public final class Server {
 
     private final PacketParser<ClientPacket> packetParser;
 
-    private ServerSocketChannel serverSocket;
-    private SocketAddress socketAddress;
-    private String address;
+    private @Nullable ServerSocketChannel serverSocket;
+    private @Nullable SocketAddress socketAddress;
+    private @Nullable String address;
     private int port;
 
     public Server(PacketParser<ClientPacket> packetParser) {
@@ -67,6 +70,8 @@ public final class Server {
 
     @ApiStatus.Internal
     public void start() {
+        final ServerSocketChannel serverSocket = this.serverSocket;
+        Objects.requireNonNull(serverSocket);
         // Use named thread builders for logging
         var readBuilder = Thread.ofVirtual().name("Ms-Socket-Reader-", 0);
         var writeBuilder = Thread.ofVirtual().name("Ms-Socket-Writer-", 0);
@@ -75,17 +80,17 @@ public final class Server {
                 try {
                     final SocketChannel client = serverSocket.accept();
                     configureSocket(client);
-                    AtomicReference<PlayerSocketConnection> reference = new AtomicReference<>(null);
+                    AtomicReference<@UnknownNullability PlayerSocketConnection> reference = new AtomicReference<>(null);
                     Thread readThread = readBuilder.unstarted(() -> playerReadLoop(reference.get()));
                     Thread writeThread = writeBuilder.unstarted(() -> playerWriteLoop(reference.get()));
                     PlayerSocketConnection connection = new PlayerSocketConnection(client, client.getRemoteAddress(), readThread, writeThread);
                     reference.set(connection);
                     readThread.start();
                     writeThread.start();
-                } catch (AsynchronousCloseException ignored) {
+                } catch (AsynchronousCloseException _) {
                     // We are exiting, bye bye!
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
+                } catch (Exception e) {
+                    MinecraftServer.getExceptionManager().handleException(e);
                 }
             }
         });
@@ -103,6 +108,7 @@ public final class Server {
 
     private void playerReadLoop(PlayerSocketConnection connection) {
         Check.notNull(connection, "connection cannot be null");
+        final PacketParser<ClientPacket> packetParser = this.packetParser;
         while (!stop) {
             try {
                 // Read & process packets
@@ -175,11 +181,11 @@ public final class Server {
         return packetParser;
     }
 
-    public SocketAddress socketAddress() {
+    public @Nullable SocketAddress socketAddress() {
         return socketAddress;
     }
 
-    public String getAddress() {
+    public @Nullable String getAddress() {
         return address;
     }
 

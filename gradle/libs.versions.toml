@@ -5,14 +5,14 @@ metadata.format.version = "1.1"
 # Important dependencies
 data = "1.21.11-rv2"
 adventure = "4.26.1"
-jetbrainsAnnotations = "26.0.2-1"
+jetbrainsAnnotations = "26.1.0"
 slf4j = "2.0.17"
 
 # Performance / Data Structures
 fastutil = "8.5.18"
 flare = "2.0.1"
 gson = "2.13.2"
-jcTools = "4.0.5"
+jcTools = "4.0.6"
 
 # Quality
 junit-jupiter = "6.0.0"
@@ -55,7 +55,7 @@ fastutil = { group = "it.unimi.dsi", name = "fastutil", version.ref = "fastutil"
 flare = { group = "space.vectrix.flare", name = "flare", version.ref = "flare" }
 flare-fastutil = { group = "space.vectrix.flare", name = "flare-fastutil", version.ref = "flare" }
 gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
-jcTools = { group = "org.jctools", name = "jctools-core", version.ref = "jcTools" }
+jcTools = { group = "org.jctools", name = "jctools-core-jdk11", version.ref = "jcTools" }
 
 # Code quality
 junit-api = { group = "org.junit.jupiter", name = "junit-jupiter-api", version.ref = "junit-jupiter" }

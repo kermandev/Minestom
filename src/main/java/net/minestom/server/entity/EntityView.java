@@ -17,6 +17,8 @@ import java.util.function.Predicate;
 
 final class EntityView {
     private static final int RANGE = ServerFlag.ENTITY_VIEW_DISTANCE;
+    private static final Consumer<Entity> NO_OP = _ -> {};
+
     private final Entity entity;
     private final Set<Player> manualViewers = new HashSet<>();
 
@@ -28,7 +30,7 @@ final class EntityView {
     final Set<Player> set = new SetImpl();
     private final Object mutex = this;
 
-    private volatile TrackedLocation trackedLocation;
+    private volatile @Nullable TrackedLocation trackedLocation;
 
     public EntityView(Entity entity) {
         this.entity = entity;
@@ -37,8 +39,8 @@ final class EntityView {
                 player -> hideEntityFromPlayer(this.entity, player)
         );
         this.viewerOption = new Option<>(EntityTracker.Target.ENTITIES, Entity::isAutoViewable,
-                entity instanceof Player player ? e -> e.viewEngine.viewableOption.addition.accept(player) : null,
-                entity instanceof Player player ? e -> e.viewEngine.viewableOption.removal.accept(player) : null);
+                entity instanceof Player player ? e -> e.viewEngine.viewableOption.addition.accept(player) : NO_OP,
+                entity instanceof Player player ? e -> e.viewEngine.viewableOption.removal.accept(player) : NO_OP);
     }
 
     private static void showEntityToPlayer(Entity entity, Player player) {
@@ -156,7 +158,7 @@ final class EntityView {
         handleAutoView(entity, viewerOption.removal, viewableOption.removal);
     }
 
-    private void handleAutoView(Entity entity, Consumer<Entity> viewer, Consumer<Player> viewable) {
+    private void handleAutoView(Entity entity, @Nullable Consumer<Entity> viewer, @Nullable Consumer<Player> viewable) {
         if (this.entity instanceof Player && viewerOption.isAuto() && entity.isAutoViewable()) {
             if (viewer != null) viewer.accept(entity); // Send packet to this player
         }
@@ -180,7 +182,7 @@ final class EntityView {
         private volatile int auto = 1;
         // The custom rule used to determine if an entity is viewable.
         // null if auto-viewable
-        private Predicate<T> predicate = null;
+        private @Nullable Predicate<T> predicate = null;
 
         public Option(EntityTracker.Target<T> target, Predicate<T> loopPredicate,
                       Consumer<T> addition, Consumer<T> removal) {
@@ -222,7 +224,7 @@ final class EntityView {
             }
         }
 
-        public void updateRule(Predicate<T> predicate) {
+        public void updateRule(@Nullable Predicate<T> predicate) {
             synchronized (mutex) {
                 this.predicate = predicate;
                 updateRule0(predicate);
@@ -235,7 +237,7 @@ final class EntityView {
             }
         }
 
-        void updateRule0(Predicate<T> predicate) {
+        void updateRule0(@Nullable Predicate<T> predicate) {
             if (predicate == null) {
                 update(loopPredicate, entity -> {
                     if (!isRegistered(entity)) addition.accept(entity);

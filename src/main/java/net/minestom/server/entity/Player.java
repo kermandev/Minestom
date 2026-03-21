@@ -73,7 +73,6 @@ import net.minestom.server.network.player.ClientSettings;
 import net.minestom.server.network.player.GameProfile;
 import net.minestom.server.network.player.PlayerConnection;
 import net.minestom.server.recipe.RecipeManager;
-import net.minestom.server.registry.DynamicRegistry;
 import net.minestom.server.registry.RegistryKey;
 import net.minestom.server.scoreboard.BelowNameTag;
 import net.minestom.server.scoreboard.Team;
@@ -86,6 +85,7 @@ import net.minestom.server.thread.Acquirable;
 import net.minestom.server.timer.Scheduler;
 import net.minestom.server.utils.MathUtils;
 import net.minestom.server.utils.PacketSendingUtils;
+import net.minestom.server.utils.Unit;
 import net.minestom.server.utils.async.AsyncUtils;
 import net.minestom.server.utils.chunk.ChunkUpdateLimitChecker;
 import net.minestom.server.utils.collection.ConcurrentMessageQueues;
@@ -118,8 +118,6 @@ import java.util.function.UnaryOperator;
  * You can easily create your own implementation of this and use it with {@link ConnectionManager#setPlayerProvider(PlayerProvider)}.
  */
 public class Player extends LivingEntity implements CommandSender, HoverEventSource<ShowEntity>, NamedAndIdentified {
-    private static final DynamicRegistry<DimensionType> DIMENSION_TYPE_REGISTRY = MinecraftServer.getDimensionTypeRegistry();
-
     private static final Component REMOVE_MESSAGE = Component.text("You have been removed from the server without reason.", NamedTextColor.RED);
     private static final Component MISSING_REQUIRED_RESOURCE_PACK = Component.text("Required resource pack was not loaded.", NamedTextColor.RED);
 
@@ -139,18 +137,16 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
     private boolean answerKeepAlive;
 
     private final GameProfile gameProfile;
-    private String username;
-    private Component usernameComponent;
     protected final PlayerConnection playerConnection;
 
     private volatile int latency;
-    private Component displayName;
-    private PlayerSkin skin;
+    private @Nullable Component displayName;
+    private @Nullable PlayerSkin skin;
 
-    private Instance pendingInstance = null;
+    private @Nullable Instance pendingInstance = null;
     private int dimensionTypeId;
     private GameMode gameMode;
-    private WorldPos deathLocation;
+    private @Nullable WorldPos deathLocation;
 
     /**
      * Keeps track of what chunks are sent to the client, this defines the center of the loaded area
@@ -187,7 +183,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
 
     protected ClickPreprocessor clickPreprocessor = new ClickPreprocessor();
     protected PlayerInventory inventory;
-    private AbstractInventory openInventory;
+    private @Nullable AbstractInventory openInventory;
     // Used internally to allow the closing of inventory within the inventory listener
     private boolean didCloseInventory;
 
@@ -200,7 +196,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
 
     private long startItemUseTime;
     private long itemUseTime;
-    private PlayerHand itemUseHand;
+    private @Nullable PlayerHand itemUseHand;
 
     // Game state (https://minecraft.wiki/w/Minecraft_Wiki:Projects/wiki.vg_merge/Protocol#Game_Event)
     private boolean enableRespawnScreen;
@@ -209,7 +205,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
     // Experience orb pickup
     protected Cooldown experiencePickupCooldown = new Cooldown(Duration.of(10, TimeUnit.SERVER_TICK));
 
-    private BelowNameTag belowNameTag;
+    private @Nullable BelowNameTag belowNameTag;
 
     private int permissionLevel;
 
@@ -233,13 +229,11 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
 
     private final Map<UUID, PendingResourcePack> pendingResourcePacks = new HashMap<>();
     // The future is non-null when a resource pack is in-flight, and completed when all statuses have been received.
-    private CompletableFuture<Void> resourcePackFuture = null;
+    private @Nullable CompletableFuture<Unit> resourcePackFuture = null;
 
     public Player(PlayerConnection playerConnection, GameProfile gameProfile) {
         super(EntityType.PLAYER, gameProfile.uuid());
         this.gameProfile = gameProfile;
-        this.username = gameProfile.name();
-        this.usernameComponent = Component.text(username);
         this.playerConnection = playerConnection;
 
         setRespawnPoint(Pos.ZERO);
@@ -252,7 +246,6 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
         refreshAnswerKeepAlive(true);
 
         this.gameMode = GameMode.SURVIVAL;
-        this.dimensionTypeId = DIMENSION_TYPE_REGISTRY.getId(DimensionType.OVERWORLD); // Default dimension
         this.levelFlat = true;
         getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.1);
 
@@ -281,10 +274,11 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
     @ApiStatus.Internal
     public CompletableFuture<Void> UNSAFE_init() {
         final Instance spawnInstance = this.pendingInstance;
+        Objects.requireNonNull(spawnInstance, "Spawn instance must be set before initialization");
         this.pendingInstance = null;
 
         this.removed = false;
-        this.dimensionTypeId = DIMENSION_TYPE_REGISTRY.getId(spawnInstance.getDimensionType());
+        this.dimensionTypeId = MinecraftServer.getDimensionTypeRegistry().getId(spawnInstance.getDimensionType());
 
         final JoinGamePacket joinGamePacket = new JoinGamePacket(
                 getEntityId(), this.hardcore, List.of(), 0,
@@ -374,8 +368,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
      * Used to initialize the player connection
      */
     protected void playerConnectionInit() {
-        PlayerConnection connection = playerConnection;
-        if (connection != null) connection.setPlayer(this);
+        playerConnection.setPlayer(this);
     }
 
     @Override
@@ -783,6 +776,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
         pendingChunkCount = Math.min(pendingChunkCount + targetChunksPerTick, ServerFlag.MAX_CHUNKS_PER_TICK);
         if (pendingChunkCount < 1) return; // Cant send anything
 
+        final Instance instance = Objects.requireNonNull(getInstance(), "Instance should be set");
         chunkQueueLock.lock();
         try {
             int batchSize = 0;
@@ -873,6 +867,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
         BoundingBox bb = pose == EntityPose.STANDING ? boundingBox : BoundingBox.fromPose(pose);
         if (bb == null) return false;
 
+        var instance = Objects.requireNonNull(getInstance(), "Requires an instance");
         var position = getPosition();
         var iter = bb.getBlocks(getPosition());
         while (iter.hasNext()) {
@@ -1034,7 +1029,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
         sendPacket(new ShowDialogPacket(Dialog.unwrap(dialog)));
     }
 
-    // TODO(1.21.6): Implementation for pending adventure method in 4.24.0.
+    @Override
     public void closeDialog() {
         sendPacket(new ClearDialogPacket());
     }
@@ -1125,7 +1120,8 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
      * @return true if the player is eating, false otherwise
      */
     public boolean isEating() {
-        if (!isUsingItem()) return false;
+        final PlayerHand itemUseHand = getItemUseHand();
+        if (itemUseHand == null) return false;
         final ItemStack itemStack = getItemInHand(itemUseHand);
         return itemStack.has(DataComponents.FOOD) || itemStack.material() == Material.POTION;
     }
@@ -1281,7 +1277,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
      */
     @Override
     public Component getName() {
-        return Objects.requireNonNullElse(displayName, usernameComponent);
+        return Objects.requireNonNullElse(displayName, Component.text(getUsername()));
     }
 
     /**
@@ -1290,7 +1286,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
      * @return the player's username
      */
     public String getUsername() {
-        return username;
+        return gameProfile.name();
     }
 
     /**
@@ -1331,7 +1327,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
 
     @Override
     public void clearResourcePacks() {
-        sendPacket(new ResourcePackPopPacket((UUID) null));
+        sendPacket(new ResourcePackPopPacket(null));
     }
 
     /**
@@ -1339,7 +1335,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
      * all resource packs have been responded to by the client. Otherwise null is returned.
      */
     @ApiStatus.Internal
-    public @Nullable CompletableFuture<Void> getResourcePackFuture() {
+    public @Nullable CompletableFuture<Unit> getResourcePackFuture() {
         return resourcePackFuture;
     }
 
@@ -1359,7 +1355,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
             }
 
             if (pendingResourcePacks.isEmpty() && resourcePackFuture != null) {
-                resourcePackFuture.complete(null);
+                resourcePackFuture.complete(Unit.INSTANCE);
                 resourcePackFuture = null;
             }
         }
@@ -1600,7 +1596,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
      * @return the player current dimension
      */
     public DimensionType getDimensionType() {
-        return DIMENSION_TYPE_REGISTRY.get(dimensionTypeId);
+        return Objects.requireNonNull(instance).getCachedDimensionType();
     }
 
     public PlayerInventory getInventory() {
@@ -1678,9 +1674,10 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
      * @param dimensionType the new player dimension
      */
     protected void sendDimension(RegistryKey<DimensionType> dimensionType, String dimensionName) {
+        Objects.requireNonNull(instance, "Instance must be set before sending dimension");
         Check.argCondition(instance.getDimensionName().equals(dimensionName),
                 "The dimension needs to be different than the current one!");
-        this.dimensionTypeId = DIMENSION_TYPE_REGISTRY.getId(dimensionType);
+        this.dimensionTypeId = MinecraftServer.getDimensionTypeRegistry().getId(dimensionType);
         sendPacket(new RespawnPacket(dimensionTypeId, dimensionName,
                 0, gameMode, gameMode, false, levelFlat,
                 deathLocation, portalCooldown, DEFAULT_SEA_LEVEL, (byte) RespawnPacket.COPY_ALL));
@@ -1731,7 +1728,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
      *
      * @param belowNameTag The new below name tag
      */
-    public void setBelowNameTag(BelowNameTag belowNameTag) {
+    public void setBelowNameTag(@Nullable BelowNameTag belowNameTag) {
         if (this.belowNameTag == belowNameTag) return;
 
         if (this.belowNameTag != null) {
@@ -2303,7 +2300,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
     @Override
     public PlayerSnapshot updateSnapshot(SnapshotUpdater updater) {
         final EntitySnapshot snapshot = super.updateSnapshot(updater);
-        return new SnapshotImpl.Player(snapshot, username, gameMode);
+        return new SnapshotImpl.Player(snapshot, getUsername(), gameMode);
     }
 
     public Locale getLocale() {
