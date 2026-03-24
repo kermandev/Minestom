@@ -1,7 +1,6 @@
 package net.minestom.testing;
 
 import net.kyori.adventure.translation.GlobalTranslator;
-import net.minestom.server.MinecraftServer;
 import net.minestom.server.ServerFlag;
 import net.minestom.server.ServerProcess;
 import net.minestom.server.adventure.MinestomAdventure;
@@ -87,7 +86,7 @@ final class TestConnectionImpl implements TestConnection {
 
         private ServerPacket extractPacket(final SendablePacket packet) {
             if (!(packet instanceof ServerPacket serverPacket))
-                return SendablePacket.extractServerPacket(packet, getServerState(), MinecraftServer.getPacketWriter());
+                return SendablePacket.extractServerPacket(packet, getServerState());
 
             final Player player = getPlayer();
             if (player == null) return serverPacket;

@@ -40,7 +40,8 @@ public class Main {
 
     public static void main(String[] args) {
         System.setProperty("minestom.new-socket-write-lock", "true");
-        MinecraftServer.setCompressionThreshold(0);
+        System.setProperty("minestom.compression-threshold", "0");
+        System.setProperty("minestom.disable-encryption", "true");
 
         MinecraftServer minecraftServer = MinecraftServer.init(new Auth.Offline());
 
@@ -107,14 +108,6 @@ public class Main {
             blockManager.registerHandler(key.key(), () -> signHandler);
         }
 
-        byte[] favicon;
-
-        try (InputStream stream = Main.class.getResourceAsStream("/minestom.png")) {
-            favicon = Objects.requireNonNull(stream).readAllBytes();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-
         MinecraftServer.getGlobalEventHandler().addListener(ServerListPingEvent.class, event -> {
             int onlinePlayers = MinecraftServer.getConnectionManager().getOnlinePlayers().size();
             Status.PlayerInfo.Builder builder = Status.PlayerInfo.builder(Status.PlayerInfo.online(20))
@@ -149,7 +142,6 @@ public class Main {
                     // the data will be automatically converted to the correct format on response, so you can do RGB and it'll be downsampled!
                     // on legacy versions, colors will be converted to the section format so it'll work there too
                     .description(Component.text("This is a Minestom Server", TextColor.color(0x66b3ff)))
-                    .favicon(favicon)
                     .playerInfo(builder.build())
                     .build());
         });

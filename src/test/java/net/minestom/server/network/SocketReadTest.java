@@ -1,10 +1,11 @@
 package net.minestom.server.network;
 
-import net.minestom.server.network.packet.PacketReading;
+import net.minestom.server.network.packet.PacketReader;
 import net.minestom.server.network.packet.PacketVanilla;
-import net.minestom.server.network.packet.PacketWriting;
+import net.minestom.server.network.packet.PacketWriter;
 import net.minestom.server.network.packet.client.ClientPacket;
 import net.minestom.server.network.packet.client.common.ClientPluginMessagePacket;
+import net.minestom.server.utils.collection.ObjectPool;
 import net.minestom.testing.Env;
 import net.minestom.testing.EnvTest;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -20,17 +21,20 @@ public class SocketReadTest {
 
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
-    public void complete(boolean compressed, Env ignored) throws DataFormatException {
+    public void complete(boolean compressed, Env env) throws DataFormatException {
         var packet = new ClientPluginMessagePacket("channel", new byte[2000]);
+        final ObjectPool<NetworkBuffer> networkPool = ObjectPool.unpooled(() -> NetworkBuffer.resizableBuffer(env.process()));
+        final PacketWriter.Client packetWriter = new PacketWriter.Client(networkPool);
+        final PacketReader.Client packetReader = new PacketReader.Client(networkPool);
 
-        var buffer = PacketVanilla.PACKET_POOL.get();
-        PacketWriting.writeFramedPacket(buffer, ConnectionState.PLAY, packet, compressed ? 256 : 0);
+        var buffer = networkPool.get();
+        packetWriter.writeFramedPacket(buffer, ConnectionState.PLAY, packet, compressed ? 256 : 0);
 
-        var readResult = PacketReading.readClients(buffer, ConnectionState.PLAY, compressed);
-        if (!(readResult instanceof PacketReading.Result.Success<ClientPacket> success)) {
+        var readResult = packetReader.readPacket(buffer, ConnectionState.PLAY, PacketVanilla::nextClientState, compressed);
+        if (!(readResult instanceof PacketReader.Result.Success<ClientPacket> success)) {
             throw new AssertionError("Expected a success result, got " + readResult);
         }
-        List<ClientPacket> packets = success.packets().stream().map(PacketReading.ParsedPacket::packet).toList();
+        List<ClientPacket> packets = success.packets().stream().map(PacketReader.ParsedPacket::packet).toList();
         assertEquals(List.of(packet), packets);
     }
 
@@ -44,10 +48,10 @@ public class SocketReadTest {
         PacketWriting.writeFramedPacket(buffer, ConnectionState.PLAY, packet, compressed ? 256 : 0);
 
         var readResult = PacketReading.readClients(buffer, ConnectionState.PLAY, compressed);
-        if (!(readResult instanceof PacketReading.Result.Success<ClientPacket> success)) {
+        if (!(readResult instanceof PacketReader.Result.Success<ClientPacket> success)) {
             throw new AssertionError("Expected a success result, got " + readResult);
         }
-        List<ClientPacket> packets = success.packets().stream().map(PacketReading.ParsedPacket::packet).toList();
+        List<ClientPacket> packets = success.packets().stream().map(PacketReader.ParsedPacket::packet).toList();
         assertEquals(List.of(packet, packet), packets);
     }
 
@@ -62,15 +66,15 @@ public class SocketReadTest {
         PacketWriting.writeFramedPacket(buffer, ConnectionState.PLAY, packet, compressed ? 256 : 0);
         buffer.write(NetworkBuffer.VAR_INT, 200); // incomplete 200 bytes packet
 
-        var readResult = PacketReading.readClients(buffer, ConnectionState.PLAY, compressed);
-        if (!(readResult instanceof PacketReading.Result.Success<ClientPacket> success)) {
+        var readResult = PacketReader.readClients(buffer, ConnectionState.PLAY, compressed);
+        if (!(readResult instanceof PacketReader.Result.Success<ClientPacket> success)) {
             throw new AssertionError("Expected a success result, got " + readResult);
         }
-        List<ClientPacket> packets = success.packets().stream().map(PacketReading.ParsedPacket::packet).toList();
+        List<ClientPacket> packets = success.packets().stream().map(PacketReader.ParsedPacket::packet).toList();
         assertEquals(List.of(packet), packets);
 
-        readResult = PacketReading.readClients(buffer, ConnectionState.PLAY, compressed);
-        if (!(readResult instanceof PacketReading.Result.Empty<ClientPacket>)) {
+        readResult = PacketReader.readClients(buffer, ConnectionState.PLAY, compressed);
+        if (!(readResult instanceof PacketReader.Result.Empty<ClientPacket>)) {
             throw new AssertionError("Expected an empty result, got " + readResult);
         }
     }

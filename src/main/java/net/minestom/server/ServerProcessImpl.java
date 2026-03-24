@@ -35,8 +35,11 @@ import net.minestom.server.monitoring.BenchmarkManager;
 import net.minestom.server.monitoring.EventsJFR;
 import net.minestom.server.monitoring.TickMonitor;
 import net.minestom.server.network.ConnectionManager;
+import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.network.packet.PacketParser;
+import net.minestom.server.network.packet.PacketReader;
 import net.minestom.server.network.packet.PacketVanilla;
+import net.minestom.server.network.packet.PacketWriter;
 import net.minestom.server.network.packet.client.ClientPacket;
 import net.minestom.server.network.packet.server.ServerPacket;
 import net.minestom.server.network.socket.Server;
@@ -50,6 +53,7 @@ import net.minestom.server.thread.ThreadProvider;
 import net.minestom.server.timer.SchedulerManager;
 import net.minestom.server.utils.PacketViewableUtils;
 import net.minestom.server.utils.collection.MappedCollection;
+import net.minestom.server.utils.collection.ObjectPool;
 import net.minestom.server.utils.time.Tick;
 import net.minestom.server.world.DimensionType;
 import net.minestom.server.world.biome.Biome;
@@ -101,8 +105,6 @@ final class ServerProcessImpl implements ServerProcess {
 
     private final ConnectionManager connection;
     private final PacketListenerManager packetListener;
-    private final PacketParser<ClientPacket> packetParser;
-    private final PacketParser<ServerPacket> packetWriter;
     private final InstanceManager instance;
     private final BlockManager block;
     private final CommandManager command;
@@ -159,8 +161,6 @@ final class ServerProcessImpl implements ServerProcess {
 
         this.connection = new ConnectionManager();
         this.packetListener = new PacketListenerManager();
-        this.packetParser = PacketVanilla.CLIENT_PACKET_PARSER;
-        this.packetWriter = PacketVanilla.SERVER_PACKET_PARSER;
         this.instance = new InstanceManager(this);
         this.block = new BlockManager();
         this.command = new CommandManager();
@@ -173,7 +173,11 @@ final class ServerProcessImpl implements ServerProcess {
         this.bossBar = new BossBarManager();
         this.clickCallbackManager = new ClickCallbackManager();
 
-        this.server = new Server(packetParser, packetWriter);
+        // Keeping this here for an eventual server builder API
+        var bufferPool = ObjectPool.pool(ServerFlag.PACKET_POOL_SIZE, () -> NetworkBuffer.resizableBuffer(ServerFlag.POOLED_BUFFER_SIZE, this), NetworkBuffer::clear);
+        var packetWriter = new PacketWriter.Server(bufferPool);
+        var packetReader = new PacketReader.Client(bufferPool);
+        this.server = new Server(packetWriter, packetReader);
 
         this.dispatcher = ThreadDispatcher.dispatcher(ThreadProvider.counter(), ServerFlag.DISPATCHER_THREADS);
         this.ticker = new TickerImpl();
@@ -372,16 +376,6 @@ final class ServerProcessImpl implements ServerProcess {
     @Override
     public PacketListenerManager packetListener() {
         return packetListener;
-    }
-
-    @Override
-    public PacketParser<ClientPacket> packetParser() {
-        return packetParser;
-    }
-
-    @Override
-    public PacketParser<ServerPacket> packetWriter() {
-        return packetWriter;
     }
 
     @Override

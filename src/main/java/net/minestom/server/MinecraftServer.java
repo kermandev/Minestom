@@ -25,9 +25,8 @@ import net.minestom.server.listener.manager.PacketListenerManager;
 import net.minestom.server.message.ChatType;
 import net.minestom.server.monitoring.BenchmarkManager;
 import net.minestom.server.network.ConnectionManager;
-import net.minestom.server.network.packet.PacketParser;
-import net.minestom.server.network.packet.client.ClientPacket;
-import net.minestom.server.network.packet.server.ServerPacket;
+import net.minestom.server.network.packet.PacketReader;
+import net.minestom.server.network.packet.PacketWriter;
 import net.minestom.server.network.packet.server.common.PluginMessagePacket;
 import net.minestom.server.network.packet.server.play.ServerDifficultyPacket;
 import net.minestom.server.network.socket.Server;
@@ -37,7 +36,6 @@ import net.minestom.server.scoreboard.TeamManager;
 import net.minestom.server.thread.TickSchedulerThread;
 import net.minestom.server.timer.SchedulerManager;
 import net.minestom.server.utils.PacketSendingUtils;
-import net.minestom.server.utils.validate.Check;
 import net.minestom.server.world.Difficulty;
 import net.minestom.server.world.DimensionType;
 import net.minestom.server.world.biome.Biome;
@@ -73,7 +71,6 @@ public final class MinecraftServer implements MinecraftConstants {
     // In-Game Manager
     private static volatile @UnknownNullability ServerProcess serverProcess;
 
-    private static int compressionThreshold = 256;
     private static String brandName = "Minestom";
     private static Difficulty difficulty = Difficulty.NORMAL;
 
@@ -194,14 +191,6 @@ public final class MinecraftServer implements MinecraftConstants {
         return serverProcess.bossBar();
     }
 
-    public static PacketParser<ClientPacket> getPacketParser() {
-        return serverProcess.packetParser();
-    }
-
-    public static PacketParser<ServerPacket> getPacketWriter() {
-        return serverProcess.packetWriter();
-    }
-
     public static boolean isStarted() {
         return serverProcess.isAlive();
     }
@@ -236,24 +225,14 @@ public final class MinecraftServer implements MinecraftConstants {
 
     /**
      * Gets the compression threshold of the server.
+     * <p>
+     * Deprecated in favor of {@link ServerFlag#COMPRESSION_THRESHOLD}
      *
      * @return the compression threshold, 0 means that compression is disabled
      */
+    @Deprecated
     public static int getCompressionThreshold() {
-        return compressionThreshold;
-    }
-
-    /**
-     * Changes the compression threshold of the server.
-     * <p>
-     * WARNING: this need to be called before {@link #start(SocketAddress)}.
-     *
-     * @param compressionThreshold the new compression threshold, 0 to disable compression
-     * @throws IllegalStateException if this is called after the server started
-     */
-    public static void setCompressionThreshold(int compressionThreshold) {
-        Check.stateCondition(serverProcess != null && serverProcess.isAlive(), "The compression threshold cannot be changed after the server has been started.");
-        MinecraftServer.compressionThreshold = compressionThreshold;
+        return ServerFlag.COMPRESSION_THRESHOLD;
     }
 
     public static AdvancementManager getAdvancementManager() {

@@ -43,6 +43,8 @@ public final class ServerFlag {
     public static final long LOGIN_PLUGIN_MESSAGE_TIMEOUT = longProperty("minestom.login-plugin-message-timeout", 5_000); // 5s
     public static final long KNOWN_PACKS_RESPONSE_TIMEOUT = longProperty("minestom.known-packs-response-timeout", 5 * 60_000); // 5m
     public static final boolean ACCEPT_TRANSFERS = booleanProperty("minestom.accept-transfers", false);
+    public static final int COMPRESSION_THRESHOLD = intProperty("minestom.compression-threshold", 256);
+    public static final boolean DISABLE_ENCRYPTION = booleanProperty("minestom.disable-encryption", false); // Completly disable encryption
 
     // Network buffers
     public static final int DEFAULT_RESIZEABLE_SIZE = intProperty("minestom.default-resizeable-size", 256);

@@ -29,6 +29,7 @@ public final class PacketVanilla {
      * <p>
      * Size starts with {@link ServerFlag#POOLED_BUFFER_SIZE} and doubles until {@link ServerFlag#MAX_PACKET_SIZE}.
      */
+    @Deprecated(forRemoval = true)
     public static final ObjectPool<NetworkBuffer> PACKET_POOL = ObjectPool.pool(
             ServerFlag.PACKET_POOL_SIZE,
             () -> NetworkBuffer.resizableBuffer(ServerFlag.POOLED_BUFFER_SIZE, MinecraftServer.process()),

@@ -2,11 +2,15 @@ package net.minestom.server.network.socket;
 
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.ServerFlag;
+import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.network.packet.PacketParser;
+import net.minestom.server.network.packet.PacketReader;
 import net.minestom.server.network.packet.PacketVanilla;
+import net.minestom.server.network.packet.PacketWriter;
 import net.minestom.server.network.packet.client.ClientPacket;
 import net.minestom.server.network.packet.server.ServerPacket;
 import net.minestom.server.network.player.PlayerSocketConnection;
+import net.minestom.server.utils.collection.ObjectPool;
 import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.UnknownNullability;
@@ -16,26 +20,23 @@ import java.io.IOException;
 import java.net.*;
 import java.nio.channels.*;
 import java.nio.file.Files;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 
 public final class Server {
     private volatile boolean stop;
 
-    private final PacketParser<ClientPacket> packetParser;
-    private final PacketParser<ServerPacket> packetWriter;
+    private final PacketWriter.Server packetWriter;
+    private final PacketReader.Client packetReader;
 
     private @UnknownNullability ServerSocketChannel serverSocket;
     private @UnknownNullability SocketAddress socketAddress;
     private @UnknownNullability String address;
     private int port;
 
-    public Server(PacketParser<ClientPacket> packetParser, PacketParser<ServerPacket> packetWriter) {
-        this.packetParser = packetParser;
-        this.packetWriter = packetWriter;
-    }
-
-    public Server() {
-        this(PacketVanilla.CLIENT_PACKET_PARSER, PacketVanilla.SERVER_PACKET_PARSER);
+    public Server(PacketWriter.Server packetWriter, PacketReader.Client packetReader) {
+        this.packetWriter = Objects.requireNonNull(packetWriter, "packetWriter");
+        this.packetReader = Objects.requireNonNull(packetReader, "packetReader");
     }
 
     @ApiStatus.Internal
@@ -141,11 +142,11 @@ public final class Server {
 
     private void playerReadLoop(PlayerSocketConnection connection) {
         Check.notNull(connection, "connection cannot be null");
-        final PacketParser<ClientPacket> packetParser = this.packetParser;
+        final PacketReader<ClientPacket> packetReader = this.packetReader;
         while (!stop) {
             try {
                 // Read & process packets
-                connection.read(packetParser);
+                connection.read(packetReader);
             } catch (ClosedChannelException _) {
                 break; // We closed the socket during read, just exit.
             } catch (EOFException _) {
@@ -170,7 +171,7 @@ public final class Server {
 
     private void playerWriteLoop(PlayerSocketConnection connection) {
         Check.notNull(connection, "connection cannot be null");
-        final PacketParser<ServerPacket> packetWriter = this.packetWriter;
+        final PacketWriter<ServerPacket> packetWriter = this.packetWriter;
         while (!stop) {
             try {
                 connection.awaitFlush();
@@ -222,13 +223,11 @@ public final class Server {
         }
     }
 
-    @ApiStatus.Internal
-    public PacketParser<ClientPacket> packetParser() {
-        return packetParser;
+    public PacketReader.Client packetReader() {
+        return packetReader;
     }
 
-    @ApiStatus.Internal
-    public PacketParser<ServerPacket> packetWriter() {
+    public PacketWriter.Server packetWriter() {
         return packetWriter;
     }
 

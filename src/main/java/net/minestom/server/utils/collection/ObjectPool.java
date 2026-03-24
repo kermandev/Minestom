@@ -13,13 +13,17 @@ import java.util.function.UnaryOperator;
 @ApiStatus.Experimental
 public sealed interface ObjectPool<T> permits ObjectPoolImpl, ObjectPoolImpl.Unpooled {
     static <T> ObjectPool<T> pool(int size, Supplier<T> supplier, UnaryOperator<T> sanitizer) {
-        if (size <= 0) return new ObjectPoolImpl.Unpooled<>(supplier);
+        if (size <= 0) unpooled(supplier);
         return new ObjectPoolImpl<>(size, supplier, sanitizer);
     }
 
     static <T> ObjectPool<T> pool(int size, Supplier<T> supplier) {
-        if (size <= 0) return new ObjectPoolImpl.Unpooled<>(supplier);
+        if (size <= 0) unpooled(supplier);
         return new ObjectPoolImpl<>(size, supplier, UnaryOperator.identity());
+    }
+
+    static <T> ObjectPool<T> unpooled(Supplier<T> supplier) {
+        return new ObjectPoolImpl.Unpooled<>(supplier);
     }
 
     T get();

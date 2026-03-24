@@ -11,8 +11,7 @@ import net.minestom.server.entity.Entity;
 import net.minestom.server.entity.Player;
 import net.minestom.server.network.ConnectionState;
 import net.minestom.server.network.NetworkBuffer;
-import net.minestom.server.network.packet.PacketParser;
-import net.minestom.server.network.packet.PacketWriting;
+import net.minestom.server.network.packet.PacketWriter;
 import net.minestom.server.network.packet.server.BufferedPacket;
 import net.minestom.server.network.packet.server.ServerPacket;
 import net.minestom.server.network.player.PlayerConnection;
@@ -78,7 +77,7 @@ public final class PacketViewableUtils {
 
     //TODO make ViewableStorage more testable.
     private static final class ViewableStorage {
-        private static final PacketParser<ServerPacket> SERVER_PACKET_PARSER = MinecraftServer.getPacketWriter();
+        private static final PacketWriter.Server SERVER_PACKET_PARSER = MinecraftServer.process().server().packetWriter();
         private static final ObjectPool<NetworkBuffer> POOL = ObjectPool.pool(
                 ServerFlag.VIEWABLE_POOL_SIZE,
                 () -> NetworkBuffer.resizableBuffer(ServerFlag.POOLED_BUFFER_SIZE, MinecraftServer.process()),
@@ -90,7 +89,7 @@ public final class PacketViewableUtils {
         private synchronized void append(ServerPacket serverPacket, @Nullable Player exception) {
             final long start = buffer.writeIndex();
             // Viewable storage is only used for play packets, so fine to assume this.
-            PacketWriting.writeFramedPacket(buffer, SERVER_PACKET_PARSER, ConnectionState.PLAY, serverPacket, MinecraftServer.getCompressionThreshold());
+            SERVER_PACKET_PARSER.writeFramedPacket(buffer, ConnectionState.PLAY, serverPacket, ServerFlag.COMPRESSION_THRESHOLD);
             final long end = buffer.writeIndex();
             if (exception != null) {
                 final long offsets = start << 32 | end & 0xFFFFFFFFL;

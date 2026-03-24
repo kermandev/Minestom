@@ -280,7 +280,10 @@ sealed abstract class NetworkBufferSegmentImpl implements NetworkBuffer, Network
 
         // Use the JVM lazy loading to ignore these until decompression is required.
         final class InflaterPoolHolder {
-            private static final ObjectPool<Inflater> INFLATER_POOL = ObjectPool.pool(ServerFlag.DECOMPRESS_POOL_SIZE, Inflater::new);
+            private static final ObjectPool<Inflater> INFLATER_POOL = ObjectPool.pool(ServerFlag.DECOMPRESS_POOL_SIZE, Inflater::new, (it) -> {
+                it.reset();
+                return it;
+            });
         }
 
         Inflater inflater = InflaterPoolHolder.INFLATER_POOL.get();

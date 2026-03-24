@@ -158,59 +158,59 @@ public class PlayerInit {
                 inventory.addItemStack(getFoodItem(20));
                 inventory.addItemStack(ItemStack.of(Material.PURPLE_BED));
 
-                if (event.isFirstSpawn()) {
-                    event.getPlayer().sendNotification(new Notification(
-                            Component.text("Welcome!"),
-                            FrameType.TASK,
-                            Material.IRON_SWORD
-                    ));
-
-                    player.playSound(Sound.sound(SoundEvent.ENTITY_EXPERIENCE_ORB_PICKUP, Sound.Source.PLAYER, 0.5f, 1f));
-
-                    var happyGhast = new LivingEntity(EntityType.HAPPY_GHAST);
-                    happyGhast.setNoGravity(true);
-                    happyGhast.setBodyEquipment(ItemStack.of(Material.GREEN_HARNESS));
-                    happyGhast.setInstance(player.getInstance(), new Pos(10, 43, 5, 45, 0));
-
-                    var copperGolem = new LivingEntity(EntityType.COPPER_GOLEM);
-                    copperGolem.setNoGravity(true);
-                    copperGolem.setItemInMainHand(ItemStack.of(Material.STICK));
-                    ((CopperGolemMeta) copperGolem.getEntityMeta()).setState(CopperGolemMeta.State.GETTING_ITEM);
-                    copperGolem.setInstance(player.getInstance(), new Pos(-10, 40, 5, -133, 0));
-
-                    player.getInstance().setBlock(new Vec(-12, 40, 5), Block.WEATHERED_COPPER_GOLEM_STATUE.withProperty("copper_golem_pose", "star"));
-
-                    player.sendPacket(new TrackedWaypointPacket(TrackedWaypointPacket.Operation.TRACK, new TrackedWaypointPacket.Waypoint(
-                            Either.left(happyGhast.getUuid()),
-                            TrackedWaypointPacket.Icon.DEFAULT,
-                            new TrackedWaypointPacket.Target.Vec3i(happyGhast.getPosition())
-                    )));
-
-                    var playerEntity = new PlayerEntity();
-                    playerEntity.setInstance(player.getInstance(), new Pos(-2.5, 40, 6.7, -163, 0));
-                    player.sendPacket(new TrackedWaypointPacket(TrackedWaypointPacket.Operation.TRACK, new TrackedWaypointPacket.Waypoint(
-                            Either.left(playerEntity.getUuid()),
-                            TrackedWaypointPacket.Icon.DEFAULT,
-                            new TrackedWaypointPacket.Target.Vec3i(playerEntity.getPosition())
-                    )));
-
-                    var mannequinEntity = new LivingEntity(EntityType.MANNEQUIN);
-                    mannequinEntity.setNoGravity(true);
-                    var mannequinMeta = (MannequinMeta) mannequinEntity.getEntityMeta();
-                    mannequinEntity.set(DataComponents.CUSTOM_NAME, Component.text("Minestom"));
-                    mannequinMeta.setCustomNameVisible(true);
-                    mannequinMeta.setProfile(new ResolvableProfile(new ResolvableProfile.Partial("Minestom", null, List.of())));
-                    mannequinMeta.setImmovable(true);
-                    mannequinMeta.setDescription(Component.text("npc"));
-                    mannequinEntity.setInstance(player.getInstance(), new Pos(-4, 40, 6, -131, 0));
-                    mannequinEntity.setItemInMainHand(ItemStack.of(Material.PLAYER_HEAD).with(DataComponents.PROFILE,
-                          new ResolvableProfile(new ResolvableProfile.Partial("Minestom", null, List.of()))));
-                    player.sendPacket(new TrackedWaypointPacket(TrackedWaypointPacket.Operation.TRACK, new TrackedWaypointPacket.Waypoint(
-                            Either.left(mannequinEntity.getUuid()),
-                            TrackedWaypointPacket.Icon.DEFAULT,
-                            new TrackedWaypointPacket.Target.Vec3i(mannequinEntity.getPosition())
-                    )));
-                }
+//                if (event.isFirstSpawn()) {
+//                    event.getPlayer().sendNotification(new Notification(
+//                            Component.text("Welcome!"),
+//                            FrameType.TASK,
+//                            Material.IRON_SWORD
+//                    ));
+//
+//                    player.playSound(Sound.sound(SoundEvent.ENTITY_EXPERIENCE_ORB_PICKUP, Sound.Source.PLAYER, 0.5f, 1f));
+//
+//                    var happyGhast = new LivingEntity(EntityType.HAPPY_GHAST);
+//                    happyGhast.setNoGravity(true);
+//                    happyGhast.setBodyEquipment(ItemStack.of(Material.GREEN_HARNESS));
+//                    happyGhast.setInstance(player.getInstance(), new Pos(10, 43, 5, 45, 0));
+//
+//                    var copperGolem = new LivingEntity(EntityType.COPPER_GOLEM);
+//                    copperGolem.setNoGravity(true);
+//                    copperGolem.setItemInMainHand(ItemStack.of(Material.STICK));
+//                    ((CopperGolemMeta) copperGolem.getEntityMeta()).setState(CopperGolemMeta.State.GETTING_ITEM);
+//                    copperGolem.setInstance(player.getInstance(), new Pos(-10, 40, 5, -133, 0));
+//
+//                    player.getInstance().setBlock(new Vec(-12, 40, 5), Block.WEATHERED_COPPER_GOLEM_STATUE.withProperty("copper_golem_pose", "star"));
+//
+//                    player.sendPacket(new TrackedWaypointPacket(TrackedWaypointPacket.Operation.TRACK, new TrackedWaypointPacket.Waypoint(
+//                            Either.left(happyGhast.getUuid()),
+//                            TrackedWaypointPacket.Icon.DEFAULT,
+//                            new TrackedWaypointPacket.Target.Vec3i(happyGhast.getPosition())
+//                    )));
+//
+//                    var playerEntity = new PlayerEntity();
+//                    playerEntity.setInstance(player.getInstance(), new Pos(-2.5, 40, 6.7, -163, 0));
+//                    player.sendPacket(new TrackedWaypointPacket(TrackedWaypointPacket.Operation.TRACK, new TrackedWaypointPacket.Waypoint(
+//                            Either.left(playerEntity.getUuid()),
+//                            TrackedWaypointPacket.Icon.DEFAULT,
+//                            new TrackedWaypointPacket.Target.Vec3i(playerEntity.getPosition())
+//                    )));
+//
+//                    var mannequinEntity = new LivingEntity(EntityType.MANNEQUIN);
+//                    mannequinEntity.setNoGravity(true);
+//                    var mannequinMeta = (MannequinMeta) mannequinEntity.getEntityMeta();
+//                    mannequinEntity.set(DataComponents.CUSTOM_NAME, Component.text("Minestom"));
+//                    mannequinMeta.setCustomNameVisible(true);
+//                    mannequinMeta.setProfile(new ResolvableProfile(new ResolvableProfile.Partial("Minestom", null, List.of())));
+//                    mannequinMeta.setImmovable(true);
+//                    mannequinMeta.setDescription(Component.text("npc"));
+//                    mannequinEntity.setInstance(player.getInstance(), new Pos(-4, 40, 6, -131, 0));
+//                    mannequinEntity.setItemInMainHand(ItemStack.of(Material.PLAYER_HEAD).with(DataComponents.PROFILE,
+//                          new ResolvableProfile(new ResolvableProfile.Partial("Minestom", null, List.of()))));
+//                    player.sendPacket(new TrackedWaypointPacket(TrackedWaypointPacket.Operation.TRACK, new TrackedWaypointPacket.Waypoint(
+//                            Either.left(mannequinEntity.getUuid()),
+//                            TrackedWaypointPacket.Icon.DEFAULT,
+//                            new TrackedWaypointPacket.Target.Vec3i(mannequinEntity.getPosition())
+//                    )));
+//                }
             })
             .addListener(PlayerGameModeRequestEvent.class, event -> {
                 final Player player = event.getPlayer();
@@ -260,7 +260,7 @@ public class PlayerInit {
                         null, 2
                 );
 
-                event.getPlayer().sendMessage(Component.text("Click for dialog!").clickEvent(ClickEvent.showDialog(dialog)));
+                //event.getPlayer().sendMessage(Component.text("Click for dialog!").clickEvent(ClickEvent.showDialog(dialog)));
             })
             .addListener(PlayerCustomClickEvent.class, event -> {
                 String payload = "null";
@@ -272,13 +272,6 @@ public class PlayerInit {
                     }
                 }
                 System.out.println(event.getKey() + " -> " + payload);
-            })
-            .addListener(PlayerPacketOutEvent.class, event -> {
-                //System.out.println("out " + event.getPacket().getClass().getSimpleName());
-            })
-            .addListener(PlayerPacketEvent.class, event -> {
-
-                //System.out.println("in " + event.getPacket().getClass().getSimpleName());
             })
             .addListener(PlayerBlockBreakEvent.class, event -> {
                 var instance = event.getInstance();

@@ -195,7 +195,7 @@ public final class ConnectionManager {
         assert ServerFlag.INSIDE_TEST || Thread.currentThread().isVirtual();
         // Compression
         if (connection instanceof PlayerSocketConnection socketConnection) {
-            final int threshold = MinecraftServer.getCompressionThreshold();
+            final int threshold = ServerFlag.COMPRESSION_THRESHOLD;
             if (threshold > 0) socketConnection.startCompression();
         }
         // Call pre login event

@@ -22,7 +22,7 @@ public class ChunkPacketTest {
         var instance = env.createFlatInstance();
         var chunk = instance.loadChunk(0, 0).join();
         instance.setBlock(BlockVec.ZERO, Block.CHEST.withNbt(CompoundBinaryTag.builder().build()));
-        var packet = assertDoesNotThrow(() -> (ChunkDataPacket) SendablePacket.extractServerPacket(chunk.getFullDataPacket(), ConnectionState.PLAY, MinecraftServer.getPacketWriter()));
+        var packet = assertDoesNotThrow(() -> (ChunkDataPacket) SendablePacket.extractServerPacket(chunk.getFullDataPacket(), ConnectionState.PLAY));
         assertNotNull(packet);
         assertEquals(1, packet.chunkData().blockEntities().size());
     }
@@ -32,7 +32,7 @@ public class ChunkPacketTest {
         var instance = env.createFlatInstance();
         var chunk = instance.loadChunk(0, 0).join();
         instance.setBlock(BlockVec.ZERO, Block.BLACK_CONCRETE_POWDER.withNbt(CompoundBinaryTag.builder().build()));
-        var packet = assertDoesNotThrow(() -> (ChunkDataPacket) SendablePacket.extractServerPacket(chunk.getFullDataPacket(), ConnectionState.PLAY, MinecraftServer.getPacketWriter()));
+        var packet = assertDoesNotThrow(() -> (ChunkDataPacket) SendablePacket.extractServerPacket(chunk.getFullDataPacket(), ConnectionState.PLAY));
         assertNotNull(packet);
         assertEquals(0, packet.chunkData().blockEntities().size(), "Should of not counted as block entity");
     }
