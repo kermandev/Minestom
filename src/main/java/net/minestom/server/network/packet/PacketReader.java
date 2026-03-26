@@ -19,7 +19,7 @@ import static net.minestom.server.network.NetworkBuffer.VAR_INT;
 import static net.minestom.server.network.packet.PacketReader.Result.Empty.empty;
 
 public sealed interface PacketReader<T> {
-    PacketParser<T> reader();
+    PacketLibrary<T> reader();
 
     ObjectPool<NetworkBuffer> bufferPool();
 
@@ -194,7 +194,7 @@ public sealed interface PacketReader<T> {
     record ParsedPacket<T>(ConnectionState nextState, T packet) {
     }
 
-    record Server(PacketParser.Server reader,
+    record Server(PacketLibrary.Server reader,
                   ObjectPool<NetworkBuffer> bufferPool) implements PacketReader<ServerPacket> {
         public Server(ObjectPool<NetworkBuffer> bufferPool) {
             this(PacketVanilla.SERVER_PACKET_PARSER, bufferPool);
@@ -216,7 +216,7 @@ public sealed interface PacketReader<T> {
         }
     }
 
-    record Client(PacketParser.Client reader,
+    record Client(PacketLibrary.Client reader,
                   ObjectPool<NetworkBuffer> bufferPool) implements PacketReader<ClientPacket> {
         public Client(ObjectPool<NetworkBuffer> bufferPool) {
             this(PacketVanilla.CLIENT_PACKET_PARSER, bufferPool);

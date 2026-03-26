@@ -1,7 +1,5 @@
 package net.minestom.server.network.packet;
 
-import net.minestom.server.network.ConnectionState;
-import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.network.packet.client.ClientPacket;
 import net.minestom.server.network.packet.server.ServerPacket;
 
@@ -11,7 +9,7 @@ import net.minestom.server.network.packet.server.ServerPacket;
  * You can retrieve the different packets per state (status/login/play)
  * from the {@link PacketRegistry} classes.
  */
-public sealed interface PacketParser<T> {
+public sealed interface PacketLibrary<T> {
 
     PacketRegistry<? extends T> handshake();
 
@@ -23,29 +21,13 @@ public sealed interface PacketParser<T> {
 
     PacketRegistry<? extends T> play();
 
-    default T parse(ConnectionState connectionState,
-                             int packetId, NetworkBuffer buffer) {
-        final PacketRegistry<? extends T> registry = stateRegistry(connectionState);
-        return registry.create(packetId, buffer);
-    }
-
-    default PacketRegistry<? extends T> stateRegistry(ConnectionState connectionState) {
-        return switch (connectionState) {
-            case HANDSHAKE -> handshake();
-            case STATUS -> status();
-            case LOGIN -> login();
-            case CONFIGURATION -> configuration();
-            case PLAY -> play();
-        };
-    }
-
     record Client(
             PacketRegistry<ClientPacket.Handshake> handshake,
             PacketRegistry<ClientPacket.Status> status,
             PacketRegistry<ClientPacket.Login> login,
             PacketRegistry<ClientPacket.Configuration> configuration,
             PacketRegistry<ClientPacket.Play> play
-    ) implements PacketParser<ClientPacket> {
+    ) implements PacketLibrary<ClientPacket> {
         public Client() {
             this(
                     new PacketRegistry.ClientHandshake(),
@@ -63,7 +45,7 @@ public sealed interface PacketParser<T> {
             PacketRegistry<ServerPacket.Login> login,
             PacketRegistry<ServerPacket.Configuration> configuration,
             PacketRegistry<ServerPacket.Play> play
-    ) implements PacketParser<ServerPacket> {
+    ) implements PacketLibrary<ServerPacket> {
         public Server() {
             this(
                     new PacketRegistry.ServerHandshake(),

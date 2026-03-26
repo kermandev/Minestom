@@ -2,15 +2,11 @@ package net.minestom.server.network.socket;
 
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.ServerFlag;
-import net.minestom.server.network.NetworkBuffer;
-import net.minestom.server.network.packet.PacketParser;
 import net.minestom.server.network.packet.PacketReader;
-import net.minestom.server.network.packet.PacketVanilla;
 import net.minestom.server.network.packet.PacketWriter;
 import net.minestom.server.network.packet.client.ClientPacket;
 import net.minestom.server.network.packet.server.ServerPacket;
 import net.minestom.server.network.player.PlayerSocketConnection;
-import net.minestom.server.utils.collection.ObjectPool;
 import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.UnknownNullability;

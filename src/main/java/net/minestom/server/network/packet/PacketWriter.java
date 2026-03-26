@@ -1,7 +1,6 @@
 package net.minestom.server.network.packet;
 
 import net.minestom.server.ServerFlag;
-import net.minestom.server.network.ConnectionState;
 import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.network.packet.client.ClientPacket;
 import net.minestom.server.network.packet.server.ServerPacket;
@@ -10,24 +9,14 @@ import net.minestom.server.utils.collection.ObjectPool;
 import java.util.Objects;
 
 public sealed interface PacketWriter<T> {
-    PacketParser<T> writer();
+    PacketRegistry<T> registry();
 
     ObjectPool<NetworkBuffer> bufferPool();
 
     default <P extends T> void writeFramedPacket(NetworkBuffer buffer,
-                                                 ConnectionState state,
                                                  P packet,
                                                  int compressionThreshold) throws IndexOutOfBoundsException {
-        @SuppressWarnings("unchecked") // We assume that T's registry is tied to the state.
-        final PacketRegistry<? super P> registry = (PacketRegistry<? super P>) writer().stateRegistry(state);
-        writeFramedPacket(buffer, registry, packet, compressionThreshold);
-    }
-
-    default <P extends T> void writeFramedPacket(NetworkBuffer buffer,
-                                                 PacketRegistry<? super P> registry,
-                                                 P packet,
-                                                 int compressionThreshold) throws IndexOutOfBoundsException {
-        final PacketRegistry.PacketInfo<P> packetInfo = registry.packetInfo(packet);
+        final PacketRegistry.PacketInfo<P> packetInfo = registry().packetInfo(packet);
         writeFramedPacket(
                 buffer,
                 packetInfo, packet,
@@ -56,23 +45,11 @@ public sealed interface PacketWriter<T> {
         else writeCompressedFormat(buffer, type, id, packet, compressionThreshold);
     }
 
-    default <P extends T> NetworkBuffer allocateTrimmedPacket(
-            ConnectionState state,
-            P packet,
-            int compressionThreshold) {
-        @SuppressWarnings("unchecked") // We assume that T's registry is tied to the state.
-        final PacketRegistry<? super P> registry = (PacketRegistry<? super P>) writer().stateRegistry(state);
-        return allocateTrimmedPacket(registry, packet, compressionThreshold);
-    }
-
-    default <P extends T> NetworkBuffer allocateTrimmedPacket(
-            PacketRegistry<? super P> registry,
-            P packet,
-            int compressionThreshold) {
+    default <P extends T> NetworkBuffer allocateTrimmedPacket(P packet, int compressionThreshold) {
         ObjectPool<NetworkBuffer> bufferPool = bufferPool();
         NetworkBuffer buffer = bufferPool.get();
         try {
-            return allocateTrimmedPacket(buffer, registry, packet, compressionThreshold);
+            return allocateTrimmedPacket(buffer, packet, compressionThreshold);
         } finally {
             bufferPool.add(buffer);
         }
@@ -80,10 +57,9 @@ public sealed interface PacketWriter<T> {
 
     default <P extends T> NetworkBuffer allocateTrimmedPacket(
             NetworkBuffer tmpBuffer,
-            PacketRegistry<? super P> registry,
             P packet,
             int compressionThreshold) {
-        final PacketRegistry.PacketInfo<P> packetInfo = registry.packetInfo(packet);
+        final PacketRegistry.PacketInfo<P> packetInfo = registry().packetInfo(packet);
         final int id = packetInfo.id();
         final NetworkBuffer.Type<P> serializer = packetInfo.serializer();
         try {
@@ -145,26 +121,19 @@ public sealed interface PacketWriter<T> {
         buffer.writeAt(uncompressedIndex, NetworkBuffer.VAR_INT_3, compressed ? (int) packetSize : 0);
     }
 
-    record Server(PacketParser.Server writer,
-                  ObjectPool<NetworkBuffer> bufferPool) implements PacketWriter<ServerPacket> {
-        public Server(ObjectPool<NetworkBuffer> bufferPool) {
-            this(PacketVanilla.SERVER_PACKET_PARSER, bufferPool);
-        }
-
+    record Server<T extends ServerPacket>(PacketRegistry<T> registry,
+                  ObjectPool<NetworkBuffer> bufferPool) implements PacketWriter<T> {
         public Server {
-            Objects.requireNonNull(writer, "writer");
+            Objects.requireNonNull(registry, "registry");
             Objects.requireNonNull(bufferPool, "bufferPool");
         }
     }
 
-    record Client(PacketParser.Client writer,
-                  ObjectPool<NetworkBuffer> bufferPool) implements PacketWriter<ClientPacket> {
-        public Client(ObjectPool<NetworkBuffer> bufferPool) {
-            this(PacketVanilla.CLIENT_PACKET_PARSER, bufferPool);
-        }
+    record Client<T extends ClientPacket>(PacketRegistry<T> registry,
+                                          ObjectPool<NetworkBuffer> bufferPool) implements PacketWriter<T> {
 
         public Client {
-            Objects.requireNonNull(writer, "writer");
+            Objects.requireNonNull(registry, "writer");
             Objects.requireNonNull(bufferPool, "bufferPool");
         }
     }

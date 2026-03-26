@@ -30,7 +30,7 @@ import net.minestom.server.network.debug.DebugSubscription;
 import net.minestom.server.network.debug.info.DebugHiveInfo;
 import net.minestom.server.network.debug.info.DebugPathInfo;
 import net.minestom.server.network.debug.info.DebugPoiInfo;
-import net.minestom.server.network.packet.PacketParser;
+import net.minestom.server.network.packet.PacketLibrary;
 import net.minestom.server.network.packet.PacketRegistry;
 import net.minestom.server.network.packet.PacketVanilla;
 import net.minestom.server.network.packet.client.ClientPacket;
@@ -626,7 +626,7 @@ public class PacketWriteReadTest {
         assertEquals(packet, createdPacket);
     }
 
-    static <T> Stream<Arguments> packets(PacketParser<T> parser, Map<Class<? extends T>, ? extends Collection<T>> map) {
+    static <T> Stream<Arguments> packets(PacketLibrary<T> parser, Map<Class<? extends T>, ? extends Collection<T>> map) {
         return Stream.of(
                         parser.handshake(),
                         parser.status(),

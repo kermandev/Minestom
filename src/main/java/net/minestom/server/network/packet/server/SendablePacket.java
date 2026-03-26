@@ -1,11 +1,8 @@
 package net.minestom.server.network.packet.server;
 
 import net.minestom.server.network.ConnectionState;
-import net.minestom.server.network.NetworkBuffer;
-import net.minestom.server.network.packet.PacketParser;
 import net.minestom.server.network.packet.PacketWriter;
 import net.minestom.server.network.player.PlayerConnection;
-import net.minestom.server.utils.collection.ObjectPool;
 import org.jetbrains.annotations.Nullable;
 
 /**

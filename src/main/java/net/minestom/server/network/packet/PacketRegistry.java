@@ -1,6 +1,5 @@
 package net.minestom.server.network.packet;
 
-import net.minestom.server.network.ConnectionState;
 import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.network.packet.client.ClientPacket;
 import net.minestom.server.network.packet.client.common.*;
@@ -41,8 +40,6 @@ public interface PacketRegistry<T> {
 
     PacketInfo<? extends T> packetInfo(int packetId);
 
-    ConnectionState state();
-
     ConnectionSide side();
 
     @Unmodifiable
@@ -73,11 +70,6 @@ public interface PacketRegistry<T> {
                     entry(ClientHandshakePacket.class, ClientHandshakePacket.SERIALIZER)
             );
         }
-
-        @Override
-        public ConnectionState state() {
-            return ConnectionState.HANDSHAKE;
-        }
     }
 
     final class ClientStatus extends Client<ClientPacket.Status> {
@@ -86,11 +78,6 @@ public interface PacketRegistry<T> {
                     entry(ClientStatusRequestPacket.class, ClientStatusRequestPacket.SERIALIZER),
                     entry(ClientPingRequestPacket.class, ClientPingRequestPacket.SERIALIZER)
             );
-        }
-
-        @Override
-        public ConnectionState state() {
-            return ConnectionState.STATUS;
         }
     }
 
@@ -103,11 +90,6 @@ public interface PacketRegistry<T> {
                     entry(ClientLoginAcknowledgedPacket.class, ClientLoginAcknowledgedPacket.SERIALIZER),
                     entry(ClientCookieResponsePacket.class, ClientCookieResponsePacket.SERIALIZER)
             );
-        }
-
-        @Override
-        public ConnectionState state() {
-            return ConnectionState.LOGIN;
         }
     }
 
@@ -125,11 +107,6 @@ public interface PacketRegistry<T> {
                     entry(ClientCustomClickActionPacket.class, ClientCustomClickActionPacket.SERIALIZER),
                     entry(ClientAcceptCodeOfConductPacket.class, ClientAcceptCodeOfConductPacket.SERIALIZER)
             );
-        }
-
-        @Override
-        public ConnectionState state() {
-            return ConnectionState.CONFIGURATION;
         }
     }
 
@@ -204,11 +181,6 @@ public interface PacketRegistry<T> {
                     entry(ClientCustomClickActionPacket.class, ClientCustomClickActionPacket.SERIALIZER)
             );
         }
-
-        @Override
-        public ConnectionState state() {
-            return ConnectionState.PLAY;
-        }
     }
 
     abstract sealed class Server<T extends ServerPacket> extends PacketRegistryTemplate<T> {
@@ -229,11 +201,6 @@ public interface PacketRegistry<T> {
                     // Empty
             );
         }
-
-        @Override
-        public ConnectionState state() {
-            return ConnectionState.HANDSHAKE;
-        }
     }
 
     final class ServerStatus extends Server<ServerPacket.Status> {
@@ -242,11 +209,6 @@ public interface PacketRegistry<T> {
                     entry(ResponsePacket.class, ResponsePacket.SERIALIZER),
                     entry(PingResponsePacket.class, PingResponsePacket.SERIALIZER)
             );
-        }
-
-        @Override
-        public ConnectionState state() {
-            return ConnectionState.STATUS;
         }
     }
 
@@ -260,11 +222,6 @@ public interface PacketRegistry<T> {
                     entry(LoginPluginRequestPacket.class, LoginPluginRequestPacket.SERIALIZER),
                     entry(CookieRequestPacket.class, CookieRequestPacket.SERIALIZER)
             );
-        }
-
-        @Override
-        public ConnectionState state() {
-            return ConnectionState.LOGIN;
         }
     }
 
@@ -292,11 +249,6 @@ public interface PacketRegistry<T> {
                     entry(ShowDialogPacket.class, ShowDialogPacket.INLINE_SERIALIZER),
                     entry(CodeOfConductPacket.class, CodeOfConductPacket.SERIALIZER)
             );
-        }
-
-        @Override
-        public ConnectionState state() {
-            return ConnectionState.CONFIGURATION;
         }
     }
 
@@ -444,11 +396,6 @@ public interface PacketRegistry<T> {
                     entry(ShowDialogPacket.class, ShowDialogPacket.SERIALIZER)
             );
         }
-
-        @Override
-        public ConnectionState state() {
-            return ConnectionState.PLAY;
-        }
     }
 
     abstract sealed class PacketRegistryTemplate<T> implements PacketRegistry<T> {
@@ -478,7 +425,7 @@ public interface PacketRegistry<T> {
                 assert info.packetClass().isInstance(packet) : "Packet class mismatch expected " + info.packetClass() + " got " + packet.getClass();
                 return packet;
             } catch (RuntimeException e) {
-                throw new IllegalStateException("Packet id 0x%X (%s) failed to read in %s_%s!".formatted(packetId, info.packetClass().getSimpleName(), side().name(), state().name()), e);
+                throw new IllegalStateException("Packet id 0x%X (%s) failed to read in %s_%s!".formatted(packetId, info.packetClass().getSimpleName(), side().name(), getClass().getSimpleName()), e);
             }
         }
 
@@ -486,7 +433,7 @@ public interface PacketRegistry<T> {
         public final PacketInfo<? extends T> packetInfo(Class<?> packetClass) {
             final PacketInfo<? extends T> info = packetsByClass.get(packetClass);
             if (info == null) {
-                throw new IllegalStateException("Packet type %s cannot be sent in state %s_%s!".formatted(packetClass.getSimpleName(), side().name(), state().name()));
+                throw new IllegalStateException("Packet type %s cannot be sent in state %s_%s!".formatted(packetClass.getSimpleName(), side().name(), getClass().getSimpleName()));
             }
             return info;
         }
@@ -494,7 +441,7 @@ public interface PacketRegistry<T> {
         @Override
         public final PacketInfo<? extends T> packetInfo(int packetId) {
             if (packetId < 0 || packetId >= packetsById.size()) {
-                throw new IllegalStateException("Packet id 0x%X isn't registered or isn't registered in state %s_%s".formatted(packetId, side().name(), state().name()));
+                throw new IllegalStateException("Packet id 0x%X isn't registered or isn't registered in state %s_%s".formatted(packetId, side().name(), getClass().getSimpleName()));
             }
             return packetsById.get(packetId);
         }
