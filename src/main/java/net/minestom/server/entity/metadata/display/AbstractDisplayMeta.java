@@ -1,6 +1,7 @@
 package net.minestom.server.entity.metadata.display;
 
 import net.minestom.server.coordinate.Point;
+import net.minestom.server.coordinate.Quaternion;
 import net.minestom.server.coordinate.Vec;
 import net.minestom.server.entity.Entity;
 import net.minestom.server.entity.MetadataDef;
@@ -52,21 +53,21 @@ public class AbstractDisplayMeta extends EntityMeta {
         metadata.set(MetadataDef.Display.SCALE, value);
     }
 
-    public float [] getLeftRotation() {
+    public Quaternion getLeftRotation() {
         //todo replace with actual quaternion type
         return metadata.get(MetadataDef.Display.ROTATION_LEFT);
     }
 
-    public void setLeftRotation(float [] value) {
+    public void setLeftRotation(Quaternion value) {
         metadata.set(MetadataDef.Display.ROTATION_LEFT, value);
     }
 
-    public float [] getRightRotation() {
+    public Quaternion getRightRotation() {
         //todo replace with actual quaternion type
         return metadata.get(MetadataDef.Display.ROTATION_RIGHT);
     }
 
-    public void setRightRotation(float [] value) {
+    public void setRightRotation(Quaternion value) {
         metadata.set(MetadataDef.Display.ROTATION_RIGHT, value);
     }
 

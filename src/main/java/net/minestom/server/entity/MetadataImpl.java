@@ -1,6 +1,7 @@
 package net.minestom.server.entity;
 
 import net.kyori.adventure.text.Component;
+import net.minestom.server.coordinate.Quaternion;
 import net.minestom.server.coordinate.Vec;
 import net.minestom.server.entity.metadata.animal.ArmadilloMeta;
 import net.minestom.server.entity.metadata.animal.FrogVariant;
@@ -59,7 +60,7 @@ final class MetadataImpl {
         EMPTY_VALUES.set(TYPE_COPPER_GOLEM_STATE, CopperGolemState(CopperGolemMeta.State.IDLE));
         EMPTY_VALUES.set(TYPE_WEATHER_STATE, WeatherState(CopperGolemMeta.WeatherState.UNAFFECTED));
         EMPTY_VALUES.set(TYPE_VECTOR3, Vector3(Vec.ZERO));
-        EMPTY_VALUES.set(TYPE_QUATERNION, Quaternion(new float[]{0, 0, 0, 0}));
+        EMPTY_VALUES.set(TYPE_QUATERNION, Quaternion(Quaternion.ZERO));
         EMPTY_VALUES.set(TYPE_RESOLVABLE_PROFILE, ResolvableProfile(ResolvableProfile.EMPTY));
         EMPTY_VALUES.trim();
     }

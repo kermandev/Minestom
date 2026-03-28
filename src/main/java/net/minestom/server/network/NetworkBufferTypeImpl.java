@@ -10,6 +10,7 @@ import net.minestom.server.codec.Result;
 import net.minestom.server.codec.Transcoder;
 import net.minestom.server.coordinate.Point;
 import net.minestom.server.coordinate.Pos;
+import net.minestom.server.coordinate.Quaternion;
 import net.minestom.server.coordinate.Vec;
 import net.minestom.server.registry.Registries;
 import net.minestom.server.registry.RegistryTranscoder;
@@ -680,22 +681,22 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    record QuaternionType() implements NetworkBufferTypeImpl<float[]> {
+    record QuaternionType() implements NetworkBufferTypeImpl<Quaternion> {
         @Override
-        public void write(NetworkBuffer buffer, float[] value) {
-            buffer.write(FLOAT, value[0]);
-            buffer.write(FLOAT, value[1]);
-            buffer.write(FLOAT, value[2]);
-            buffer.write(FLOAT, value[3]);
+        public void write(NetworkBuffer buffer, Quaternion value) {
+            buffer.write(FLOAT, (float) value.x());
+            buffer.write(FLOAT, (float) value.y());
+            buffer.write(FLOAT, (float) value.z());
+            buffer.write(FLOAT, (float) value.w());
         }
 
         @Override
-        public float[] read(NetworkBuffer buffer) {
+        public Quaternion read(NetworkBuffer buffer) {
             final float x = buffer.read(FLOAT);
             final float y = buffer.read(FLOAT);
             final float z = buffer.read(FLOAT);
             final float w = buffer.read(FLOAT);
-            return new float[]{x, y, z, w};
+            return new Quaternion(x, y, z, w);
         }
     }
 
