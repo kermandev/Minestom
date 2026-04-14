@@ -17,7 +17,7 @@ public record PlaceGhostRecipePacket(int windowId, RecipeDisplay recipe) impleme
             PlaceGhostRecipePacket::new);
 
     @Override
-    public @Unmodifiable Collection<Component> components() {
+    public @Unmodifiable Collection<? extends Component> components() {
         return recipe.components();
     }
 

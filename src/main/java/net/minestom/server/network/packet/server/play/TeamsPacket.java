@@ -34,7 +34,7 @@ public record TeamsPacket(String teamName, Action action) implements ServerPacke
     }
 
     @Override
-    public ServerPacket copyWithOperator(UnaryOperator<Component> operator) {
+    public TeamsPacket copyWithOperator(UnaryOperator<Component> operator) {
         return new TeamsPacket(
                 this.teamName,
                 this.action instanceof ComponentHolder<?> holder

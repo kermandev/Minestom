@@ -30,7 +30,7 @@ public record ScoreboardObjectivePacket(String objectiveName, Mode mode) impleme
     }
 
     @Override
-    public Collection<Component> components() {
+    public Collection<? extends Component> components() {
         if (mode instanceof ComponentHolder<?> componentHolder) return componentHolder.components();
         return List.of();
     }

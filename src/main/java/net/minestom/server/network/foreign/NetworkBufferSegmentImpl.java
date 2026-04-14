@@ -265,7 +265,7 @@ sealed abstract class NetworkBufferSegmentImpl implements NetworkBuffer, Network
             return bytes;
         } finally {
             deflater.reset();
-            CompressionHolder.DEFLATER_POOL.add(deflater);
+            DeflaterPoolHolder.DEFLATER_POOL.add(deflater);
         }
     }
 
@@ -291,7 +291,7 @@ sealed abstract class NetworkBufferSegmentImpl implements NetworkBuffer, Network
             return bytes;
         } finally {
             inflater.reset();
-            CompressionHolder.INFLATER_POOL.add(inflater);
+            InflaterPoolHolder.INFLATER_POOL.add(inflater);
         }
     }
 
@@ -424,7 +424,7 @@ sealed abstract class NetworkBufferSegmentImpl implements NetworkBuffer, Network
     }
 
     @Override
-    public final boolean equals(Object o) {
+    public final boolean equals(@Nullable Object o) {
         return this == o;
     }
 

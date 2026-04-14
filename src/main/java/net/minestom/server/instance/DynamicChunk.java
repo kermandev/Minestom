@@ -268,10 +268,11 @@ public class DynamicChunk extends Chunk {
         var lightData = createLightData(true);
 
         final List<ChunkData.BlockEntityInfo> entries;
+        final byte[] data;
         lockReadLock();
         try {
             NetworkBuffer.Type<Palette> biomeSerializer = Palette.biomeSerializer(MinecraftServer.getBiomeRegistry().size());
-            final byte[] data = NetworkBuffer.makeArray(networkBuffer -> {
+            data = NetworkBuffer.makeArray(networkBuffer -> {
                 for (Section section : sections) {
                     networkBuffer.write(SHORT, (short) section.blockPalette().count());
                     networkBuffer.write(Palette.BLOCK_SERIALIZER, section.blockPalette());

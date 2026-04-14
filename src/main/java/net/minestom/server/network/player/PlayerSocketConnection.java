@@ -309,12 +309,6 @@ public final class PlayerSocketConnection extends PlayerConnection {
         return serverPort;
     }
 
-    @Override
-    public void disconnect() {
-        super.disconnect();
-        unlockWriteThread();
-    }
-
     /**
      * Gets the protocol version of a client.
      *

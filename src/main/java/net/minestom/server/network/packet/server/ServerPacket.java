@@ -36,7 +36,7 @@ public sealed interface ServerPacket extends SendablePacket {
         @Override
         @Unmodifiable
         @Contract(pure = true)
-        Collection<Component> components();
+        Collection<? extends Component> components();
 
         @Override
         @Contract(pure = true)
