@@ -819,6 +819,7 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
                 .lload(indexSlot)
                 .iconst_1()
                 .invokevirtual(CD_NETWORK_BUFFER_IMPL, "_putByte", MT_PUT_BYTE);
+        emitEnsureWritable(codeBuilder, 1L + intrinsic.size());
         if (intrinsic.transformed()) {
             codeBuilder.aload(valueSlot);
             emitTransformApply(codeBuilder, classDesc, field, intrinsic, false);
