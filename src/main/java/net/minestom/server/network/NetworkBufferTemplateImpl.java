@@ -5,6 +5,7 @@ import org.jetbrains.annotations.UnknownNullability;
 
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.CodeBuilder;
+import java.lang.classfile.TypeKind;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.ConstantDescs;
 import java.lang.constant.MethodTypeDesc;
@@ -24,14 +25,26 @@ final class NetworkBufferTemplateImpl {
     private static final ClassDesc CD_CLASS = ConstantDescs.CD_Class;
     private static final ClassDesc CD_INT = ConstantDescs.CD_int;
     private static final ClassDesc CD_LONG = ConstantDescs.CD_long;
+    private static final ClassDesc CD_FLOAT = ConstantDescs.CD_float;
+    private static final ClassDesc CD_DOUBLE = ConstantDescs.CD_double;
+    private static final ClassDesc CD_SHORT = ConstantDescs.CD_short;
+    private static final ClassDesc CD_BYTE = ConstantDescs.CD_byte;
     private static final ClassDesc CD_VOID = ConstantDescs.CD_void;
+    private static final ClassDesc CD_BOOLEAN_WRAPPER = ConstantDescs.CD_Boolean;
+    private static final ClassDesc CD_BYTE_WRAPPER = ConstantDescs.CD_Byte;
+    private static final ClassDesc CD_SHORT_WRAPPER = ConstantDescs.CD_Short;
+    private static final ClassDesc CD_INTEGER_WRAPPER = ConstantDescs.CD_Integer;
+    private static final ClassDesc CD_LONG_WRAPPER = ConstantDescs.CD_Long;
+    private static final ClassDesc CD_FLOAT_WRAPPER = ConstantDescs.CD_Float;
+    private static final ClassDesc CD_DOUBLE_WRAPPER = ConstantDescs.CD_Double;
     private static final ClassDesc CD_METHOD_HANDLES = ConstantDescs.CD_MethodHandles;
     private static final ClassDesc CD_METHOD_HANDLES_LOOKUP = ConstantDescs.CD_MethodHandles_Lookup;
     private static final ClassDesc CD_NETWORK_BUFFER = NetworkBuffer.class.describeConstable().orElseThrow();
-    private static final ClassDesc CD_NETWORK_BUFFER_INTRINSICS = NetworkBufferIntrinsics.class.describeConstable().orElseThrow();
+    private static final ClassDesc CD_NETWORK_BUFFER_IMPL = NetworkBufferImpl.class.describeConstable().orElseThrow();
     private static final ClassDesc CD_TYPE = NetworkBuffer.Type.class.describeConstable().orElseThrow();
     private static final ClassDesc CD_IMPL_TYPE = NetworkBufferTypeImpl.class.describeConstable().orElseThrow();
     private static final ClassDesc CD_FUNCTION = Function.class.describeConstable().orElseThrow();
+    private static final ClassDesc CD_UNIT = net.minestom.server.utils.Unit.class.describeConstable().orElseThrow();
 
     private static final MethodTypeDesc MT_VOID = MethodTypeDesc.of(CD_VOID);
     private static final MethodTypeDesc MT_LOOKUP = MethodTypeDesc.of(CD_METHOD_HANDLES_LOOKUP);
@@ -42,8 +55,32 @@ final class NetworkBufferTemplateImpl {
     private static final MethodTypeDesc MT_INDEX_SETTER = MethodTypeDesc.of(CD_NETWORK_BUFFER, CD_LONG);
     private static final MethodTypeDesc MT_ENSURE = MethodTypeDesc.of(CD_VOID, CD_LONG);
     private static final MethodTypeDesc MT_FUNCTION_APPLY = MethodTypeDesc.of(CD_OBJECT, CD_OBJECT);
-    private static final MethodTypeDesc MT_INTRINSIC_WRITE = MethodTypeDesc.of(CD_VOID, CD_NETWORK_BUFFER, CD_LONG, CD_OBJECT);
-    private static final MethodTypeDesc MT_INTRINSIC_READ = MethodTypeDesc.of(CD_OBJECT, CD_NETWORK_BUFFER, CD_LONG);
+    private static final MethodTypeDesc MT_BOOLEAN_VALUE = MethodTypeDesc.of(ConstantDescs.CD_boolean);
+    private static final MethodTypeDesc MT_BYTE_VALUE = MethodTypeDesc.of(CD_BYTE);
+    private static final MethodTypeDesc MT_SHORT_VALUE = MethodTypeDesc.of(CD_SHORT);
+    private static final MethodTypeDesc MT_INT_VALUE = MethodTypeDesc.of(CD_INT);
+    private static final MethodTypeDesc MT_LONG_VALUE = MethodTypeDesc.of(CD_LONG);
+    private static final MethodTypeDesc MT_FLOAT_VALUE = MethodTypeDesc.of(CD_FLOAT);
+    private static final MethodTypeDesc MT_DOUBLE_VALUE = MethodTypeDesc.of(CD_DOUBLE);
+    private static final MethodTypeDesc MT_BOX_BOOLEAN = MethodTypeDesc.of(CD_BOOLEAN_WRAPPER, ConstantDescs.CD_boolean);
+    private static final MethodTypeDesc MT_BOX_BYTE = MethodTypeDesc.of(CD_BYTE_WRAPPER, CD_BYTE);
+    private static final MethodTypeDesc MT_BOX_SHORT = MethodTypeDesc.of(CD_SHORT_WRAPPER, CD_SHORT);
+    private static final MethodTypeDesc MT_BOX_INT = MethodTypeDesc.of(CD_INTEGER_WRAPPER, CD_INT);
+    private static final MethodTypeDesc MT_BOX_LONG = MethodTypeDesc.of(CD_LONG_WRAPPER, CD_LONG);
+    private static final MethodTypeDesc MT_BOX_FLOAT = MethodTypeDesc.of(CD_FLOAT_WRAPPER, CD_FLOAT);
+    private static final MethodTypeDesc MT_BOX_DOUBLE = MethodTypeDesc.of(CD_DOUBLE_WRAPPER, CD_DOUBLE);
+    private static final MethodTypeDesc MT_PUT_BYTE = MethodTypeDesc.of(CD_VOID, CD_LONG, CD_BYTE);
+    private static final MethodTypeDesc MT_GET_BYTE = MethodTypeDesc.of(CD_BYTE, CD_LONG);
+    private static final MethodTypeDesc MT_PUT_SHORT = MethodTypeDesc.of(CD_VOID, CD_LONG, CD_SHORT);
+    private static final MethodTypeDesc MT_GET_SHORT = MethodTypeDesc.of(CD_SHORT, CD_LONG);
+    private static final MethodTypeDesc MT_PUT_INT = MethodTypeDesc.of(CD_VOID, CD_LONG, CD_INT);
+    private static final MethodTypeDesc MT_GET_INT = MethodTypeDesc.of(CD_INT, CD_LONG);
+    private static final MethodTypeDesc MT_PUT_LONG = MethodTypeDesc.of(CD_VOID, CD_LONG, CD_LONG);
+    private static final MethodTypeDesc MT_GET_LONG = MethodTypeDesc.of(CD_LONG, CD_LONG);
+    private static final MethodTypeDesc MT_PUT_FLOAT = MethodTypeDesc.of(CD_VOID, CD_LONG, CD_FLOAT);
+    private static final MethodTypeDesc MT_GET_FLOAT = MethodTypeDesc.of(CD_FLOAT, CD_LONG);
+    private static final MethodTypeDesc MT_PUT_DOUBLE = MethodTypeDesc.of(CD_VOID, CD_LONG, CD_DOUBLE);
+    private static final MethodTypeDesc MT_GET_DOUBLE = MethodTypeDesc.of(CD_DOUBLE, CD_LONG);
 
     private static final int FIELD_FLAGS = ClassFile.ACC_PRIVATE | ClassFile.ACC_STATIC | ClassFile.ACC_FINAL | ClassFile.ACC_SYNTHETIC;
     private static final int METHOD_FLAGS = ClassFile.ACC_PUBLIC | ClassFile.ACC_FINAL | ClassFile.ACC_SYNTHETIC;
@@ -73,7 +110,7 @@ final class NetworkBufferTemplateImpl {
         Objects.requireNonNull(values[values.length - 1], CTOR_NAME);
         try {
             final ClassDesc classDesc = ClassDesc.of(PACKAGE, "NetworkTemplate");
-            final FieldIntrinsic[] fieldIntrinsics = fieldIntrinsics(values, fieldCount);
+            final IntrinsicKind[] fieldIntrinsics = fieldIntrinsics(values, fieldCount);
             final byte[] bytes = ClassFile.of().build(classDesc, classBuilder -> {
                 classBuilder.withFlags(CLASS_FLAGS)
                         .withSuperclass(CD_OBJECT)
@@ -121,7 +158,7 @@ final class NetworkBufferTemplateImpl {
                 .return_();
     }
 
-    private static void buildWrite(CodeBuilder codeBuilder, ClassDesc classDesc, int fieldCount, FieldIntrinsic[] fieldIntrinsics) {
+    private static void buildWrite(CodeBuilder codeBuilder, ClassDesc classDesc, int fieldCount, IntrinsicKind[] fieldIntrinsics) {
         for (int i = 0; i < fieldCount; ) {
             if (fieldIntrinsics[i] != null) {
                 final int start = i;
@@ -130,13 +167,15 @@ final class NetworkBufferTemplateImpl {
                     size += fieldIntrinsics[i++].size();
                 } while (i < fieldCount && fieldIntrinsics[i] != null);
                 if (size > 0) emitEnsureWritable(codeBuilder, size);
-                final int indexSlot = codeBuilder.allocateLocal(java.lang.classfile.TypeKind.LONG);
+                final int indexSlot = codeBuilder.allocateLocal(TypeKind.LONG);
+                final int directSlot = codeBuilder.allocateLocal(TypeKind.REFERENCE);
                 codeBuilder.aload(1)
                         .invokeinterface(CD_NETWORK_BUFFER, "writeIndex", MT_INDEX_GETTER)
                         .lstore(indexSlot);
+                emitDirectBuffer(codeBuilder, directSlot);
                 long offset = 0;
                 for (int j = start; j < i; j++) {
-                    emitIntrinsicWrite(codeBuilder, classDesc, j, fieldIntrinsics[j], offset, indexSlot);
+                    emitIntrinsicWrite(codeBuilder, classDesc, j, fieldIntrinsics[j], offset, directSlot, indexSlot);
                     offset += fieldIntrinsics[j].size();
                 }
                 codeBuilder.aload(1)
@@ -152,20 +191,27 @@ final class NetworkBufferTemplateImpl {
         codeBuilder.return_();
     }
 
-    private static void buildRead(CodeBuilder codeBuilder, ClassDesc classDesc, int fieldCount, ClassDesc ctor, FieldIntrinsic[] fieldIntrinsics) {
-        codeBuilder.getstatic(classDesc, CTOR_NAME, ctor);
+    private static void buildRead(CodeBuilder codeBuilder, ClassDesc classDesc, int fieldCount, ClassDesc ctor, IntrinsicKind[] fieldIntrinsics) {
+        final int[] valueSlots = new int[fieldCount];
+        final IntrinsicKind[] valueKinds = new IntrinsicKind[fieldCount];
 
         for (int i = 0; i < fieldCount; ) {
             if (fieldIntrinsics[i] != null) {
-                final int indexSlot = codeBuilder.allocateLocal(java.lang.classfile.TypeKind.LONG);
+                final int indexSlot = codeBuilder.allocateLocal(TypeKind.LONG);
+                final int directSlot = codeBuilder.allocateLocal(TypeKind.REFERENCE);
                 codeBuilder.aload(1)
                         .invokeinterface(CD_NETWORK_BUFFER, "readIndex", MT_INDEX_GETTER)
                         .lstore(indexSlot);
+                emitDirectBuffer(codeBuilder, directSlot);
                 // TODO: call NetworkBuffer.ensureReadable(totalSize) here once it exists.
                 long size = 0;
                 do {
-                    emitIntrinsicRead(codeBuilder, fieldIntrinsics[i], size, indexSlot);
-                    size += fieldIntrinsics[i].size();
+                    final IntrinsicKind kind = fieldIntrinsics[i];
+                    emitIntrinsicRead(codeBuilder, kind, size, directSlot, indexSlot);
+                    valueKinds[i] = kind;
+                    valueSlots[i] = codeBuilder.allocateLocal(kind.localKind());
+                    codeBuilder.storeLocal(kind.localKind(), valueSlots[i]);
+                    size += kind.size();
                     i++;
                 } while (i < fieldCount && fieldIntrinsics[i] != null);
                 codeBuilder.aload(1)
@@ -177,9 +223,14 @@ final class NetworkBufferTemplateImpl {
             } else {
                 codeBuilder.getstatic(classDesc, typeName(i), CD_TYPE)
                         .aload(1)
-                        .invokeinterface(CD_TYPE, READ, MT_READ_OBJECT);
+                        .invokeinterface(CD_TYPE, READ, MT_READ_OBJECT)
+                        .astore(valueSlots[i] = codeBuilder.allocateLocal(TypeKind.REFERENCE));
                 i++;
             }
+        }
+        codeBuilder.getstatic(classDesc, CTOR_NAME, ctor);
+        for (int i = 0; i < fieldCount; i++) {
+            emitConstructorValue(codeBuilder, valueKinds[i], valueSlots[i]);
         }
         codeBuilder.invokeinterface(ctor, "apply", constructorApplyType(fieldCount))
                 .areturn();
@@ -200,53 +251,198 @@ final class NetworkBufferTemplateImpl {
                 .invokeinterface(CD_TYPE, WRITE, MT_WRITE_OBJECT);
     }
 
-    private static void emitIntrinsicWrite(CodeBuilder codeBuilder, ClassDesc classDesc, int index, FieldIntrinsic intrinsic, long offset, int indexSlot) {
+    private static void emitDirectBuffer(CodeBuilder codeBuilder, int directSlot) {
         codeBuilder.aload(1)
-                .lload(indexSlot);
-        if (offset > 0) {
-            codeBuilder.loadConstant(offset)
-                    .ladd();
+                .checkcast(CD_NETWORK_BUFFER_IMPL)
+                .astore(directSlot);
+    }
+
+    private static void emitIntrinsicWrite(CodeBuilder codeBuilder, ClassDesc classDesc, int index, IntrinsicKind intrinsic, long offset, int directSlot, int indexSlot) {
+        if (intrinsic == IntrinsicKind.UNIT) {
+            codeBuilder.getstatic(classDesc, getterName(index), CD_FUNCTION)
+                    .aload(2)
+                    .invokeinterface(CD_FUNCTION, "apply", MT_FUNCTION_APPLY)
+                    .pop();
+            return;
         }
+
+        codeBuilder.aload(directSlot);
+        emitOffsetIndex(codeBuilder, offset, indexSlot);
         codeBuilder.getstatic(classDesc, getterName(index), CD_FUNCTION)
                 .aload(2)
-                .invokeinterface(CD_FUNCTION, "apply", MT_FUNCTION_APPLY)
-                .invokestatic(CD_NETWORK_BUFFER_INTRINSICS, intrinsic.writeMethod(), MT_INTRINSIC_WRITE);
+                .invokeinterface(CD_FUNCTION, "apply", MT_FUNCTION_APPLY);
+        emitIntrinsicWriteValue(codeBuilder, intrinsic);
     }
 
-    private static void emitIntrinsicRead(CodeBuilder codeBuilder, FieldIntrinsic intrinsic, long offset, int indexSlot) {
-        codeBuilder.aload(1)
-                .lload(indexSlot);
+    private static void emitIntrinsicRead(CodeBuilder codeBuilder, IntrinsicKind intrinsic, long offset, int directSlot, int indexSlot) {
+        codeBuilder.aload(directSlot);
+        emitOffsetIndex(codeBuilder, offset, indexSlot);
+        emitIntrinsicReadValue(codeBuilder, intrinsic);
+    }
+
+    private static void emitOffsetIndex(CodeBuilder codeBuilder, long offset, int indexSlot) {
+        codeBuilder.lload(indexSlot);
         if (offset > 0) {
             codeBuilder.loadConstant(offset)
                     .ladd();
         }
-        codeBuilder.invokestatic(CD_NETWORK_BUFFER_INTRINSICS, intrinsic.readMethod(), MT_INTRINSIC_READ);
     }
 
-    private static FieldIntrinsic[] fieldIntrinsics(Object[] values, int fieldCount) {
-        final FieldIntrinsic[] fieldIntrinsics = new FieldIntrinsic[fieldCount];
+    private static void emitIntrinsicWriteValue(CodeBuilder codeBuilder, IntrinsicKind kind) {
+        switch (kind) {
+            case UNIT -> throw new UnsupportedOperationException("Should not be writing unit values");
+            case BOOLEAN -> codeBuilder.checkcast(CD_BOOLEAN_WRAPPER)
+                    .invokevirtual(CD_BOOLEAN_WRAPPER, "booleanValue", MT_BOOLEAN_VALUE)
+                    .i2b()
+                    .invokevirtual(CD_NETWORK_BUFFER_IMPL, "_putByte", MT_PUT_BYTE);
+            case BYTE -> codeBuilder.checkcast(CD_BYTE_WRAPPER)
+                    .invokevirtual(CD_BYTE_WRAPPER, "byteValue", MT_BYTE_VALUE)
+                    .invokevirtual(CD_NETWORK_BUFFER_IMPL, "_putByte", MT_PUT_BYTE);
+            case UNSIGNED_BYTE -> codeBuilder.checkcast(CD_SHORT_WRAPPER)
+                    .invokevirtual(CD_SHORT_WRAPPER, "shortValue", MT_SHORT_VALUE)
+                    .sipush(0xFF)
+                    .iand()
+                    .i2b()
+                    .invokevirtual(CD_NETWORK_BUFFER_IMPL, "_putByte", MT_PUT_BYTE);
+            case SHORT -> codeBuilder.checkcast(CD_SHORT_WRAPPER)
+                    .invokevirtual(CD_SHORT_WRAPPER, "shortValue", MT_SHORT_VALUE)
+                    .invokevirtual(CD_NETWORK_BUFFER_IMPL, "_putShort", MT_PUT_SHORT);
+            case UNSIGNED_SHORT -> codeBuilder.checkcast(CD_INTEGER_WRAPPER)
+                    .invokevirtual(CD_INTEGER_WRAPPER, "intValue", MT_INT_VALUE)
+                    .loadConstant(0xFFFF)
+                    .iand()
+                    .i2s()
+                    .invokevirtual(CD_NETWORK_BUFFER_IMPL, "_putShort", MT_PUT_SHORT);
+            case INT -> codeBuilder.checkcast(CD_INTEGER_WRAPPER)
+                    .invokevirtual(CD_INTEGER_WRAPPER, "intValue", MT_INT_VALUE)
+                    .invokevirtual(CD_NETWORK_BUFFER_IMPL, "_putInt", MT_PUT_INT);
+            case UNSIGNED_INT -> codeBuilder.checkcast(CD_LONG_WRAPPER)
+                    .invokevirtual(CD_LONG_WRAPPER, "longValue", MT_LONG_VALUE)
+                    .loadConstant(0xFFFFFFFFL)
+                    .land()
+                    .l2i()
+                    .invokevirtual(CD_NETWORK_BUFFER_IMPL, "_putInt", MT_PUT_INT);
+            case LONG -> codeBuilder.checkcast(CD_LONG_WRAPPER)
+                    .invokevirtual(CD_LONG_WRAPPER, "longValue", MT_LONG_VALUE)
+                    .invokevirtual(CD_NETWORK_BUFFER_IMPL, "_putLong", MT_PUT_LONG);
+            case FLOAT -> codeBuilder.checkcast(CD_FLOAT_WRAPPER)
+                    .invokevirtual(CD_FLOAT_WRAPPER, "floatValue", MT_FLOAT_VALUE)
+                    .invokevirtual(CD_NETWORK_BUFFER_IMPL, "_putFloat", MT_PUT_FLOAT);
+            case DOUBLE -> codeBuilder.checkcast(CD_DOUBLE_WRAPPER)
+                    .invokevirtual(CD_DOUBLE_WRAPPER, "doubleValue", MT_DOUBLE_VALUE)
+                    .invokevirtual(CD_NETWORK_BUFFER_IMPL, "_putDouble", MT_PUT_DOUBLE);
+        }
+    }
+
+    private static void emitIntrinsicReadValue(CodeBuilder codeBuilder, IntrinsicKind kind) {
+        switch (kind) {
+            case UNIT -> codeBuilder.pop2()
+                    .pop()
+                    .getstatic(CD_UNIT, "INSTANCE", CD_UNIT);
+            case BOOLEAN -> {
+                final var falseLabel = codeBuilder.newLabel();
+                final var endLabel = codeBuilder.newLabel();
+                codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "_getByte", MT_GET_BYTE)
+                        .iconst_1()
+                        .if_icmpne(falseLabel)
+                        .iconst_1()
+                        .goto_(endLabel)
+                        .labelBinding(falseLabel)
+                        .iconst_0()
+                        .labelBinding(endLabel);
+            }
+            case BYTE -> codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "_getByte", MT_GET_BYTE);
+            case UNSIGNED_BYTE -> codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "_getByte", MT_GET_BYTE)
+                    .sipush(0xFF)
+                    .iand();
+            case SHORT -> codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "_getShort", MT_GET_SHORT);
+            case UNSIGNED_SHORT -> codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "_getShort", MT_GET_SHORT)
+                    .loadConstant(0xFFFF)
+                    .iand();
+            case INT -> codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "_getInt", MT_GET_INT);
+            case UNSIGNED_INT -> codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "_getInt", MT_GET_INT)
+                    .i2l()
+                    .loadConstant(0xFFFFFFFFL)
+                    .land();
+            case LONG -> codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "_getLong", MT_GET_LONG);
+            case FLOAT -> codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "_getFloat", MT_GET_FLOAT);
+            case DOUBLE -> codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "_getDouble", MT_GET_DOUBLE);
+        }
+    }
+
+    private static void emitConstructorValue(CodeBuilder codeBuilder, IntrinsicKind kind, int valueSlot) {
+        if (kind == null) {
+            codeBuilder.aload(valueSlot);
+            return;
+        }
+        codeBuilder.loadLocal(kind.localKind(), valueSlot);
+        switch (kind) {
+            case UNIT -> {
+            }
+            case BOOLEAN -> codeBuilder.invokestatic(CD_BOOLEAN_WRAPPER, "valueOf", MT_BOX_BOOLEAN);
+            case BYTE -> codeBuilder.i2b()
+                    .invokestatic(CD_BYTE_WRAPPER, "valueOf", MT_BOX_BYTE);
+            case UNSIGNED_BYTE, SHORT -> codeBuilder.i2s()
+                    .invokestatic(CD_SHORT_WRAPPER, "valueOf", MT_BOX_SHORT);
+            case UNSIGNED_SHORT, INT -> codeBuilder.invokestatic(CD_INTEGER_WRAPPER, "valueOf", MT_BOX_INT);
+            case UNSIGNED_INT, LONG -> codeBuilder.invokestatic(CD_LONG_WRAPPER, "valueOf", MT_BOX_LONG);
+            case FLOAT -> codeBuilder.invokestatic(CD_FLOAT_WRAPPER, "valueOf", MT_BOX_FLOAT);
+            case DOUBLE -> codeBuilder.invokestatic(CD_DOUBLE_WRAPPER, "valueOf", MT_BOX_DOUBLE);
+        }
+    }
+
+    private static IntrinsicKind[] fieldIntrinsics(Object[] values, int fieldCount) {
+        final IntrinsicKind[] fieldIntrinsics = new IntrinsicKind[fieldCount];
         for (int i = 0; i < fieldCount; i++) {
             fieldIntrinsics[i] = intrinsic(values[i * 2]);
         }
         return fieldIntrinsics;
     }
 
-    private static FieldIntrinsic intrinsic(Object type) {
-        if (type instanceof NetworkBufferTypeImpl.UnitType) return new FieldIntrinsic(0, "writeUnit", "readUnit");
-        if (type instanceof NetworkBufferTypeImpl.BooleanType) return new FieldIntrinsic(1, "writeBoolean", "readBoolean");
-        if (type instanceof NetworkBufferTypeImpl.ByteType) return new FieldIntrinsic(1, "writeByte", "readByte");
-        if (type instanceof NetworkBufferTypeImpl.UnsignedByteType) return new FieldIntrinsic(1, "writeUnsignedByte", "readUnsignedByte");
-        if (type instanceof NetworkBufferTypeImpl.ShortType) return new FieldIntrinsic(2, "writeShort", "readShort");
-        if (type instanceof NetworkBufferTypeImpl.UnsignedShortType) return new FieldIntrinsic(2, "writeUnsignedShort", "readUnsignedShort");
-        if (type instanceof NetworkBufferTypeImpl.IntType) return new FieldIntrinsic(4, "writeInt", "readInt");
-        if (type instanceof NetworkBufferTypeImpl.UnsignedIntType) return new FieldIntrinsic(4, "writeUnsignedInt", "readUnsignedInt");
-        if (type instanceof NetworkBufferTypeImpl.LongType) return new FieldIntrinsic(8, "writeLong", "readLong");
-        if (type instanceof NetworkBufferTypeImpl.FloatType) return new FieldIntrinsic(4, "writeFloat", "readFloat");
-        if (type instanceof NetworkBufferTypeImpl.DoubleType) return new FieldIntrinsic(8, "writeDouble", "readDouble");
+    private static IntrinsicKind intrinsic(Object type) {
+        if (type instanceof NetworkBufferTypeImpl.UnitType) return IntrinsicKind.UNIT;
+        if (type instanceof NetworkBufferTypeImpl.BooleanType) return IntrinsicKind.BOOLEAN;
+        if (type instanceof NetworkBufferTypeImpl.ByteType) return IntrinsicKind.BYTE;
+        if (type instanceof NetworkBufferTypeImpl.UnsignedByteType) return IntrinsicKind.UNSIGNED_BYTE;
+        if (type instanceof NetworkBufferTypeImpl.ShortType) return IntrinsicKind.SHORT;
+        if (type instanceof NetworkBufferTypeImpl.UnsignedShortType) return IntrinsicKind.UNSIGNED_SHORT;
+        if (type instanceof NetworkBufferTypeImpl.IntType) return IntrinsicKind.INT;
+        if (type instanceof NetworkBufferTypeImpl.UnsignedIntType) return IntrinsicKind.UNSIGNED_INT;
+        if (type instanceof NetworkBufferTypeImpl.LongType) return IntrinsicKind.LONG;
+        if (type instanceof NetworkBufferTypeImpl.FloatType) return IntrinsicKind.FLOAT;
+        if (type instanceof NetworkBufferTypeImpl.DoubleType) return IntrinsicKind.DOUBLE;
         return null;
     }
 
-    private record FieldIntrinsic(int size, String writeMethod, String readMethod) {}
+    private enum IntrinsicKind {
+        UNIT(0, TypeKind.REFERENCE),
+        BOOLEAN(1, TypeKind.INT),
+        BYTE(1, TypeKind.INT),
+        UNSIGNED_BYTE(1, TypeKind.INT),
+        SHORT(2, TypeKind.INT),
+        UNSIGNED_SHORT(2, TypeKind.INT),
+        INT(4, TypeKind.INT),
+        UNSIGNED_INT(4, TypeKind.LONG),
+        LONG(8, TypeKind.LONG),
+        FLOAT(4, TypeKind.FLOAT),
+        DOUBLE(8, TypeKind.DOUBLE);
+
+        private final int size;
+        private final TypeKind localKind;
+
+        IntrinsicKind(int size, TypeKind localKind) {
+            this.size = size;
+            this.localKind = localKind;
+        }
+
+        private int size() {
+            return size;
+        }
+
+        private TypeKind localKind() {
+            return localKind;
+        }
+    }
 
     private static ClassDesc constructorInterface(int fieldCount) {
         return ClassDesc.of(PACKAGE, "NetworkBufferTemplate$F" + fieldCount);
