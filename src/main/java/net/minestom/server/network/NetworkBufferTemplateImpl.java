@@ -1,6 +1,7 @@
 package net.minestom.server.network;
 
 import net.minestom.server.utils.validate.Check;
+import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.UnknownNullability;
 
 import java.lang.classfile.ClassFile;
@@ -116,17 +117,18 @@ final class NetworkBufferTemplateImpl {
         Objects.requireNonNull(values[values.length - 1], CTOR_NAME);
         try {
             final ClassDesc classDesc = ClassDesc.of(PACKAGE, "NetworkTemplate");
-            final Intrinsic[] fieldIntrinsics = fieldIntrinsics(values, fieldCount);
+            final @Nullable Intrinsic[] fieldIntrinsics = fieldIntrinsics(values, fieldCount);
             final byte[] bytes = ClassFile.of().build(classDesc, classBuilder -> {
                 classBuilder.withFlags(CLASS_FLAGS)
                         .withSuperclass(CD_OBJECT)
                         .withInterfaceSymbols(CD_IMPL_TYPE);
 
                 for (int i = 0; i < fieldCount; i++) {
-                    if (fieldIntrinsics[i] == null) {
+                    final Intrinsic intrinsic = fieldIntrinsics[i];
+                    if (intrinsic == null) {
                         classBuilder.withField(typeName(i), CD_TYPE, FIELD_FLAGS);
-                    } else if (fieldIntrinsics[i].transformed()) {
-                        for (int level = 0; level < fieldIntrinsics[i].transformDepth(); level++) {
+                    } else if (intrinsic.transformed()) {
+                        for (int level = 0; level < intrinsic.transformDepth(); level++) {
                             classBuilder.withField(transformToName(i, level), CD_FUNCTION, FIELD_FLAGS);
                             classBuilder.withField(transformFromName(i, level), CD_FUNCTION, FIELD_FLAGS);
                         }
@@ -145,7 +147,7 @@ final class NetworkBufferTemplateImpl {
                 classBuilder.withMethodBody(READ, MT_READ_OBJECT, METHOD_FLAGS,
                         codeBuilder -> buildRead(codeBuilder, classDesc, fieldCount, ctor, fieldIntrinsics));
             });
-            if (true) {
+            if (Arrays.stream(fieldIntrinsics).anyMatch(it -> it instanceof OptionalIntrinsic || it instanceof TransformIntrinsic)) {
                 Files.write(Paths.get("GeneratedClass%s.class".formatted(fieldCount)), bytes);
             }
             final MethodHandles.Lookup lookup = MethodHandles.lookup().defineHiddenClassWithClassData(bytes, Arrays.asList(values), true, MethodHandles.Lookup.ClassOption.NESTMATE);
@@ -156,16 +158,17 @@ final class NetworkBufferTemplateImpl {
         }
     }
 
-    private static void buildClassInitializer(CodeBuilder codeBuilder, ClassDesc classDesc, int fieldCount, ClassDesc ctor, Intrinsic[] fieldIntrinsics) {
+    private static void buildClassInitializer(CodeBuilder codeBuilder, ClassDesc classDesc, int fieldCount, ClassDesc ctor, @Nullable Intrinsic[] fieldIntrinsics) {
         codeBuilder.invokestatic(CD_METHOD_HANDLES, "lookup", MT_LOOKUP)
                 .astore(0);
         for (int i = 0; i < fieldCount; i++) {
-            if (fieldIntrinsics[i] == null) {
+            final Intrinsic intrinsic = fieldIntrinsics[i];
+            if (intrinsic == null) {
                 loadClassDataAt(codeBuilder, CD_TYPE, i * 2)
                         .putstatic(classDesc, typeName(i), CD_TYPE);
-            } else if (fieldIntrinsics[i].transformed()) {
-                final boolean optional = fieldIntrinsics[i] instanceof OptionalIntrinsic;
-                for (int level = 0; level < fieldIntrinsics[i].transformDepth(); level++) {
+            } else if (intrinsic.transformed()) {
+                final boolean optional = intrinsic instanceof OptionalIntrinsic;
+                for (int level = 0; level < intrinsic.transformDepth(); level++) {
                     loadTransformFunction(codeBuilder, i, optional, level, false)
                             .putstatic(classDesc, transformFromName(i, level), CD_FUNCTION);
                     loadTransformFunction(codeBuilder, i, optional, level, true)
@@ -180,7 +183,7 @@ final class NetworkBufferTemplateImpl {
                 .return_();
     }
 
-    private static void buildWrite(CodeBuilder codeBuilder, ClassDesc classDesc, int fieldCount, Intrinsic[] fieldIntrinsics) {
+    private static void buildWrite(CodeBuilder codeBuilder, ClassDesc classDesc, int fieldCount, @Nullable Intrinsic[] fieldIntrinsics) {
         for (int i = 0; i < fieldCount; ) {
             if (isFixedIntrinsic(fieldIntrinsics[i])) {
                 final int start = i;
@@ -197,8 +200,10 @@ final class NetworkBufferTemplateImpl {
                 emitDirectBuffer(codeBuilder, directSlot);
                 long offset = 0;
                 for (int j = start; j < i; j++) {
-                    emitIntrinsicWrite(codeBuilder, classDesc, j, fieldIntrinsics[j], offset, directSlot, indexSlot);
-                    offset += fieldIntrinsics[j].size();
+                    final Intrinsic intrinsic = fieldIntrinsics[j];
+                    assert intrinsic != null;
+                    emitIntrinsicWrite(codeBuilder, classDesc, j, intrinsic, offset, directSlot, indexSlot);
+                    offset += intrinsic.size();
                 }
                 codeBuilder.aload(1)
                         .lload(indexSlot)
@@ -206,9 +211,14 @@ final class NetworkBufferTemplateImpl {
                         .ladd()
                         .invokeinterface(CD_NETWORK_BUFFER, "writeIndex", MT_INDEX_SETTER)
                         .pop();
-            } else if (fieldIntrinsics[i] instanceof OptionalIntrinsic optional) {
-                emitOptionalWrite(codeBuilder, classDesc, i, optional);
-                i++;
+            } else if (fieldIntrinsics[i] instanceof OptionalIntrinsic) {
+                final int start = i;
+                long baseSize = 0;
+                do {
+                    baseSize++;
+                    i++;
+                } while (i < fieldCount && fieldIntrinsics[i] instanceof OptionalIntrinsic);
+                emitOptionalWriteRun(codeBuilder, classDesc, fieldIntrinsics, start, i, baseSize);
             } else {
                 emitWrite(codeBuilder, classDesc, i++);
             }
@@ -216,7 +226,7 @@ final class NetworkBufferTemplateImpl {
         codeBuilder.return_();
     }
 
-    private static void buildRead(CodeBuilder codeBuilder, ClassDesc classDesc, int fieldCount, ClassDesc ctor, Intrinsic[] fieldIntrinsics) {
+    private static void buildRead(CodeBuilder codeBuilder, ClassDesc classDesc, int fieldCount, ClassDesc ctor, @Nullable Intrinsic[] fieldIntrinsics) {
         final int[] valueSlots = new int[fieldCount];
         final Intrinsic[] valueIntrinsics = new Intrinsic[fieldCount];
 
@@ -245,9 +255,12 @@ final class NetworkBufferTemplateImpl {
                         .ladd()
                         .invokeinterface(CD_NETWORK_BUFFER, "readIndex", MT_INDEX_SETTER)
                         .pop();
-            } else if (fieldIntrinsics[i] instanceof OptionalIntrinsic optional) {
-                emitOptionalRead(codeBuilder, classDesc, i, optional, valueSlots);
-                i++;
+            } else if (fieldIntrinsics[i] instanceof OptionalIntrinsic) {
+                final int start = i;
+                do {
+                    i++;
+                } while (i < fieldCount && fieldIntrinsics[i] instanceof OptionalIntrinsic);
+                emitOptionalReadRun(codeBuilder, classDesc, fieldIntrinsics, start, i, valueSlots);
             } else {
                 codeBuilder.getstatic(classDesc, typeName(i), CD_TYPE)
                         .aload(1)
@@ -285,7 +298,7 @@ final class NetworkBufferTemplateImpl {
                 .astore(directSlot);
     }
 
-    private static boolean isFixedIntrinsic(Intrinsic intrinsic) {
+    private static boolean isFixedIntrinsic(@Nullable Intrinsic intrinsic) {
         return intrinsic != null && !(intrinsic instanceof OptionalIntrinsic);
     }
 
@@ -328,7 +341,6 @@ final class NetworkBufferTemplateImpl {
             case UNIT -> throw new UnsupportedOperationException("Should not be writing unit values");
             case BOOLEAN -> codeBuilder.checkcast(CD_BOOLEAN_WRAPPER)
                     .invokevirtual(CD_BOOLEAN_WRAPPER, "booleanValue", MT_BOOLEAN_VALUE)
-                    .i2b()
                     .invokevirtual(CD_NETWORK_BUFFER_IMPL, "_putByte", MT_PUT_BYTE);
             case BYTE -> codeBuilder.checkcast(CD_BYTE_WRAPPER)
                     .invokevirtual(CD_BYTE_WRAPPER, "byteValue", MT_BYTE_VALUE)
@@ -405,7 +417,7 @@ final class NetworkBufferTemplateImpl {
         }
     }
 
-    private static void emitConstructorValue(CodeBuilder codeBuilder, ClassDesc classDesc, int index, Intrinsic intrinsic, int valueSlot) {
+    private static void emitConstructorValue(CodeBuilder codeBuilder, ClassDesc classDesc, int index, @Nullable Intrinsic intrinsic, int valueSlot) {
         if (intrinsic == null) {
             codeBuilder.aload(valueSlot);
             return;
@@ -431,13 +443,30 @@ final class NetworkBufferTemplateImpl {
         }
     }
 
-    private static void emitOptionalWrite(CodeBuilder codeBuilder, ClassDesc classDesc, int index, OptionalIntrinsic optional) {
-        final Intrinsic intrinsic = optional.parent();
-        final int valueSlot = codeBuilder.allocateLocal(TypeKind.REFERENCE);
+    private static void emitOptionalWriteRun(CodeBuilder codeBuilder, ClassDesc classDesc, Intrinsic[] fieldIntrinsics,
+                                             int start, int end, long baseSize) {
+        emitEnsureWritable(codeBuilder, baseSize);
         final int indexSlot = codeBuilder.allocateLocal(TypeKind.LONG);
         final int directSlot = codeBuilder.allocateLocal(TypeKind.REFERENCE);
+        codeBuilder.aload(1)
+                .invokeinterface(CD_NETWORK_BUFFER, "writeIndex", MT_INDEX_GETTER)
+                .lstore(indexSlot);
+        emitDirectBuffer(codeBuilder, directSlot);
+        for (int i = start; i < end; i++) {
+            emitOptionalWrite(codeBuilder, classDesc, i, (OptionalIntrinsic) fieldIntrinsics[i], directSlot, indexSlot);
+        }
+        codeBuilder.aload(1)
+                .lload(indexSlot)
+                .invokeinterface(CD_NETWORK_BUFFER, "writeIndex", MT_INDEX_SETTER)
+                .pop();
+    }
+
+    private static void emitOptionalWrite(CodeBuilder codeBuilder, ClassDesc classDesc, int index, OptionalIntrinsic optional,
+                                          int directSlot, int indexSlot) {
+        final Intrinsic intrinsic = optional.parent();
+        final int valueSlot = codeBuilder.allocateLocal(TypeKind.REFERENCE);
         final var notNull = codeBuilder.newLabel();
-        final var end = codeBuilder.newLabel();
+        final var advance = codeBuilder.newLabel();
 
         codeBuilder.getstatic(classDesc, getterName(index), CD_FUNCTION)
                 .aload(2)
@@ -445,33 +474,15 @@ final class NetworkBufferTemplateImpl {
                 .astore(valueSlot)
                 .aload(valueSlot)
                 .ifnonnull(notNull);
-        emitEnsureWritable(codeBuilder, 1);
-        codeBuilder.aload(1)
-                .invokeinterface(CD_NETWORK_BUFFER, "writeIndex", MT_INDEX_GETTER)
-                .lstore(indexSlot);
-        emitDirectBuffer(codeBuilder, directSlot);
         codeBuilder.aload(directSlot)
                 .lload(indexSlot)
                 .iconst_0()
-                .i2b()
                 .invokevirtual(CD_NETWORK_BUFFER_IMPL, "_putByte", MT_PUT_BYTE)
-                .aload(1)
-                .lload(indexSlot)
-                .lconst_1()
-                .ladd()
-                .invokeinterface(CD_NETWORK_BUFFER, "writeIndex", MT_INDEX_SETTER)
-                .pop()
-                .goto_(end)
+                .goto_(advance)
                 .labelBinding(notNull);
-        emitEnsureWritable(codeBuilder, 1L + intrinsic.size());
-        codeBuilder.aload(1)
-                .invokeinterface(CD_NETWORK_BUFFER, "writeIndex", MT_INDEX_GETTER)
-                .lstore(indexSlot);
-        emitDirectBuffer(codeBuilder, directSlot);
         codeBuilder.aload(directSlot)
                 .lload(indexSlot)
                 .iconst_1()
-                .i2b()
                 .invokevirtual(CD_NETWORK_BUFFER_IMPL, "_putByte", MT_PUT_BYTE);
         if (intrinsic.primitive() != PrimitiveIntrinsic.UNIT) {
             codeBuilder.aload(directSlot);
@@ -484,27 +495,42 @@ final class NetworkBufferTemplateImpl {
             emitTransformApply(codeBuilder, classDesc, index, intrinsic, false);
             codeBuilder.pop();
         }
-        codeBuilder.aload(1)
-                .lload(indexSlot)
-                .loadConstant(1L + intrinsic.size())
+        codeBuilder.lload(indexSlot)
+                .loadConstant((long) intrinsic.size())
                 .ladd()
-                .invokeinterface(CD_NETWORK_BUFFER, "writeIndex", MT_INDEX_SETTER)
-                .pop()
-                .labelBinding(end);
+                .lstore(indexSlot)
+                .labelBinding(advance)
+                .lload(indexSlot)
+                .lconst_1()
+                .ladd()
+                .lstore(indexSlot);
     }
 
-    private static void emitOptionalRead(CodeBuilder codeBuilder, ClassDesc classDesc, int index, OptionalIntrinsic optional, int[] valueSlots) {
-        final Intrinsic intrinsic = optional.parent();
-        final int valueSlot = valueSlots[index] = codeBuilder.allocateLocal(TypeKind.REFERENCE);
+    private static void emitOptionalReadRun(CodeBuilder codeBuilder, ClassDesc classDesc, Intrinsic[] fieldIntrinsics,
+                                            int start, int end, int[] valueSlots) {
         final int indexSlot = codeBuilder.allocateLocal(TypeKind.LONG);
         final int directSlot = codeBuilder.allocateLocal(TypeKind.REFERENCE);
-        final var present = codeBuilder.newLabel();
-        final var end = codeBuilder.newLabel();
-
         codeBuilder.aload(1)
                 .invokeinterface(CD_NETWORK_BUFFER, "readIndex", MT_INDEX_GETTER)
                 .lstore(indexSlot);
         emitDirectBuffer(codeBuilder, directSlot);
+        // TODO: call NetworkBuffer.ensureReadable(totalSize) here once it exists.
+        for (int i = start; i < end; i++) {
+            emitOptionalRead(codeBuilder, classDesc, i, (OptionalIntrinsic) fieldIntrinsics[i], directSlot, indexSlot, valueSlots);
+        }
+        codeBuilder.aload(1)
+                .lload(indexSlot)
+                .invokeinterface(CD_NETWORK_BUFFER, "readIndex", MT_INDEX_SETTER)
+                .pop();
+    }
+
+    private static void emitOptionalRead(CodeBuilder codeBuilder, ClassDesc classDesc, int index, OptionalIntrinsic optional,
+                                         int directSlot, int indexSlot, int[] valueSlots) {
+        final Intrinsic intrinsic = optional.parent();
+        final int valueSlot = valueSlots[index] = codeBuilder.allocateLocal(TypeKind.REFERENCE);
+        final var present = codeBuilder.newLabel();
+        final var advance = codeBuilder.newLabel();
+
         codeBuilder.aload(directSlot)
                 .lload(indexSlot)
                 .invokevirtual(CD_NETWORK_BUFFER_IMPL, "_getByte", MT_GET_BYTE)
@@ -512,25 +538,21 @@ final class NetworkBufferTemplateImpl {
                 .if_icmpeq(present)
                 .aconst_null()
                 .astore(valueSlot)
-                .aload(1)
-                .lload(indexSlot)
-                .lconst_1()
-                .ladd()
-                .invokeinterface(CD_NETWORK_BUFFER, "readIndex", MT_INDEX_SETTER)
-                .pop()
-                .goto_(end)
+                .goto_(advance)
                 .labelBinding(present);
         emitIntrinsicRead(codeBuilder, intrinsic, 1, directSlot, indexSlot);
         emitBoxedIntrinsicValue(codeBuilder, intrinsic.primitive());
         if (intrinsic.transformed()) emitTransformApply(codeBuilder, classDesc, index, intrinsic, true);
         codeBuilder.astore(valueSlot)
-                .aload(1)
                 .lload(indexSlot)
-                .loadConstant(1L + intrinsic.size())
+                .loadConstant((long) intrinsic.size())
                 .ladd()
-                .invokeinterface(CD_NETWORK_BUFFER, "readIndex", MT_INDEX_SETTER)
-                .pop()
-                .labelBinding(end);
+                .lstore(indexSlot)
+                .labelBinding(advance)
+                .lload(indexSlot)
+                .lconst_1()
+                .ladd()
+                .lstore(indexSlot);
     }
 
     private static void emitTransformApply(CodeBuilder codeBuilder, ClassDesc classDesc, int index, Intrinsic intrinsic, boolean to) {
@@ -551,35 +573,38 @@ final class NetworkBufferTemplateImpl {
                 .invokeinterface(CD_FUNCTION, "apply", MT_FUNCTION_APPLY);
     }
 
-    private static Intrinsic[] fieldIntrinsics(Object[] values, int fieldCount) {
-        final Intrinsic[] fieldIntrinsics = new Intrinsic[fieldCount];
+    private static @Nullable Intrinsic[] fieldIntrinsics(Object[] values, int fieldCount) {
+        final @Nullable Intrinsic[] fieldIntrinsics = new Intrinsic[fieldCount];
         for (int i = 0; i < fieldCount; i++) {
             fieldIntrinsics[i] = intrinsic(values[i * 2]);
         }
         return fieldIntrinsics;
     }
 
+    @Nullable
     private static Intrinsic intrinsic(Object type) {
-        if (type instanceof NetworkBufferTypeImpl.OptionalType<?> optional) {
-            final Intrinsic parent = intrinsic(optional.parent());
-            return parent != null ? new OptionalIntrinsic(parent) : null;
-        }
-        if (type instanceof NetworkBufferTypeImpl.TransformType<?, ?> transform) {
-            final Intrinsic parent = intrinsic(transform.parent());
-            return parent != null && !(parent instanceof OptionalIntrinsic) ? new TransformIntrinsic(parent) : null;
-        }
-        if (type instanceof NetworkBufferTypeImpl.UnitType) return PrimitiveIntrinsic.UNIT;
-        if (type instanceof NetworkBufferTypeImpl.BooleanType) return PrimitiveIntrinsic.BOOLEAN;
-        if (type instanceof NetworkBufferTypeImpl.ByteType) return PrimitiveIntrinsic.BYTE;
-        if (type instanceof NetworkBufferTypeImpl.UnsignedByteType) return PrimitiveIntrinsic.UNSIGNED_BYTE;
-        if (type instanceof NetworkBufferTypeImpl.ShortType) return PrimitiveIntrinsic.SHORT;
-        if (type instanceof NetworkBufferTypeImpl.UnsignedShortType) return PrimitiveIntrinsic.UNSIGNED_SHORT;
-        if (type instanceof NetworkBufferTypeImpl.IntType) return PrimitiveIntrinsic.INT;
-        if (type instanceof NetworkBufferTypeImpl.UnsignedIntType) return PrimitiveIntrinsic.UNSIGNED_INT;
-        if (type instanceof NetworkBufferTypeImpl.LongType) return PrimitiveIntrinsic.LONG;
-        if (type instanceof NetworkBufferTypeImpl.FloatType) return PrimitiveIntrinsic.FLOAT;
-        if (type instanceof NetworkBufferTypeImpl.DoubleType) return PrimitiveIntrinsic.DOUBLE;
-        return null;
+        return switch (type) {
+            case NetworkBufferTypeImpl.OptionalType<?>(NetworkBuffer.Type<?> parent1) -> {
+                final Intrinsic parent = intrinsic(parent1);
+                yield parent != null ? new OptionalIntrinsic(parent) : null;
+            }
+            case NetworkBufferTypeImpl.TransformType<?, ?> transform -> {
+                final Intrinsic parent = intrinsic(transform.parent());
+                yield parent != null && !(parent instanceof OptionalIntrinsic) ? new TransformIntrinsic(parent) : null;
+            }
+            case NetworkBufferTypeImpl.UnitType _ -> PrimitiveIntrinsic.UNIT;
+            case NetworkBufferTypeImpl.BooleanType _ -> PrimitiveIntrinsic.BOOLEAN;
+            case NetworkBufferTypeImpl.ByteType _ -> PrimitiveIntrinsic.BYTE;
+            case NetworkBufferTypeImpl.UnsignedByteType _ -> PrimitiveIntrinsic.UNSIGNED_BYTE;
+            case NetworkBufferTypeImpl.ShortType _ -> PrimitiveIntrinsic.SHORT;
+            case NetworkBufferTypeImpl.UnsignedShortType _ -> PrimitiveIntrinsic.UNSIGNED_SHORT;
+            case NetworkBufferTypeImpl.IntType _ -> PrimitiveIntrinsic.INT;
+            case NetworkBufferTypeImpl.UnsignedIntType _ -> PrimitiveIntrinsic.UNSIGNED_INT;
+            case NetworkBufferTypeImpl.LongType _ -> PrimitiveIntrinsic.LONG;
+            case NetworkBufferTypeImpl.FloatType _ -> PrimitiveIntrinsic.FLOAT;
+            case NetworkBufferTypeImpl.DoubleType _ -> PrimitiveIntrinsic.DOUBLE;
+            default -> null;
+        };
     }
 
     private interface Intrinsic {
