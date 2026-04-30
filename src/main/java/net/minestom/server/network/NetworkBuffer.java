@@ -85,6 +85,9 @@ public sealed interface NetworkBuffer permits NetworkBufferImpl {
 
     static <E extends Enum<E>> Type<E> Enum(Class<E> enumClass) {
         final E[] values = enumClass.getEnumConstants();
+        if (values.length < 128) {
+            return BYTE.transform(integer -> values[integer], (it) -> (byte) it.ordinal());
+        }
         return VAR_INT.transform(integer -> values[integer], Enum::ordinal);
     }
 
@@ -154,6 +157,8 @@ public sealed interface NetworkBuffer permits NetworkBufferImpl {
     void resize(long newSize);
 
     void ensureWritable(long length);
+
+    void ensureReadable(long length);
 
     void compact();
 

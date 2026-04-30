@@ -24,6 +24,7 @@ import java.util.zip.Inflater;
 
 import static net.minestom.server.network.NetworkBufferUnsafe.*;
 
+@SuppressWarnings("removal")
 final class NetworkBufferImpl implements NetworkBuffer {
     private static final Cleaner CLEANER = Cleaner.create();
     private static final long DUMMY_ADDRESS = -1;
@@ -212,6 +213,14 @@ final class NetworkBufferImpl implements NetworkBuffer {
         resize(newCapacity);
     }
 
+    @Override
+    public void ensureReadable(long length) {
+        assertDummy();
+        if (readableBytes() < length) {
+            throw new IndexOutOfBoundsException("Not enough readable bytes: " + readableBytes() + " < " + length);
+        }
+    }
+
     private long newCapacity(long length, long capacity) {
         final long targetSize = writeIndex + length;
         final AutoResize strategy = this.autoResize;
@@ -372,9 +381,18 @@ final class NetworkBufferImpl implements NetworkBuffer {
         UNSAFE.copyMemory(value, BYTE_ARRAY_OFFSET, null, address + index, value.length);
     }
 
+    void _putBytesUnchecked(long index, byte[] value) {
+        if (isDummy()) return;
+        UNSAFE.copyMemory(value, BYTE_ARRAY_OFFSET, null, address + index, value.length);
+    }
+
     void _getBytes(long index, byte[] value) {
         assertDummy();
         Objects.checkFromIndexSize(index, value.length, capacity);
+        UNSAFE.copyMemory(null, address + index, value, BYTE_ARRAY_OFFSET, value.length);
+    }
+
+    void _getBytesUnchecked(long index, byte[] value) {
         UNSAFE.copyMemory(null, address + index, value, BYTE_ARRAY_OFFSET, value.length);
     }
 
@@ -385,9 +403,18 @@ final class NetworkBufferImpl implements NetworkBuffer {
         UNSAFE.putByte(address + index, value);
     }
 
+    void _putByteUnchecked(long index, byte value) {
+        if (isDummy()) return;
+        UNSAFE.putByte(address + index, value);
+    }
+
     byte _getByte(long index) {
         assertDummy();
         Objects.checkFromIndexSize(index, Byte.BYTES, capacity);
+        return UNSAFE.getByte(address + index);
+    }
+
+    byte _getByteUnchecked(long index) {
         return UNSAFE.getByte(address + index);
     }
 
@@ -399,9 +426,20 @@ final class NetworkBufferImpl implements NetworkBuffer {
         UNSAFE.putShort(address + index, value);
     }
 
+    void _putShortUnchecked(long index, short value) {
+        if (isDummy()) return;
+        if (ENDIAN_CONVERSION) value = Short.reverseBytes(value);
+        UNSAFE.putShort(address + index, value);
+    }
+
     short _getShort(long index) {
         assertDummy();
         Objects.checkFromIndexSize(index, Short.BYTES, capacity);
+        final short value = UNSAFE.getShort(address + index);
+        return ENDIAN_CONVERSION ? Short.reverseBytes(value) : value;
+    }
+
+    short _getShortUnchecked(long index) {
         final short value = UNSAFE.getShort(address + index);
         return ENDIAN_CONVERSION ? Short.reverseBytes(value) : value;
     }
@@ -414,9 +452,20 @@ final class NetworkBufferImpl implements NetworkBuffer {
         UNSAFE.putInt(address + index, value);
     }
 
+    void _putIntUnchecked(long index, int value) {
+        if (isDummy()) return;
+        if (ENDIAN_CONVERSION) value = Integer.reverseBytes(value);
+        UNSAFE.putInt(address + index, value);
+    }
+
     int _getInt(long index) {
         assertDummy();
         Objects.checkFromIndexSize(index, Integer.BYTES, capacity);
+        final int value = UNSAFE.getInt(address + index);
+        return ENDIAN_CONVERSION ? Integer.reverseBytes(value) : value;
+    }
+
+    int _getIntUnchecked(long index) {
         final int value = UNSAFE.getInt(address + index);
         return ENDIAN_CONVERSION ? Integer.reverseBytes(value) : value;
     }
@@ -429,9 +478,20 @@ final class NetworkBufferImpl implements NetworkBuffer {
         UNSAFE.putLong(address + index, value);
     }
 
+    void _putLongUnchecked(long index, long value) {
+        if (isDummy()) return;
+        if (ENDIAN_CONVERSION) value = Long.reverseBytes(value);
+        UNSAFE.putLong(address + index, value);
+    }
+
     long _getLong(long index) {
         assertDummy();
         Objects.checkFromIndexSize(index, Long.BYTES, capacity);
+        final long value = UNSAFE.getLong(address + index);
+        return ENDIAN_CONVERSION ? Long.reverseBytes(value) : value;
+    }
+
+    long _getLongUnchecked(long index) {
         final long value = UNSAFE.getLong(address + index);
         return ENDIAN_CONVERSION ? Long.reverseBytes(value) : value;
     }
@@ -445,9 +505,22 @@ final class NetworkBufferImpl implements NetworkBuffer {
         UNSAFE.putInt(address + index, intValue);
     }
 
+    void _putFloatUnchecked(long index, float value) {
+        if (isDummy()) return;
+        int intValue = Float.floatToIntBits(value);
+        if (ENDIAN_CONVERSION) intValue = Integer.reverseBytes(intValue);
+        UNSAFE.putInt(address + index, intValue);
+    }
+
     float _getFloat(long index) {
         assertDummy();
         Objects.checkFromIndexSize(index, Float.BYTES, capacity);
+        int intValue = UNSAFE.getInt(address + index);
+        if (ENDIAN_CONVERSION) intValue = Integer.reverseBytes(intValue);
+        return Float.intBitsToFloat(intValue);
+    }
+
+    float _getFloatUnchecked(long index) {
         int intValue = UNSAFE.getInt(address + index);
         if (ENDIAN_CONVERSION) intValue = Integer.reverseBytes(intValue);
         return Float.intBitsToFloat(intValue);
@@ -462,9 +535,22 @@ final class NetworkBufferImpl implements NetworkBuffer {
         UNSAFE.putLong(address + index, longValue);
     }
 
+    void _putDoubleUnchecked(long index, double value) {
+        if (isDummy()) return;
+        long longValue = Double.doubleToLongBits(value);
+        if (ENDIAN_CONVERSION) longValue = Long.reverseBytes(longValue);
+        UNSAFE.putLong(address + index, longValue);
+    }
+
     double _getDouble(long index) {
         assertDummy();
         Objects.checkFromIndexSize(index, Double.BYTES, capacity);
+        long longValue = UNSAFE.getLong(address + index);
+        if (ENDIAN_CONVERSION) longValue = Long.reverseBytes(longValue);
+        return Double.longBitsToDouble(longValue);
+    }
+
+    double _getDoubleUnchecked(long index) {
         long longValue = UNSAFE.getLong(address + index);
         if (ENDIAN_CONVERSION) longValue = Long.reverseBytes(longValue);
         return Double.longBitsToDouble(longValue);

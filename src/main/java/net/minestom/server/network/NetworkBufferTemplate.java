@@ -10,6 +10,8 @@ import java.util.function.Supplier;
 /**
  * A utility class to create {@link NetworkBuffer.Type} templates
  * useful for serializing and deserializing objects and ensure the same type written is the same type read.
+ * Template getter functions are expected to be pure field accessors. Generated serializers may evaluate getters before
+ * performing writes, and may evaluate all getters before writing any bytes.
  * <pre>{@code
  * record MyClass(int id, String name) {
  *         // Using the template utility:
