@@ -1,0 +1,92 @@
+package net.minestom.server.network;
+
+import java.util.List;
+import java.util.function.Function;
+
+public sealed interface Op
+        permits Op.GetField, Op.Apply, Op.Cast, Op.Unbox, Op.Box, Op.WriteExternal, Op.ReadExternal,
+        Op.ReadVarInt, Op.WriteVarLong, Op.ReadVarLong, Op.WriteRun, Op.ReadRun, Op.If, Op.ForEach,
+        Op.ForIndex, Op.ElementAt, Op.MapEntryKey, Op.MapEntryValue, Op.ResultElementSet, Op.CollectionAdd,
+        Op.MapPut, Op.Construct, Op.Return {
+    record GetField(FieldIr<?, ?> field, Local source, Local out) implements Op {
+    }
+
+    record Apply(Function<?, ?> function, Local in, Local out) implements Op {
+    }
+
+    record Cast(Local in, Class<?> targetClass, Local out) implements Op {
+    }
+
+    record Unbox(PrimitiveKind kind, Local in, Local out) implements Op {
+    }
+
+    record Box(PrimitiveKind kind, Local in, Local out) implements Op {
+    }
+
+    record WriteExternal(NetworkBuffer.Type<?> type, Value value) implements Op {
+    }
+
+    record ReadExternal(NetworkBuffer.Type<?> type, Local out) implements Op {
+    }
+
+    record ReadVarInt(Local out) implements Op {
+    }
+
+    record WriteVarLong(Value value) implements Op {
+    }
+
+    record ReadVarLong(Local out) implements Op {
+    }
+
+    record WriteRun(RunIr run) implements Op {
+    }
+
+    record ReadRun(RunIr run) implements Op {
+    }
+
+    record If(Value condition, List<Op> thenOps, List<Op> elseOps) implements Op {
+        public If {
+            thenOps = List.copyOf(thenOps);
+            elseOps = List.copyOf(elseOps);
+        }
+    }
+
+    record ForEach(Value source, Local element, List<Op> body) implements Op {
+        public ForEach {
+            body = List.copyOf(body);
+        }
+    }
+
+    record ForIndex(Local index, Value start, Value end, List<Op> body) implements Op {
+        public ForIndex {
+            body = List.copyOf(body);
+        }
+    }
+
+    record ElementAt(Value source, Value index, Local out) implements Op {
+    }
+
+    record MapEntryKey(Local entry, Local out) implements Op {
+    }
+
+    record MapEntryValue(Local entry, Local out) implements Op {
+    }
+
+    record ResultElementSet(Value result, Value index, Value value) implements Op {
+    }
+
+    record CollectionAdd(Local collection, Value value) implements Op {
+    }
+
+    record MapPut(Local map, Value key, Value value) implements Op {
+    }
+
+    record Construct(ConstructorIr<?> constructor, List<Value> args, Local out) implements Op {
+        public Construct {
+            args = List.copyOf(args);
+        }
+    }
+
+    record Return(Value value) implements Op {
+    }
+}
