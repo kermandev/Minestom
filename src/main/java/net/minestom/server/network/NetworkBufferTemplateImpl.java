@@ -1,5 +1,6 @@
 package net.minestom.server.network;
 
+import net.minestom.server.utils.Unit;
 import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.UnknownNullability;
@@ -21,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -52,23 +54,19 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
     static final ClassDesc CD_NETWORK_BUFFER_IMPL = NetworkBufferImpl.class.describeConstable().orElseThrow();
     static final ClassDesc CD_NETWORK_BUFFER_TYPE_IMPL = NetworkBufferTypeImpl.class.describeConstable().orElseThrow();
     static final ClassDesc CD_TYPE = NetworkBuffer.Type.class.describeConstable().orElseThrow();
-    static final ClassDesc CD_OPTIONAL_TYPE = NetworkBufferTypeImpl.OptionalType.class.describeConstable().orElseThrow();
-    static final ClassDesc CD_TRANSFORM_TYPE = NetworkBufferTypeImpl.TransformType.class.describeConstable().orElseThrow();
     static final ClassDesc CD_TEMPLATE_IMPL = NetworkBufferTemplateImpl.class.describeConstable().orElseThrow();
     static final ClassDesc CD_NETWORK_IR = NetworkIr.class.describeConstable().orElseThrow();
     static final ClassDesc CD_FUNCTION = Function.class.describeConstable().orElseThrow();
-    static final ClassDesc CD_UNIT = net.minestom.server.utils.Unit.class.describeConstable().orElseThrow();
+    static final ClassDesc CD_UNIT = Unit.class.describeConstable().orElseThrow();
 
     static final MethodTypeDesc MT_VOID = MethodTypeDesc.of(CD_VOID);
     static final MethodTypeDesc MT_LOOKUP = MethodTypeDesc.of(CD_METHOD_HANDLES_LOOKUP);
     static final MethodTypeDesc MT_CLASS_DATA_AT = MethodTypeDesc.of(CD_OBJECT, CD_METHOD_HANDLES_LOOKUP, CD_STRING, CD_CLASS, CD_INT);
     static final MethodTypeDesc MT_READ_OBJECT = MethodTypeDesc.of(CD_OBJECT, CD_NETWORK_BUFFER);
     static final MethodTypeDesc MT_WRITE_OBJECT = MethodTypeDesc.of(CD_VOID, CD_NETWORK_BUFFER, CD_OBJECT);
-    static final MethodTypeDesc MT_PARENT = MethodTypeDesc.of(CD_TYPE);
     static final MethodTypeDesc MT_NETWORK_IR = MethodTypeDesc.of(CD_NETWORK_IR);
     static final MethodTypeDesc MT_RESERVE = MethodTypeDesc.of(CD_LONG, CD_LONG);
     static final MethodTypeDesc MT_FUNCTION_APPLY = MethodTypeDesc.of(CD_OBJECT, CD_OBJECT);
-    static final MethodTypeDesc MT_FUNCTION = MethodTypeDesc.of(CD_FUNCTION);
     static final MethodTypeDesc MT_BOOLEAN_VALUE = MethodTypeDesc.of(ConstantDescs.CD_boolean);
     static final MethodTypeDesc MT_BYTE_VALUE = MethodTypeDesc.of(CD_BYTE);
     static final MethodTypeDesc MT_SHORT_VALUE = MethodTypeDesc.of(CD_SHORT);
@@ -198,37 +196,12 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
     private static void declareIrFields(ClassBuilder classBuilder, IrClassData data) {
         for (IrFieldData field : data.fields()) {
             classBuilder.withField(typeName(field.path()), CD_TYPE, FIELD_FLAGS);
-            final TypeIr<?> shape = field.optimizedType();
-            if (shape != null) {
-                declareTypeIrFields(classBuilder, field);
-            }
             classBuilder.withField(getterName(field.path()), CD_FUNCTION, FIELD_FLAGS);
         }
+        for (TransformFieldData transform : data.transforms()) {
+            classBuilder.withField(transform.name(), CD_FUNCTION, FIELD_FLAGS);
+        }
         classBuilder.withField(ctorName(data.path()), constructorInterface(data.ir().constructor().fieldCount()), FIELD_FLAGS);
-    }
-
-    private static void declareTypeIrFields(ClassBuilder classBuilder, IrFieldData field) {
-        final TypeIr<?> shape = field.optimizedType();
-        assert shape != null;
-        if (transformed(shape)) {
-            for (int level = 0; level < transformDepth(shape); level++) {
-                classBuilder.withField(transformToName(field.path(), level), CD_FUNCTION, FIELD_FLAGS);
-                classBuilder.withField(transformFromName(field.path(), level), CD_FUNCTION, FIELD_FLAGS);
-            }
-        }
-        if (field.nested() != null) declareIrFields(classBuilder, field.nested());
-        declareTypeIrNodeFields(classBuilder, shape);
-    }
-
-    private static void declareTypeIrNodeFields(ClassBuilder classBuilder, TypeIr<?> shape) {
-        switch (shape) {
-            case TypeIr.Transform<?, ?> transform -> declareTypeIrNodeFields(classBuilder, transform.parent());
-            case TypeIr.Optional<?> optional -> declareTypeIrNodeFields(classBuilder, optional.parent());
-            case TypeIr.Template<?> _, TypeIr.Primitive<?> _, TypeIr.VarInt _, TypeIr.VarLong _, TypeIr.FixedBytes _,
-                 TypeIr.ByteArray _, TypeIr.StringUtf8 _, TypeIr.Constant<?> _ -> {
-            }
-            default -> throw new UnsupportedOperationException("Unsupported shape: " + shape);
-        }
     }
 
     private static void buildClassInitializer(CodeBuilder codeBuilder, ClassDesc classDesc, IrClassData data, int irIndex) {
@@ -244,50 +217,23 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
         for (IrFieldData field : data.fields()) {
             loadClassDataAt(codeBuilder, CD_TYPE, field.typeDataIndex())
                     .putstatic(classDesc, typeName(field.path()), CD_TYPE);
-            final TypeIr<?> shape = field.optimizedType();
-            if (shape != null) {
-                initTypeIrFields(codeBuilder, classDesc, field);
-            }
             loadClassDataAt(codeBuilder, CD_FUNCTION, field.getterDataIndex())
                     .putstatic(classDesc, getterName(field.path()), CD_FUNCTION);
+        }
+        for (TransformFieldData transform : data.transforms()) {
+            loadClassDataAt(codeBuilder, CD_FUNCTION, transform.dataIndex())
+                    .putstatic(classDesc, transform.name(), CD_FUNCTION);
         }
         final ClassDesc constructorType = constructorInterface(data.ir().constructor().fieldCount());
         loadClassDataAt(codeBuilder, constructorType, data.ctorDataIndex())
                 .putstatic(classDesc, ctorName(data.path()), constructorType);
     }
 
-    private static void initTypeIrFields(CodeBuilder codeBuilder, ClassDesc classDesc, IrFieldData field) {
-        final TypeIr<?> shape = field.optimizedType();
-        assert shape != null;
-        if (transformed(shape)) {
-            final boolean optional = shape instanceof TypeIr.Optional;
-            for (int level = 0; level < transformDepth(shape); level++) {
-                loadTransformFunction(codeBuilder, field, optional, level, false)
-                        .putstatic(classDesc, transformFromName(field.path(), level), CD_FUNCTION);
-                loadTransformFunction(codeBuilder, field, optional, level, true)
-                        .putstatic(classDesc, transformToName(field.path(), level), CD_FUNCTION);
-            }
-        }
-        if (field.nested() != null) initIrFields(codeBuilder, classDesc, field.nested());
-        initTypeIrNodeFields(codeBuilder, classDesc, shape);
-    }
-
-    private static void initTypeIrNodeFields(CodeBuilder codeBuilder, ClassDesc classDesc, TypeIr<?> shape) {
-        switch (shape) {
-            case TypeIr.Transform transform -> initTypeIrNodeFields(codeBuilder, classDesc, transform.parent());
-            case TypeIr.Optional optional -> initTypeIrNodeFields(codeBuilder, classDesc, optional.parent());
-            case TypeIr.Template _, TypeIr.Primitive _, TypeIr.VarInt _, TypeIr.VarLong _, TypeIr.FixedBytes _,
-                 TypeIr.ByteArray _, TypeIr.StringUtf8 _, TypeIr.Constant _ -> {
-            }
-            default -> throw new UnsupportedOperationException("Unsupported shape: " + shape);
-        }
-    }
-
     private static void buildWrite(CodeBuilder codeBuilder, ClassDesc classDesc, IrClassData data, ProgramIr program, int objectSlot) {
         final int directSlot = codeBuilder.allocateLocal(TypeKind.REFERENCE);
         emitDirectBuffer(codeBuilder, directSlot);
         final EmitContext context = new EmitContext(classDesc, data, directSlot, new HashMap<>());
-        context.locals().put(new Local("value", new LocalType.Reference(Object.class)), objectSlot);
+        context.locals().put(referenceLocal("value"), objectSlot);
         emitProgram(codeBuilder, context, program);
         codeBuilder.return_();
     }
@@ -494,7 +440,7 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
         switch (value) {
             case Value.LocalValue localValue -> {
                 emitLoadLocal(codeBuilder, context, localValue.local());
-                if (localValue.local().type() instanceof LocalType.Primitive primitive && primitive.kind() != TypeKind.LONG) {
+                if (localValue.local().type() instanceof LocalType.Kind kind && kind.kind() != TypeKind.LONG) {
                     codeBuilder.i2l();
                 }
             }
@@ -527,7 +473,7 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
             codeBuilder.loadConstant(longValue);
         } else if (value instanceof String stringValue) {
             codeBuilder.loadConstant(stringValue);
-        } else if (value == net.minestom.server.utils.Unit.INSTANCE) {
+        } else if (value == Unit.INSTANCE) {
             codeBuilder.getstatic(CD_UNIT, "INSTANCE", CD_UNIT);
         } else {
             throw new UnsupportedOperationException("Unsupported constant IR value: " + value);
@@ -558,8 +504,8 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
 
     private static boolean longValue(Value value) {
         return switch (value) {
-            case Value.LocalValue localValue -> localValue.local().type() instanceof LocalType.Primitive primitive &&
-                    primitive.kind() == TypeKind.LONG;
+            case Value.LocalValue localValue -> localValue.local().type() instanceof LocalType.Kind kind &&
+                    kind.kind() == TypeKind.LONG;
             case Value.Const constant -> constant.value() instanceof Long;
             case Value.Add _, Value.Mul _, Value.ShiftLeft _, Value.ShiftRightUnsigned _ -> true;
             default -> false;
@@ -623,9 +569,13 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
 
     private static TypeKind localTypeKind(LocalType type) {
         return switch (type) {
-            case LocalType.Primitive primitive -> primitive.kind();
+            case LocalType.Kind kind -> kind.kind();
             case LocalType.Reference _ -> TypeKind.REFERENCE;
         };
+    }
+
+    private static Local referenceLocal(String name) {
+        return new Local(name, new LocalType.Kind(TypeKind.REFERENCE));
     }
 
     private static String typeFieldName(IrClassData data, NetworkBuffer.Type<?> type) {
@@ -635,28 +585,11 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
         throw new IllegalStateException("Missing type field for " + type);
     }
 
-    private static String transformFunctionName(IrClassData data, java.util.function.Function<?, ?> function) {
-        for (IrFieldData field : data.fields()) {
-            final String name = transformFunctionName(field.path(), field.optimizedType(), function, 0);
-            if (name != null) return name;
+    private static String transformFunctionName(IrClassData data, Function<?, ?> function) {
+        for (TransformFieldData transform : data.transforms()) {
+            if (transform.function() == function) return transform.name();
         }
         throw new IllegalStateException("Missing transform function field");
-    }
-
-    private static @Nullable String transformFunctionName(String path, @Nullable TypeIr<?> type,
-                                                          java.util.function.Function<?, ?> function, int level) {
-        if (type == null) return null;
-        return switch (type) {
-            case TypeIr.Transform<?, ?> transform -> {
-                if (transform.from() == function) yield transformFromName(path, level);
-                if (transform.to() == function) yield transformToName(path, level);
-                yield transformFunctionName(path, transform.parent(), function, level + 1);
-            }
-            case TypeIr.Optional<?> optional -> transformFunctionName(path, optional.parent(), function, level);
-            case TypeIr.Template<?> _, TypeIr.External<?> _, TypeIr.Constant<?> _, TypeIr.Primitive<?> _,
-                 TypeIr.VarInt _, TypeIr.VarLong _, TypeIr.StringUtf8 _, TypeIr.ByteArray _, TypeIr.FixedBytes _,
-                 TypeIr.ListType<?, ?> _, TypeIr.MapType<?, ?, ?> _ -> null;
-        };
     }
 
     private static ClassDesc classDesc(Class<?> type) {
@@ -719,17 +652,60 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
     private static IrClassData irClassData(String path, List<Object> classData, NetworkIr<?> ir) {
         final List<? extends FieldIr<?, ?>> irFields = ir.fields();
         final List<IrFieldData> fields = new ArrayList<>(irFields.size());
+        final List<TransformFieldData> transforms = new ArrayList<>();
+        final IdentityHashMap<Function<?, ?>, Boolean> usedTransforms = new IdentityHashMap<>();
+        collectApplyFunctions(ir.write(), usedTransforms);
+        collectApplyFunctions(ir.read(), usedTransforms);
         for (int i = 0; i < irFields.size(); i++) {
             final String fieldPath = childPath(path, i);
             final FieldIr<?, ?> field = irFields.get(i);
-            final TypeIr<?> optimizedType = optimizedType(fieldPath, classData, field.type());
             fields.add(new IrFieldData(field, fieldPath,
                     addClassData(classData, field.originalType()),
-                    addClassData(classData, field.getter()),
-                    optimizedType,
-                    nestedIrClassData(fieldPath, classData, optimizedType)));
+                    addClassData(classData, field.getter())));
+            collectTransformFields(fieldPath, field.type(), usedTransforms, classData, transforms, 0);
         }
-        return new IrClassData(ir, path, fields, addClassData(classData, ir.constructor().object()));
+        return new IrClassData(ir, path, fields, List.copyOf(transforms), addClassData(classData, ir.constructor().object()));
+    }
+
+    private static void collectApplyFunctions(ProgramIr program, IdentityHashMap<Function<?, ?>, Boolean> functions) {
+        for (Op op : program.ops()) {
+            collectApplyFunctions(op, functions);
+        }
+    }
+
+    private static void collectApplyFunctions(Op op, IdentityHashMap<Function<?, ?>, Boolean> functions) {
+        switch (op) {
+            case Op.Apply apply -> functions.put(apply.function(), Boolean.TRUE);
+            case Op.If branch -> {
+                branch.thenOps().forEach(child -> collectApplyFunctions(child, functions));
+                branch.elseOps().forEach(child -> collectApplyFunctions(child, functions));
+            }
+            case Op.ForEach loop -> loop.body().forEach(child -> collectApplyFunctions(child, functions));
+            case Op.ForIndex loop -> loop.body().forEach(child -> collectApplyFunctions(child, functions));
+            default -> {
+            }
+        }
+    }
+
+    private static void collectTransformFields(String path, TypeIr<?> type,
+                                               IdentityHashMap<Function<?, ?>, Boolean> usedTransforms,
+                                               List<Object> classData, List<TransformFieldData> fields, int level) {
+        switch (type) {
+            case TypeIr.Transform<?, ?> transform -> {
+                if (usedTransforms.containsKey(transform.from())) {
+                    fields.add(new TransformFieldData(transformFromName(path, level), transform.from(), addClassData(classData, transform.from())));
+                }
+                if (usedTransforms.containsKey(transform.to())) {
+                    fields.add(new TransformFieldData(transformToName(path, level), transform.to(), addClassData(classData, transform.to())));
+                }
+                collectTransformFields(path, transform.parent(), usedTransforms, classData, fields, level + 1);
+            }
+            case TypeIr.Optional<?> optional -> collectTransformFields(path, optional.parent(), usedTransforms, classData, fields, level);
+            case TypeIr.Template<?> _, TypeIr.External<?> _, TypeIr.Constant<?> _, TypeIr.Primitive<?> _,
+                 TypeIr.VarInt _, TypeIr.VarLong _, TypeIr.StringUtf8 _, TypeIr.ByteArray _, TypeIr.FixedBytes _,
+                 TypeIr.ListType<?, ?> _, TypeIr.MapType<?, ?, ?> _ -> {
+            }
+        }
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
@@ -752,7 +728,7 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
     @SuppressWarnings({"rawtypes"})
     private static ProgramIr writeProgram(FieldIr<?, ?>[] fields) {
         final List<Op> writeOps = new ArrayList<>(fields.length * 2);
-        final Local source = new Local("value", new LocalType.Reference(Object.class));
+        final Local source = referenceLocal("value");
         for (int i = 0; i < fields.length; ) {
             final PrimitiveKind primitive = runPrimitive(fields[i].type());
             if (primitive != null) {
@@ -760,7 +736,7 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
                 long offset = 0;
                 do {
                     final PrimitiveKind kind = runPrimitive(fields[i].type());
-                    final Local raw = new Local("field" + i, new LocalType.Reference(Object.class));
+                    final Local raw = referenceLocal("field" + i);
                     writeOps.add(new Op.GetField(fields[i], source, raw));
                     final Local normalized = normalizeWritePrimitive(writeOps, fields[i].type(), raw, i, 0);
                     items.add(new RunItem.Put(kind.storeKind(), new Value.Const(offset), new Value.LocalValue(normalized)));
@@ -775,7 +751,7 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
                 continue;
             }
             if (isVarInt(fields[i].type())) {
-                final Local raw = new Local("field" + i, new LocalType.Reference(Object.class));
+                final Local raw = referenceLocal("field" + i);
                 writeOps.add(new Op.GetField(fields[i], source, raw));
                 final Local normalized = normalizeWriteVarInt(writeOps, fields[i].type(), raw, i, 0);
                 final Value value = new Value.LocalValue(normalized);
@@ -785,7 +761,7 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
                 continue;
             }
             if (isVarLong(fields[i].type())) {
-                final Local raw = new Local("field" + i, new LocalType.Reference(Object.class));
+                final Local raw = referenceLocal("field" + i);
                 writeOps.add(new Op.GetField(fields[i], source, raw));
                 final Local normalized = normalizeWriteVarLong(writeOps, fields[i].type(), raw, i, 0);
                 writeOps.add(new Op.WriteVarLong(new Value.LocalValue(normalized)));
@@ -794,7 +770,7 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
             }
             if (fixedBytesLength(fields[i].type()) >= 0) {
                 final int length = fixedBytesLength(fields[i].type());
-                final Local raw = new Local("field" + i, new LocalType.Reference(Object.class));
+                final Local raw = referenceLocal("field" + i);
                 writeOps.add(new Op.GetField(fields[i], source, raw));
                 final Local bytes = materializeWriteReference(writeOps, fields[i].type(), TypeIr.FixedBytes.class, raw, i, 0, byte[].class);
                 writeOps.add(new Op.WriteRun(new RunIr(
@@ -807,13 +783,13 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
             if (isByteArray(fields[i].type()) || isStringUtf8(fields[i].type()) ||
                     fields[i].originalType() instanceof NetworkBufferTypeImpl.ListType<?> ||
                     fields[i].originalType() instanceof NetworkBufferTypeImpl.MapType<?, ?>) {
-                final Local writeLocal = new Local("field" + i, new LocalType.Reference(Object.class));
+                final Local writeLocal = referenceLocal("field" + i);
                 writeOps.add(new Op.GetField(fields[i], source, writeLocal));
                 writeOps.add(new Op.WriteExternal(fields[i].originalType(), new Value.LocalValue(writeLocal)));
                 i++;
                 continue;
             }
-            final Local writeLocal = new Local("field" + i, new LocalType.Reference(Object.class));
+            final Local writeLocal = referenceLocal("field" + i);
             writeOps.add(new Op.GetField(fields[i], source, writeLocal));
             writeOps.add(new Op.WriteExternal(fields[i].originalType(), new Value.LocalValue(writeLocal)));
             i++;
@@ -833,7 +809,7 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
                 long offset = 0;
                 do {
                     final PrimitiveKind kind = runPrimitive(fields[i].type());
-                    final Local normalized = new Local("field" + i + "Value", new LocalType.Primitive(kind.localKind()));
+                    final Local normalized = new Local("field" + i + "Value", new LocalType.Kind(kind.localKind()));
                     items.add(new RunItem.Get(kind.storeKind(), new Value.Const(offset), normalized));
                     offset += kind.storeKind().byteSize();
                     i++;
@@ -841,7 +817,7 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
                 readOps.add(new Op.ReadRun(new RunIr(new Value.Const(offset), items)));
                 for (int j = start; j < i; j++) {
                     final PrimitiveKind kind = runPrimitive(fields[j].type());
-                    final Local normalized = new Local("field" + j + "Value", new LocalType.Primitive(kind.localKind()));
+                    final Local normalized = new Local("field" + j + "Value", new LocalType.Kind(kind.localKind()));
                     valuesOut[j] = new Value.LocalValue(materializeReadPrimitive(readOps, fields[j].type(), normalized, j, 0));
                 }
                 continue;
@@ -852,14 +828,14 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
                 continue;
             }
             if (isVarInt(fields[i].type())) {
-                final Local normalized = new Local("field" + i + "Value", new LocalType.Primitive(TypeKind.INT));
+                final Local normalized = new Local("field" + i + "Value", new LocalType.Kind(TypeKind.INT));
                 readOps.add(new Op.ReadVarInt(normalized));
                 valuesOut[i] = new Value.LocalValue(materializeReadVarInt(readOps, fields[i].type(), normalized, i, 0));
                 i++;
                 continue;
             }
             if (isVarLong(fields[i].type())) {
-                final Local normalized = new Local("field" + i + "Value", new LocalType.Primitive(TypeKind.LONG));
+                final Local normalized = new Local("field" + i + "Value", new LocalType.Kind(TypeKind.LONG));
                 readOps.add(new Op.ReadVarLong(normalized));
                 valuesOut[i] = new Value.LocalValue(materializeReadVarLong(readOps, fields[i].type(), normalized, i, 0));
                 i++;
@@ -879,19 +855,19 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
             if (isByteArray(fields[i].type()) || isStringUtf8(fields[i].type()) ||
                     fields[i].originalType() instanceof NetworkBufferTypeImpl.ListType<?> ||
                     fields[i].originalType() instanceof NetworkBufferTypeImpl.MapType<?, ?>) {
-                final Local readLocal = new Local("field" + i, new LocalType.Reference(Object.class));
+                final Local readLocal = referenceLocal("field" + i);
                 readOps.add(new Op.ReadExternal(fields[i].originalType(), readLocal));
                 valuesOut[i] = new Value.LocalValue(readLocal);
                 i++;
                 continue;
             }
-            final Local readLocal = new Local("field" + i, new LocalType.Reference(Object.class));
+            final Local readLocal = referenceLocal("field" + i);
             readOps.add(new Op.ReadExternal(fields[i].originalType(), readLocal));
             valuesOut[i] = new Value.LocalValue(readLocal);
             i++;
         }
         constructorArgs.addAll(Arrays.asList(valuesOut));
-        final Local result = new Local("result", new LocalType.Reference(Object.class));
+        final Local result = referenceLocal("result");
         readOps.add(new Op.Construct(constructor, constructorArgs, result));
         readOps.add(new Op.Return(new Value.LocalValue(result)));
         return new ProgramIr(readOps);
@@ -900,14 +876,14 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
     private static Local normalizeWritePrimitive(List<Op> ops, TypeIr<?> type, Local in, int fieldIndex, int depth) {
         return switch (type) {
             case TypeIr.Transform<?, ?> transform -> {
-                final Local out = new Local("field" + fieldIndex + "Transform" + depth, new LocalType.Reference(Object.class));
+                final Local out = referenceLocal("field" + fieldIndex + "Transform" + depth);
                 ops.add(new Op.Apply(transform.from(), in, out));
                 yield normalizeWritePrimitive(ops, transform.parent(), out, fieldIndex, depth + 1);
             }
             case TypeIr.Primitive<?> primitive -> {
                 final PrimitiveKind kind = primitive.kind();
-                final Local cast = new Local("field" + fieldIndex + "Cast", new LocalType.Reference(kind.wrapperClass()));
-                final Local normalized = new Local("field" + fieldIndex + "Value", new LocalType.Primitive(kind.localKind()));
+                final Local cast = referenceLocal("field" + fieldIndex + "Cast");
+                final Local normalized = new Local("field" + fieldIndex + "Value", new LocalType.Kind(kind.localKind()));
                 ops.add(new Op.Cast(in, kind.wrapperClass(), cast));
                 ops.add(new Op.Unbox(kind, cast, normalized));
                 yield normalized;
@@ -920,13 +896,13 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
         return switch (type) {
             case TypeIr.Transform<?, ?> transform -> {
                 final Local parent = materializeReadPrimitive(ops, transform.parent(), normalized, fieldIndex, depth + 1);
-                final Local out = new Local("field" + fieldIndex + "Transform" + depth, new LocalType.Reference(Object.class));
+                final Local out = referenceLocal("field" + fieldIndex + "Transform" + depth);
                 ops.add(new Op.Apply(transform.to(), parent, out));
                 yield out;
             }
             case TypeIr.Primitive<?> primitive -> {
                 final PrimitiveKind kind = primitive.kind();
-                final Local boxed = new Local("field" + fieldIndex, new LocalType.Reference(kind.wrapperClass()));
+                final Local boxed = referenceLocal("field" + fieldIndex);
                 ops.add(new Op.Box(kind, normalized, boxed));
                 yield boxed;
             }
@@ -937,13 +913,13 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
     private static Local normalizeWriteVarInt(List<Op> ops, TypeIr<?> type, Local in, int fieldIndex, int depth) {
         return switch (type) {
             case TypeIr.Transform<?, ?> transform -> {
-                final Local out = new Local("field" + fieldIndex + "Transform" + depth, new LocalType.Reference(Object.class));
+                final Local out = referenceLocal("field" + fieldIndex + "Transform" + depth);
                 ops.add(new Op.Apply(transform.from(), in, out));
                 yield normalizeWriteVarInt(ops, transform.parent(), out, fieldIndex, depth + 1);
             }
             case TypeIr.VarInt _ -> {
-                final Local cast = new Local("field" + fieldIndex + "Cast", new LocalType.Reference(Integer.class));
-                final Local normalized = new Local("field" + fieldIndex + "Value", new LocalType.Primitive(TypeKind.INT));
+                final Local cast = referenceLocal("field" + fieldIndex + "Cast");
+                final Local normalized = new Local("field" + fieldIndex + "Value", new LocalType.Kind(TypeKind.INT));
                 ops.add(new Op.Cast(in, Integer.class, cast));
                 ops.add(new Op.Unbox(PrimitiveKind.INT, cast, normalized));
                 yield normalized;
@@ -956,12 +932,12 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
         return switch (type) {
             case TypeIr.Transform<?, ?> transform -> {
                 final Local parent = materializeReadVarInt(ops, transform.parent(), normalized, fieldIndex, depth + 1);
-                final Local out = new Local("field" + fieldIndex + "Transform" + depth, new LocalType.Reference(Object.class));
+                final Local out = referenceLocal("field" + fieldIndex + "Transform" + depth);
                 ops.add(new Op.Apply(transform.to(), parent, out));
                 yield out;
             }
             case TypeIr.VarInt _ -> {
-                final Local boxed = new Local("field" + fieldIndex, new LocalType.Reference(Integer.class));
+                final Local boxed = referenceLocal("field" + fieldIndex);
                 ops.add(new Op.Box(PrimitiveKind.INT, normalized, boxed));
                 yield boxed;
             }
@@ -980,13 +956,13 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
     private static Local normalizeWriteVarLong(List<Op> ops, TypeIr<?> type, Local in, int fieldIndex, int depth) {
         return switch (type) {
             case TypeIr.Transform<?, ?> transform -> {
-                final Local out = new Local("field" + fieldIndex + "Transform" + depth, new LocalType.Reference(Object.class));
+                final Local out = referenceLocal("field" + fieldIndex + "Transform" + depth);
                 ops.add(new Op.Apply(transform.from(), in, out));
                 yield normalizeWriteVarLong(ops, transform.parent(), out, fieldIndex, depth + 1);
             }
             case TypeIr.VarLong _ -> {
-                final Local cast = new Local("field" + fieldIndex + "Cast", new LocalType.Reference(Long.class));
-                final Local normalized = new Local("field" + fieldIndex + "Value", new LocalType.Primitive(TypeKind.LONG));
+                final Local cast = referenceLocal("field" + fieldIndex + "Cast");
+                final Local normalized = new Local("field" + fieldIndex + "Value", new LocalType.Kind(TypeKind.LONG));
                 ops.add(new Op.Cast(in, Long.class, cast));
                 ops.add(new Op.Unbox(PrimitiveKind.LONG, cast, normalized));
                 yield normalized;
@@ -999,12 +975,12 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
         return switch (type) {
             case TypeIr.Transform<?, ?> transform -> {
                 final Local parent = materializeReadVarLong(ops, transform.parent(), normalized, fieldIndex, depth + 1);
-                final Local out = new Local("field" + fieldIndex + "Transform" + depth, new LocalType.Reference(Object.class));
+                final Local out = referenceLocal("field" + fieldIndex + "Transform" + depth);
                 ops.add(new Op.Apply(transform.to(), parent, out));
                 yield out;
             }
             case TypeIr.VarLong _ -> {
-                final Local boxed = new Local("field" + fieldIndex, new LocalType.Reference(Long.class));
+                final Local boxed = referenceLocal("field" + fieldIndex);
                 ops.add(new Op.Box(PrimitiveKind.LONG, normalized, boxed));
                 yield boxed;
             }
@@ -1024,7 +1000,7 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
                                                    int fieldIndex, int depth, Class<?> targetClass) {
         return switch (type) {
             case TypeIr.Transform<?, ?> transform -> {
-                final Local out = new Local("field" + fieldIndex + "Transform" + depth, new LocalType.Reference(Object.class));
+                final Local out = referenceLocal("field" + fieldIndex + "Transform" + depth);
                 ops.add(new Op.Apply(transform.from(), in, out));
                 yield materializeWriteReference(ops, transform.parent(), targetType, out, fieldIndex, depth + 1, targetClass);
             }
@@ -1044,7 +1020,7 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
         return switch (type) {
             case TypeIr.Transform<?, ?> transform -> {
                 final Local parent = materializeReadReference(ops, transform.parent(), targetType, in, fieldIndex, depth + 1);
-                final Local out = new Local("field" + fieldIndex + "Transform" + depth, new LocalType.Reference(Object.class));
+                final Local out = referenceLocal("field" + fieldIndex + "Transform" + depth);
                 ops.add(new Op.Apply(transform.to(), parent, out));
                 yield out;
             }
@@ -1102,7 +1078,7 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
         try {
             result = switch (type) {
                 case NetworkIrBacked<?> backed -> new TypeIr.Template(backed.ir());
-                case NetworkBufferTypeImpl.UnitType _ -> new TypeIr.Constant<>(net.minestom.server.utils.Unit.INSTANCE);
+                case NetworkBufferTypeImpl.UnitType _ -> new TypeIr.Constant<>(Unit.INSTANCE);
                 case NetworkBufferTypeImpl.BooleanType _ -> new TypeIr.Primitive<>(PrimitiveKind.BOOLEAN);
                 case NetworkBufferTypeImpl.ByteType _ -> new TypeIr.Primitive<>(PrimitiveKind.BYTE);
                 case NetworkBufferTypeImpl.UnsignedByteType _ -> new TypeIr.Primitive<>(PrimitiveKind.UNSIGNED_BYTE);
@@ -1151,7 +1127,7 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
     MapFactory<Object, Object, Map<Object, Object>> MAP_FACTORY = new MapFactory<>() {
         @Override
         public Object create(int size) {
-            return new java.util.LinkedHashMap<>(size);
+            return new LinkedHashMap<>(size);
         }
 
         @Override
@@ -1164,45 +1140,6 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
             return Map.copyOf((Map<Object, Object>) map);
         }
     };
-
-    @Nullable
-    private static TypeIr<?> optimizedType(String path, List<Object> classData, Object type) {
-        return optimizedType(path, classData, typeIr((NetworkBuffer.Type<?>) type));
-    }
-
-    @Nullable
-    private static TypeIr<?> optimizedType(String path, List<Object> classData, TypeIr<?> type) {
-        return switch (type) {
-            case TypeIr.Optional optional -> {
-                final TypeIr<?> parent = optimizedType(path, classData, optional.parent());
-                yield parent != null ? new TypeIr.Optional(parent) : null;
-            }
-            case TypeIr.Transform transform -> {
-                final TypeIr<?> parent = optimizedType(path, classData, transform.parent());
-                yield parent != null && !(parent instanceof TypeIr.Optional) ? new TypeIr.Transform(parent, transform.to(), transform.from()) : null;
-            }
-            case TypeIr.Template template -> template;
-            case TypeIr.VarInt _, TypeIr.VarLong _, TypeIr.StringUtf8 _, TypeIr.ByteArray _,
-                 TypeIr.FixedBytes _, TypeIr.Constant _, TypeIr.Primitive _ -> type;
-            default -> null;
-        };
-    }
-
-    private static @Nullable IrClassData nestedIrClassData(String path, List<Object> classData, @Nullable TypeIr<?> type) {
-        if (type == null) return null;
-        while (true) {
-            switch (type) {
-                case TypeIr.Transform<?, ?> transform -> type = transform.parent();
-                case TypeIr.Optional<?> optional -> type = optional.parent();
-                default -> {
-                    if (type instanceof TypeIr.Template<?> template) {
-                        return irClassData(path, classData, template.ir());
-                    }
-                    return null;
-                }
-            }
-        }
-    }
 
     private static int addClassData(List<Object> classData, Object value) {
         final int index = classData.size();
@@ -1220,14 +1157,18 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
         return MethodTypeDesc.of(CD_OBJECT, parameters);
     }
 
-    record IrClassData(NetworkIr<?> ir, String path, List<IrFieldData> fields, int ctorDataIndex) {
+    record IrClassData(NetworkIr<?> ir, String path, List<IrFieldData> fields, List<TransformFieldData> transforms,
+                       int ctorDataIndex) {
         public IrClassData {
             fields = List.copyOf(fields);
+            transforms = List.copyOf(transforms);
         }
     }
 
-    record IrFieldData(FieldIr<?, ?> ir, String path, int typeDataIndex, int getterDataIndex,
-                       @Nullable TypeIr<?> optimizedType, @Nullable IrClassData nested) {
+    record IrFieldData(FieldIr<?, ?> ir, String path, int typeDataIndex, int getterDataIndex) {
+    }
+
+    record TransformFieldData(String name, Function<?, ?> function, int dataIndex) {
     }
 
     record EmitContext(ClassDesc classDesc, IrClassData data, int directSlot, Map<Local, Integer> locals) {
@@ -1240,20 +1181,6 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
                 .loadConstant(index)
                 .invokestatic(CD_METHOD_HANDLES, "classDataAt", MT_CLASS_DATA_AT)
                 .checkcast(type);
-    }
-
-    private static CodeBuilder loadTransformFunction(CodeBuilder codeBuilder, IrFieldData field, boolean optional, int level, boolean to) {
-        loadClassDataAt(codeBuilder, CD_TYPE, field.typeDataIndex());
-        if (optional) {
-            codeBuilder.checkcast(CD_OPTIONAL_TYPE)
-                    .invokevirtual(CD_OPTIONAL_TYPE, "parent", MT_PARENT);
-        }
-        for (int i = 0; i < level; i++) {
-            codeBuilder.checkcast(CD_TRANSFORM_TYPE)
-                    .invokevirtual(CD_TRANSFORM_TYPE, "parent", MT_PARENT);
-        }
-        return codeBuilder.checkcast(CD_TRANSFORM_TYPE)
-                .invokevirtual(CD_TRANSFORM_TYPE, to ? "to" : "from", MT_FUNCTION);
     }
 
     private static String childPath(String parent, int index) {

@@ -30,6 +30,9 @@ public class NetworkBufferTest {
     private record TemplateUnsigned(short byteValue, int shortValue, long intValue) {
     }
 
+    private record TemplateTransformed(String value) {
+    }
+
     @Test
     public void resize() {
         var buffer = NetworkBuffer.resizableBuffer(6);
@@ -248,6 +251,15 @@ public class NetworkBufferTest {
         var unsignedArray = NetworkBuffer.makeArray(unsignedType, new TemplateUnsigned((short) 0xFF, 0xFFFF, 0xFFFFFFFFL));
         assertArrayEquals(new byte[]{(byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF}, unsignedArray);
         assertEquals(new TemplateUnsigned((short) 0xFF, 0xFFFF, 0xFFFFFFFFL), NetworkBuffer.wrap(unsignedArray, 0, unsignedArray.length).read(unsignedType));
+
+        NetworkBuffer.Type<String> transformedVarInt = VAR_INT.transform(Object::toString, Integer::parseInt);
+        NetworkBuffer.Type<TemplateTransformed> transformedType = NetworkBufferTemplate.template(
+                transformedVarInt, TemplateTransformed::value,
+                TemplateTransformed::new
+        );
+        var transformedArray = NetworkBuffer.makeArray(transformedType, new TemplateTransformed("123"));
+        assertArrayEquals(new byte[]{0x7B}, transformedArray);
+        assertEquals(new TemplateTransformed("123"), NetworkBuffer.wrap(transformedArray, 0, transformedArray.length).read(transformedType));
     }
 
     @Test
