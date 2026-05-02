@@ -4,11 +4,11 @@ import java.util.List;
 import java.util.function.Function;
 
 public sealed interface Op
-        permits Op.GetField, Op.Apply, Op.Cast, Op.Unbox, Op.Box, Op.WriteExternal, Op.ReadExternal,
+        permits Op.GetField, Op.Apply, Op.Cast, Op.Unbox, Op.Box, Op.Store, Op.Check, Op.WriteExternal, Op.ReadExternal,
         Op.ReadVarInt, Op.WriteVarLong, Op.ReadVarLong, Op.WriteRun, Op.ReadRun, Op.If, Op.ForEach,
-        Op.ForIndex, Op.ElementAt, Op.MapEntryKey, Op.MapEntryValue, Op.ResultElementSet, Op.CollectionAdd,
-        Op.MapPut, Op.Construct, Op.Return {
-    record GetField(FieldIr<?, ?> field, Local source, Local out) implements Op {
+        Op.ForIndex, Op.ElementAt, Op.MapEntrySet, Op.MapEntryKey, Op.MapEntryValue, Op.ResultElementSet, Op.CollectionAdd,
+        Op.MapPut, Op.CollectionCreate, Op.CollectionFinish, Op.MapCreate, Op.MapFinish, Op.Construct, Op.Return {
+    record GetField(FieldIr<?, ?> field, String path, Local source, Local out) implements Op {
     }
 
     record Apply(Function<?, ?> function, Local in, Local out) implements Op {
@@ -21,6 +21,12 @@ public sealed interface Op
     }
 
     record Box(PrimitiveKind kind, Local in, Local out) implements Op {
+    }
+
+    record Store(Value value, Local out) implements Op {
+    }
+
+    record Check(Value condition, String message) implements Op {
     }
 
     record WriteExternal(NetworkBuffer.Type<?> type, Value value) implements Op {
@@ -66,6 +72,9 @@ public sealed interface Op
     record ElementAt(Value source, Value index, Local out) implements Op {
     }
 
+    record MapEntrySet(Value map, Local out) implements Op {
+    }
+
     record MapEntryKey(Local entry, Local out) implements Op {
     }
 
@@ -75,13 +84,25 @@ public sealed interface Op
     record ResultElementSet(Value result, Value index, Value value) implements Op {
     }
 
-    record CollectionAdd(Local collection, Value value) implements Op {
+    record CollectionAdd(CollectionFactory<?, ?> factory, String path, Local collection, Value value) implements Op {
     }
 
-    record MapPut(Local map, Value key, Value value) implements Op {
+    record MapPut(MapFactory<?, ?, ?> factory, String path, Local map, Value key, Value value) implements Op {
     }
 
-    record Construct(ConstructorIr<?> constructor, List<Value> args, Local out) implements Op {
+    record CollectionCreate(CollectionFactory<?, ?> factory, String path, Value size, Local out) implements Op {
+    }
+
+    record CollectionFinish(CollectionFactory<?, ?> factory, String path, Local collection, Local out) implements Op {
+    }
+
+    record MapCreate(MapFactory<?, ?, ?> factory, String path, Value size, Local out) implements Op {
+    }
+
+    record MapFinish(MapFactory<?, ?, ?> factory, String path, Local map, Local out) implements Op {
+    }
+
+    record Construct(ConstructorIr<?> constructor, String path, List<Value> args, Local out) implements Op {
         public Construct {
             args = List.copyOf(args);
         }

@@ -410,12 +410,12 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
     record StringType() implements NetworkBufferTypeImpl<String> {
         @Override
         public void write(NetworkBuffer buffer, String value) {
-            writeStringUtf8(buffer, value, Integer.MAX_VALUE);
+            writeStringUtf8(buffer, value, 1024 * 1024);
         }
 
         @Override
         public String read(NetworkBuffer buffer) {
-            return readStringUtf8(buffer, Integer.MAX_VALUE);
+            return readStringUtf8(buffer, 1024 * 1024);
         }
     }
 

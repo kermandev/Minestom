@@ -602,6 +602,7 @@ final class NetworkBufferImpl implements NetworkBuffer {
         final long srcAddress = src.address + srcOffset;
         final long dstAddress = dst.address + dstOffset;
         UNSAFE.copyMemory(srcAddress, dstAddress, length);
+        dst.writeIndex = Math.max(dst.writeIndex, dstOffset + length);
     }
 
     public static boolean equals(NetworkBuffer buffer1, NetworkBuffer buffer2) {

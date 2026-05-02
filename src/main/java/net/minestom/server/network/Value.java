@@ -1,9 +1,9 @@
 package net.minestom.server.network;
-
 public sealed interface Value
         permits Value.LocalValue, Value.Const, Value.IsNull, Value.IsNotNull, Value.Not, Value.Add, Value.Mul,
-        Value.And, Value.Or, Value.ShiftLeft, Value.ShiftRightUnsigned, Value.BoolByte, Value.UnsignedByte,
-        Value.VarIntSize, Value.ArrayLength, Value.CollectionSize, Value.StringUtf8Bytes {
+        Value.And, Value.Or, Value.LessThanOrEqual, Value.GreaterThan, Value.ShiftLeft, Value.ShiftRightUnsigned,
+        Value.BoolByte, Value.UnsignedByte, Value.VarIntSize, Value.ArrayLength, Value.CollectionSize, Value.MapSize,
+        Value.StringUtf8Bytes {
     record LocalValue(Local local) implements Value {
     }
 
@@ -31,6 +31,12 @@ public sealed interface Value
     record Or(Value left, Value right) implements Value {
     }
 
+    record LessThanOrEqual(Value left, Value right) implements Value {
+    }
+
+    record GreaterThan(Value left, Value right) implements Value {
+    }
+
     record ShiftLeft(Value value, int amount) implements Value {
     }
 
@@ -50,6 +56,9 @@ public sealed interface Value
     }
 
     record CollectionSize(Value collection) implements Value {
+    }
+
+    record MapSize(Value map) implements Value {
     }
 
     record StringUtf8Bytes(Value string) implements Value {
