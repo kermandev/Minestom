@@ -139,8 +139,8 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
             final ClassDesc classDesc = ClassDesc.of(PACKAGE, "NetworkTemplate");
             final List<Object> classData = new ArrayList<>();
             final ConstructorIr<T> constructorIr = new ConstructorIr<>(values[values.length - 1], fieldCount);
-            final TemplatePlan plan = templatePlan("", classData, values, fieldCount, constructorIr);
-            final NetworkIr<T> ir = networkIr("NetworkTemplate", values, fieldCount, plan, constructorIr);
+            final NetworkIr<T> ir = networkIr("NetworkTemplate", values, fieldCount, constructorIr);
+            final IrClassData irData = irClassData("", classData, ir);
             final int irIndex = addClassData(classData, ir);
             final byte[] bytes = ClassFile.of().build(classDesc, classBuilder -> {
                 classBuilder.withFlags(CLASS_FLAGS)
@@ -148,18 +148,18 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
                         .withInterfaceSymbols(CD_TEMPLATE_IMPL);
 
                 classBuilder.withField(IR_FIELD_NAME, CD_NETWORK_IR, FIELD_FLAGS);
-                declareTemplateFields(classBuilder, plan);
+                declareIrFields(classBuilder, irData);
 
                 classBuilder.withMethodBody(ConstantDescs.CLASS_INIT_NAME, MT_VOID, ClassFile.ACC_STATIC | ClassFile.ACC_SYNTHETIC,
-                        codeBuilder -> buildClassInitializer(codeBuilder, classDesc, plan, irIndex));
+                        codeBuilder -> buildClassInitializer(codeBuilder, classDesc, irData, irIndex));
                 classBuilder.withMethodBody(ConstantDescs.INIT_NAME, MT_VOID, ClassFile.ACC_PRIVATE | ClassFile.ACC_SYNTHETIC,
                         codeBuilder -> codeBuilder.aload(0).invokespecial(CD_OBJECT, ConstantDescs.INIT_NAME, MT_VOID).return_());
                 classBuilder.withMethodBody(IR, MT_NETWORK_IR, METHOD_FLAGS,
                         codeBuilder -> codeBuilder.getstatic(classDesc, IR_FIELD_NAME, CD_NETWORK_IR).areturn());
                 classBuilder.withMethodBody(WRITE, MT_WRITE_OBJECT, METHOD_FLAGS,
-                        codeBuilder -> buildWrite(codeBuilder, classDesc, plan, ir.write(), 2));
+                        codeBuilder -> buildWrite(codeBuilder, classDesc, irData, ir.write(), 2));
                 classBuilder.withMethodBody(READ, MT_READ_OBJECT, METHOD_FLAGS,
-                        codeBuilder -> buildRead(codeBuilder, classDesc, plan, ir.read()));
+                        codeBuilder -> buildRead(codeBuilder, classDesc, irData, ir.read()));
             });
             if (DEBUG) dump(bytes, fieldCount);
             final MethodHandles.Lookup lookup = MethodHandles.lookup().defineHiddenClassWithClassData(bytes, List.copyOf(classData), true, MethodHandles.Lookup.ClassOption.NESTMATE);
@@ -195,20 +195,20 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
         return builder.toString();
     }
 
-    private static void declareTemplateFields(ClassBuilder classBuilder, TemplatePlan plan) {
-        for (FieldPlan field : plan.fields()) {
+    private static void declareIrFields(ClassBuilder classBuilder, IrClassData data) {
+        for (IrFieldData field : data.fields()) {
             classBuilder.withField(typeName(field.path()), CD_TYPE, FIELD_FLAGS);
-            final TypeIr<?> shape = field.type();
+            final TypeIr<?> shape = field.optimizedType();
             if (shape != null) {
                 declareTypeIrFields(classBuilder, field);
             }
             classBuilder.withField(getterName(field.path()), CD_FUNCTION, FIELD_FLAGS);
         }
-        classBuilder.withField(ctorName(plan.path()), constructorInterface(plan.fieldCount()), FIELD_FLAGS);
+        classBuilder.withField(ctorName(data.path()), constructorInterface(data.ir().constructor().fieldCount()), FIELD_FLAGS);
     }
 
-    private static void declareTypeIrFields(ClassBuilder classBuilder, FieldPlan field) {
-        final TypeIr<?> shape = field.type();
+    private static void declareTypeIrFields(ClassBuilder classBuilder, IrFieldData field) {
+        final TypeIr<?> shape = field.optimizedType();
         assert shape != null;
         if (transformed(shape)) {
             for (int level = 0; level < transformDepth(shape); level++) {
@@ -216,7 +216,7 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
                 classBuilder.withField(transformFromName(field.path(), level), CD_FUNCTION, FIELD_FLAGS);
             }
         }
-        if (field.nestedPlan() != null) declareTemplateFields(classBuilder, field.nestedPlan());
+        if (field.nested() != null) declareIrFields(classBuilder, field.nested());
         declareTypeIrNodeFields(classBuilder, shape);
     }
 
@@ -231,33 +231,33 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
         }
     }
 
-    private static void buildClassInitializer(CodeBuilder codeBuilder, ClassDesc classDesc, TemplatePlan plan, int irIndex) {
+    private static void buildClassInitializer(CodeBuilder codeBuilder, ClassDesc classDesc, IrClassData data, int irIndex) {
         codeBuilder.invokestatic(CD_METHOD_HANDLES, "lookup", MT_LOOKUP)
                 .astore(0);
         loadClassDataAt(codeBuilder, CD_NETWORK_IR, irIndex)
                 .putstatic(classDesc, IR_FIELD_NAME, CD_NETWORK_IR);
-        initTemplateFields(codeBuilder, classDesc, plan);
+        initIrFields(codeBuilder, classDesc, data);
         codeBuilder.return_();
     }
 
-    private static void initTemplateFields(CodeBuilder codeBuilder, ClassDesc classDesc, TemplatePlan plan) {
-        for (FieldPlan field : plan.fields()) {
+    private static void initIrFields(CodeBuilder codeBuilder, ClassDesc classDesc, IrClassData data) {
+        for (IrFieldData field : data.fields()) {
             loadClassDataAt(codeBuilder, CD_TYPE, field.typeDataIndex())
                     .putstatic(classDesc, typeName(field.path()), CD_TYPE);
-            final TypeIr<?> shape = field.type();
+            final TypeIr<?> shape = field.optimizedType();
             if (shape != null) {
                 initTypeIrFields(codeBuilder, classDesc, field);
             }
             loadClassDataAt(codeBuilder, CD_FUNCTION, field.getterDataIndex())
                     .putstatic(classDesc, getterName(field.path()), CD_FUNCTION);
         }
-        final ClassDesc constructorType = constructorInterface(plan.fieldCount());
-        loadClassDataAt(codeBuilder, constructorType, plan.ctorDataIndex())
-                .putstatic(classDesc, ctorName(plan.path()), constructorType);
+        final ClassDesc constructorType = constructorInterface(data.ir().constructor().fieldCount());
+        loadClassDataAt(codeBuilder, constructorType, data.ctorDataIndex())
+                .putstatic(classDesc, ctorName(data.path()), constructorType);
     }
 
-    private static void initTypeIrFields(CodeBuilder codeBuilder, ClassDesc classDesc, FieldPlan field) {
-        final TypeIr<?> shape = field.type();
+    private static void initTypeIrFields(CodeBuilder codeBuilder, ClassDesc classDesc, IrFieldData field) {
+        final TypeIr<?> shape = field.optimizedType();
         assert shape != null;
         if (transformed(shape)) {
             final boolean optional = shape instanceof TypeIr.Optional;
@@ -268,7 +268,7 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
                         .putstatic(classDesc, transformToName(field.path(), level), CD_FUNCTION);
             }
         }
-        if (field.nestedPlan() != null) initTemplateFields(codeBuilder, classDesc, field.nestedPlan());
+        if (field.nested() != null) initIrFields(codeBuilder, classDesc, field.nested());
         initTypeIrNodeFields(codeBuilder, classDesc, shape);
     }
 
@@ -283,39 +283,39 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
         }
     }
 
-    private static void buildWrite(CodeBuilder codeBuilder, ClassDesc classDesc, TemplatePlan plan, ProgramIr program, int objectSlot) {
+    private static void buildWrite(CodeBuilder codeBuilder, ClassDesc classDesc, IrClassData data, ProgramIr program, int objectSlot) {
         final int directSlot = codeBuilder.allocateLocal(TypeKind.REFERENCE);
         emitDirectBuffer(codeBuilder, directSlot);
-        final ProgramEmitContext context = new ProgramEmitContext(classDesc, plan, directSlot, new HashMap<>());
+        final EmitContext context = new EmitContext(classDesc, data, directSlot, new HashMap<>());
         context.locals().put(new Local("value", new LocalType.Reference(Object.class)), objectSlot);
         emitProgram(codeBuilder, context, program);
         codeBuilder.return_();
     }
 
-    private static void buildRead(CodeBuilder codeBuilder, ClassDesc classDesc, TemplatePlan plan, ProgramIr program) {
+    private static void buildRead(CodeBuilder codeBuilder, ClassDesc classDesc, IrClassData data, ProgramIr program) {
         final int directSlot = codeBuilder.allocateLocal(TypeKind.REFERENCE);
         emitDirectBuffer(codeBuilder, directSlot);
-        final ProgramEmitContext context = new ProgramEmitContext(classDesc, plan, directSlot, new HashMap<>());
+        final EmitContext context = new EmitContext(classDesc, data, directSlot, new HashMap<>());
         emitProgram(codeBuilder, context, program);
     }
 
-    private static void emitProgram(CodeBuilder codeBuilder, ProgramEmitContext context, ProgramIr program) {
+    private static void emitProgram(CodeBuilder codeBuilder, EmitContext context, ProgramIr program) {
         for (Op op : program.ops()) {
             emitOp(codeBuilder, context, op);
         }
     }
 
-    private static void emitOp(CodeBuilder codeBuilder, ProgramEmitContext context, Op op) {
+    private static void emitOp(CodeBuilder codeBuilder, EmitContext context, Op op) {
         switch (op) {
             case Op.GetField getField -> {
-                final FieldPlan field = context.plan().fields()[getField.field().index()];
+                final IrFieldData field = context.data().fields().get(getField.field().index());
                 codeBuilder.getstatic(context.classDesc(), getterName(field.path()), CD_FUNCTION);
                 emitLoadLocal(codeBuilder, context, getField.source());
                 codeBuilder.invokeinterface(CD_FUNCTION, "apply", MT_FUNCTION_APPLY);
                 emitStoreLocal(codeBuilder, context, getField.out());
             }
             case Op.Apply apply -> {
-                codeBuilder.getstatic(context.classDesc(), transformFunctionName(context.plan(), apply.function()), CD_FUNCTION);
+                codeBuilder.getstatic(context.classDesc(), transformFunctionName(context.data(), apply.function()), CD_FUNCTION);
                 emitLoadLocal(codeBuilder, context, apply.in());
                 codeBuilder.invokeinterface(CD_FUNCTION, "apply", MT_FUNCTION_APPLY);
                 emitStoreLocal(codeBuilder, context, apply.out());
@@ -336,13 +336,13 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
                 emitStoreLocal(codeBuilder, context, box.out());
             }
             case Op.WriteExternal writeExternal -> {
-                codeBuilder.getstatic(context.classDesc(), typeFieldName(context.plan(), writeExternal.type()), CD_TYPE)
+                codeBuilder.getstatic(context.classDesc(), typeFieldName(context.data(), writeExternal.type()), CD_TYPE)
                         .aload(1);
                 emitValue(codeBuilder, context, writeExternal.value());
                 codeBuilder.invokeinterface(CD_TYPE, WRITE, MT_WRITE_OBJECT);
             }
             case Op.ReadExternal readExternal -> {
-                codeBuilder.getstatic(context.classDesc(), typeFieldName(context.plan(), readExternal.type()), CD_TYPE)
+                codeBuilder.getstatic(context.classDesc(), typeFieldName(context.data(), readExternal.type()), CD_TYPE)
                         .aload(1)
                         .invokeinterface(CD_TYPE, READ, MT_READ_OBJECT);
                 emitStoreLocal(codeBuilder, context, readExternal.out());
@@ -380,7 +380,7 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
             case Op.ReadRun readRun -> emitReadRun(codeBuilder, context, readRun.run());
             case Op.Construct construct -> {
                 final ClassDesc constructorType = constructorInterface(construct.constructor().fieldCount());
-                codeBuilder.getstatic(context.classDesc(), ctorName(context.plan().path()), constructorType);
+                codeBuilder.getstatic(context.classDesc(), ctorName(context.data().path()), constructorType);
                 for (Value arg : construct.args()) {
                     emitValue(codeBuilder, context, arg);
                 }
@@ -395,7 +395,7 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
         }
     }
 
-    private static void emitWriteRun(CodeBuilder codeBuilder, ProgramEmitContext context, RunIr run) {
+    private static void emitWriteRun(CodeBuilder codeBuilder, EmitContext context, RunIr run) {
         final int indexSlot = codeBuilder.allocateLocal(TypeKind.LONG);
         codeBuilder.aload(context.directSlot());
         emitLongValue(codeBuilder, context, run.size());
@@ -407,7 +407,7 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
                     codeBuilder.aload(context.directSlot());
                     emitOffsetValue(codeBuilder, context, indexSlot, put.offset());
                     emitValue(codeBuilder, context, put.value());
-                    emitStoreKindWrite(codeBuilder, put.kind());
+                    emitStoreKindWrite(codeBuilder, put.kind(), put.value());
                 }
                 case RunItem.PutVarInt putVarInt -> {
                     codeBuilder.aload(context.directSlot());
@@ -428,7 +428,7 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
         }
     }
 
-    private static void emitReadRun(CodeBuilder codeBuilder, ProgramEmitContext context, RunIr run) {
+    private static void emitReadRun(CodeBuilder codeBuilder, EmitContext context, RunIr run) {
         final int indexSlot = codeBuilder.allocateLocal(TypeKind.LONG);
         codeBuilder.aload(context.directSlot());
         emitLongValue(codeBuilder, context, run.size());
@@ -439,7 +439,7 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
                 case RunItem.Get get -> {
                     codeBuilder.aload(context.directSlot());
                     emitOffsetValue(codeBuilder, context, indexSlot, get.offset());
-                    emitStoreKindRead(codeBuilder, get.kind());
+                    emitStoreKindRead(codeBuilder, get.kind(), get.out());
                     emitStoreLocal(codeBuilder, context, get.out());
                 }
                 case RunItem.GetBytes getBytes -> {
@@ -461,7 +461,7 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
         }
     }
 
-    private static void emitValue(CodeBuilder codeBuilder, ProgramEmitContext context, Value value) {
+    private static void emitValue(CodeBuilder codeBuilder, EmitContext context, Value value) {
         switch (value) {
             case Value.LocalValue localValue -> emitLoadLocal(codeBuilder, context, localValue.local());
             case Value.Const constant -> emitConstant(codeBuilder, constant.value());
@@ -478,7 +478,7 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
         }
     }
 
-    private static void emitIntValue(CodeBuilder codeBuilder, ProgramEmitContext context, Value value) {
+    private static void emitIntValue(CodeBuilder codeBuilder, EmitContext context, Value value) {
         switch (value) {
             case Value.LocalValue localValue -> emitLoadLocal(codeBuilder, context, localValue.local());
             case Value.Const constant -> codeBuilder.loadConstant(((Number) constant.value()).intValue());
@@ -490,7 +490,7 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
         }
     }
 
-    private static void emitLongValue(CodeBuilder codeBuilder, ProgramEmitContext context, Value value) {
+    private static void emitLongValue(CodeBuilder codeBuilder, EmitContext context, Value value) {
         switch (value) {
             case Value.LocalValue localValue -> {
                 emitLoadLocal(codeBuilder, context, localValue.local());
@@ -512,7 +512,7 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
         }
     }
 
-    private static void emitOffsetValue(CodeBuilder codeBuilder, ProgramEmitContext context, int indexSlot, Value offset) {
+    private static void emitOffsetValue(CodeBuilder codeBuilder, EmitContext context, int indexSlot, Value offset) {
         codeBuilder.lload(indexSlot);
         emitLongValue(codeBuilder, context, offset);
         codeBuilder.ladd();
@@ -534,20 +534,40 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
         }
     }
 
-    private static void emitStoreKindWrite(CodeBuilder codeBuilder, StoreKind kind) {
+    private static void emitStoreKindWrite(CodeBuilder codeBuilder, StoreKind kind, Value value) {
         switch (kind) {
-            case BOOLEAN, BYTE -> codeBuilder.i2b()
-                    .invokevirtual(CD_NETWORK_BUFFER_IMPL, "_putByteUnchecked", MT_PUT_BYTE);
-            case SHORT -> codeBuilder.i2s()
-                    .invokevirtual(CD_NETWORK_BUFFER_IMPL, "_putShortUnchecked", MT_PUT_SHORT);
-            case INT -> codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "_putIntUnchecked", MT_PUT_INT);
+            case BOOLEAN, BYTE -> {
+                if (longValue(value)) codeBuilder.l2i();
+                codeBuilder.i2b()
+                        .invokevirtual(CD_NETWORK_BUFFER_IMPL, "_putByteUnchecked", MT_PUT_BYTE);
+            }
+            case SHORT -> {
+                if (longValue(value)) codeBuilder.l2i();
+                codeBuilder.i2s()
+                        .invokevirtual(CD_NETWORK_BUFFER_IMPL, "_putShortUnchecked", MT_PUT_SHORT);
+            }
+            case INT -> {
+                if (longValue(value)) codeBuilder.l2i();
+                codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "_putIntUnchecked", MT_PUT_INT);
+            }
             case LONG -> codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "_putLongUnchecked", MT_PUT_LONG);
             case FLOAT -> codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "_putFloatUnchecked", MT_PUT_FLOAT);
             case DOUBLE -> codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "_putDoubleUnchecked", MT_PUT_DOUBLE);
         }
     }
 
-    private static void emitStoreKindRead(CodeBuilder codeBuilder, StoreKind kind) {
+    private static boolean longValue(Value value) {
+        return switch (value) {
+            case Value.LocalValue localValue -> localValue.local().type() instanceof LocalType.Primitive primitive &&
+                    primitive.kind() == TypeKind.LONG;
+            case Value.Const constant -> constant.value() instanceof Long;
+            case Value.Add _, Value.Mul _, Value.ShiftLeft _, Value.ShiftRightUnsigned _ -> true;
+            default -> false;
+        };
+    }
+
+    private static void emitStoreKindRead(CodeBuilder codeBuilder, StoreKind kind, Local out) {
+        final TypeKind targetKind = localTypeKind(out.type());
         switch (kind) {
             case BOOLEAN -> {
                 final var falseLabel = codeBuilder.newLabel();
@@ -561,24 +581,43 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
                         .iconst_0()
                         .labelBinding(endLabel);
             }
-            case BYTE -> codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "_getByteUnchecked", MT_GET_BYTE);
-            case SHORT -> codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "_getShortUnchecked", MT_GET_SHORT);
-            case INT -> codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "_getIntUnchecked", MT_GET_INT);
+            case BYTE -> {
+                codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "_getByteUnchecked", MT_GET_BYTE);
+                if (targetKind == TypeKind.INT) {
+                    codeBuilder.sipush(0xFF)
+                            .iand();
+                }
+            }
+            case SHORT -> {
+                codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "_getShortUnchecked", MT_GET_SHORT);
+                if (targetKind == TypeKind.INT) {
+                    codeBuilder.loadConstant(0xFFFF)
+                            .iand();
+                }
+            }
+            case INT -> {
+                codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "_getIntUnchecked", MT_GET_INT);
+                if (targetKind == TypeKind.LONG) {
+                    codeBuilder.i2l()
+                            .loadConstant(0xFFFFFFFFL)
+                            .land();
+                }
+            }
             case LONG -> codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "_getLongUnchecked", MT_GET_LONG);
             case FLOAT -> codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "_getFloatUnchecked", MT_GET_FLOAT);
             case DOUBLE -> codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "_getDoubleUnchecked", MT_GET_DOUBLE);
         }
     }
 
-    private static void emitLoadLocal(CodeBuilder codeBuilder, ProgramEmitContext context, Local local) {
+    private static void emitLoadLocal(CodeBuilder codeBuilder, EmitContext context, Local local) {
         codeBuilder.loadLocal(localTypeKind(local.type()), localSlot(codeBuilder, context, local));
     }
 
-    private static void emitStoreLocal(CodeBuilder codeBuilder, ProgramEmitContext context, Local local) {
+    private static void emitStoreLocal(CodeBuilder codeBuilder, EmitContext context, Local local) {
         codeBuilder.storeLocal(localTypeKind(local.type()), localSlot(codeBuilder, context, local));
     }
 
-    private static int localSlot(CodeBuilder codeBuilder, ProgramEmitContext context, Local local) {
+    private static int localSlot(CodeBuilder codeBuilder, EmitContext context, Local local) {
         return context.locals().computeIfAbsent(local, ignored -> codeBuilder.allocateLocal(localTypeKind(local.type())));
     }
 
@@ -589,16 +628,16 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
         };
     }
 
-    private static String typeFieldName(TemplatePlan plan, NetworkBuffer.Type<?> type) {
-        for (FieldPlan field : plan.fields()) {
-            if (field.originalType() == type) return typeName(field.path());
+    private static String typeFieldName(IrClassData data, NetworkBuffer.Type<?> type) {
+        for (IrFieldData field : data.fields()) {
+            if (field.ir().originalType() == type) return typeName(field.path());
         }
         throw new IllegalStateException("Missing type field for " + type);
     }
 
-    private static String transformFunctionName(TemplatePlan plan, java.util.function.Function<?, ?> function) {
-        for (FieldPlan field : plan.fields()) {
-            final String name = transformFunctionName(field.path(), field.type(), function, 0);
+    private static String transformFunctionName(IrClassData data, java.util.function.Function<?, ?> function) {
+        for (IrFieldData field : data.fields()) {
+            final String name = transformFunctionName(field.path(), field.optimizedType(), function, 0);
             if (name != null) return name;
         }
         throw new IllegalStateException("Missing transform function field");
@@ -644,32 +683,22 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
 
     private static void emitUnboxedTypeIrValue(CodeBuilder codeBuilder, PrimitiveKind kind) {
         switch (kind) {
-            case BOOLEAN -> codeBuilder.checkcast(CD_BOOLEAN_WRAPPER)
-                    .invokevirtual(CD_BOOLEAN_WRAPPER, "booleanValue", MT_BOOLEAN_VALUE);
-            case BYTE -> codeBuilder.checkcast(CD_BYTE_WRAPPER)
-                    .invokevirtual(CD_BYTE_WRAPPER, "byteValue", MT_BYTE_VALUE);
-            case UNSIGNED_BYTE -> codeBuilder.checkcast(CD_SHORT_WRAPPER)
-                    .invokevirtual(CD_SHORT_WRAPPER, "shortValue", MT_SHORT_VALUE)
+            case BOOLEAN -> codeBuilder.invokevirtual(CD_BOOLEAN_WRAPPER, "booleanValue", MT_BOOLEAN_VALUE);
+            case BYTE -> codeBuilder.invokevirtual(CD_BYTE_WRAPPER, "byteValue", MT_BYTE_VALUE);
+            case UNSIGNED_BYTE -> codeBuilder.invokevirtual(CD_SHORT_WRAPPER, "shortValue", MT_SHORT_VALUE)
                     .sipush(0xFF)
                     .iand();
-            case SHORT -> codeBuilder.checkcast(CD_SHORT_WRAPPER)
-                    .invokevirtual(CD_SHORT_WRAPPER, "shortValue", MT_SHORT_VALUE);
-            case UNSIGNED_SHORT -> codeBuilder.checkcast(CD_INTEGER_WRAPPER)
-                    .invokevirtual(CD_INTEGER_WRAPPER, "intValue", MT_INT_VALUE)
+            case SHORT -> codeBuilder.invokevirtual(CD_SHORT_WRAPPER, "shortValue", MT_SHORT_VALUE);
+            case UNSIGNED_SHORT -> codeBuilder.invokevirtual(CD_INTEGER_WRAPPER, "intValue", MT_INT_VALUE)
                     .loadConstant(0xFFFF)
                     .iand();
-            case INT -> codeBuilder.checkcast(CD_INTEGER_WRAPPER)
-                    .invokevirtual(CD_INTEGER_WRAPPER, "intValue", MT_INT_VALUE);
-            case UNSIGNED_INT -> codeBuilder.checkcast(CD_LONG_WRAPPER)
-                    .invokevirtual(CD_LONG_WRAPPER, "longValue", MT_LONG_VALUE)
+            case INT -> codeBuilder.invokevirtual(CD_INTEGER_WRAPPER, "intValue", MT_INT_VALUE);
+            case UNSIGNED_INT -> codeBuilder.invokevirtual(CD_LONG_WRAPPER, "longValue", MT_LONG_VALUE)
                     .loadConstant(0xFFFFFFFFL)
                     .land();
-            case LONG -> codeBuilder.checkcast(CD_LONG_WRAPPER)
-                    .invokevirtual(CD_LONG_WRAPPER, "longValue", MT_LONG_VALUE);
-            case FLOAT -> codeBuilder.checkcast(CD_FLOAT_WRAPPER)
-                    .invokevirtual(CD_FLOAT_WRAPPER, "floatValue", MT_FLOAT_VALUE);
-            case DOUBLE -> codeBuilder.checkcast(CD_DOUBLE_WRAPPER)
-                    .invokevirtual(CD_DOUBLE_WRAPPER, "doubleValue", MT_DOUBLE_VALUE);
+            case LONG -> codeBuilder.invokevirtual(CD_LONG_WRAPPER, "longValue", MT_LONG_VALUE);
+            case FLOAT -> codeBuilder.invokevirtual(CD_FLOAT_WRAPPER, "floatValue", MT_FLOAT_VALUE);
+            case DOUBLE -> codeBuilder.invokevirtual(CD_DOUBLE_WRAPPER, "doubleValue", MT_DOUBLE_VALUE);
         }
     }
 
@@ -687,43 +716,25 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
         }
     }
 
-    private static TemplatePlan templatePlan(String path, List<Object> classData, Object[] values, int fieldCount,
-                                             ConstructorIr<?> constructor) {
-        final FieldPlan[] fields = new FieldPlan[fieldCount];
-        for (int i = 0; i < fieldCount; i++) {
-            final String fieldPath = childPath(path, i);
-            final Object type = values[i * 2];
-            final TypeIr<?> optimizedType = optimizedType(fieldPath, classData, type);
-            fields[i] = new FieldPlan(i, fieldPath,
-                    type,
-                    addClassData(classData, type),
-                    addClassData(classData, values[i * 2 + 1]),
-                    optimizedType,
-                    nestedTemplatePlan(fieldPath, classData, optimizedType));
-        }
-        return new TemplatePlan(path, fieldCount, fields, addClassData(classData, constructor.object()));
-    }
-
-    private static TemplatePlan templatePlan(String path, List<Object> classData, NetworkIr<?> ir) {
+    private static IrClassData irClassData(String path, List<Object> classData, NetworkIr<?> ir) {
         final List<? extends FieldIr<?, ?>> irFields = ir.fields();
-        final FieldPlan[] fields = new FieldPlan[irFields.size()];
+        final List<IrFieldData> fields = new ArrayList<>(irFields.size());
         for (int i = 0; i < irFields.size(); i++) {
             final String fieldPath = childPath(path, i);
             final FieldIr<?, ?> field = irFields.get(i);
             final TypeIr<?> optimizedType = optimizedType(fieldPath, classData, field.type());
-            fields[i] = new FieldPlan(i, fieldPath,
-                    field.originalType(),
+            fields.add(new IrFieldData(field, fieldPath,
                     addClassData(classData, field.originalType()),
                     addClassData(classData, field.getter()),
                     optimizedType,
-                    nestedTemplatePlan(fieldPath, classData, optimizedType));
+                    nestedIrClassData(fieldPath, classData, optimizedType)));
         }
-        return new TemplatePlan(path, irFields.size(), fields, addClassData(classData, ir.constructor().object()));
+        return new IrClassData(ir, path, fields, addClassData(classData, ir.constructor().object()));
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private static <T extends @UnknownNullability Object> NetworkIr<T> networkIr(String name, Object[] values, int fieldCount,
-                                                                                 TemplatePlan plan, ConstructorIr<T> constructor) {
+                                                                                 ConstructorIr<T> constructor) {
         final List<FieldIr<T, ?>> fields = new ArrayList<>(fieldCount);
         final FieldIr<T, ?>[] fieldArray = new FieldIr[fieldCount];
         for (int i = 0; i < fieldCount; i++) {
@@ -733,17 +744,16 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
             fields.add(field);
             fieldArray[i] = field;
         }
-        final ProgramIr write = writeProgram(values, plan, fieldArray);
-        final ProgramIr read = readProgram(values, plan, fieldArray, constructor);
+        final ProgramIr write = writeProgram(fieldArray);
+        final ProgramIr read = readProgram(fieldArray, constructor);
         return new NetworkIr<>(name, fields, constructor, write, read);
     }
 
     @SuppressWarnings({"rawtypes"})
-    private static ProgramIr writeProgram(Object[] values, TemplatePlan plan, FieldIr<?, ?>[] fields) {
-        final List<Op> writeOps = new ArrayList<>(plan.fieldCount() * 2);
+    private static ProgramIr writeProgram(FieldIr<?, ?>[] fields) {
+        final List<Op> writeOps = new ArrayList<>(fields.length * 2);
         final Local source = new Local("value", new LocalType.Reference(Object.class));
-        final FieldPlan[] plans = plan.fields();
-        for (int i = 0; i < plans.length; ) {
+        for (int i = 0; i < fields.length; ) {
             final PrimitiveKind primitive = runPrimitive(fields[i].type());
             if (primitive != null) {
                 final List<RunItem> items = new ArrayList<>();
@@ -756,7 +766,7 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
                     items.add(new RunItem.Put(kind.storeKind(), new Value.Const(offset), new Value.LocalValue(normalized)));
                     offset += kind.storeKind().byteSize();
                     i++;
-                } while (i < plans.length && runPrimitive(fields[i].type()) != null);
+                } while (i < fields.length && runPrimitive(fields[i].type()) != null);
                 writeOps.add(new Op.WriteRun(new RunIr(new Value.Const(offset), items)));
                 continue;
             }
@@ -797,28 +807,25 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
             if (isByteArray(fields[i].type()) || isStringUtf8(fields[i].type()) ||
                     fields[i].originalType() instanceof NetworkBufferTypeImpl.ListType<?> ||
                     fields[i].originalType() instanceof NetworkBufferTypeImpl.MapType<?, ?>) {
-                final NetworkBuffer.Type<?> originalType = (NetworkBuffer.Type<?>) values[i * 2];
                 final Local writeLocal = new Local("field" + i, new LocalType.Reference(Object.class));
                 writeOps.add(new Op.GetField(fields[i], source, writeLocal));
-                writeOps.add(new Op.WriteExternal(originalType, new Value.LocalValue(writeLocal)));
+                writeOps.add(new Op.WriteExternal(fields[i].originalType(), new Value.LocalValue(writeLocal)));
                 i++;
                 continue;
             }
-            final NetworkBuffer.Type<?> originalType = (NetworkBuffer.Type<?>) values[i * 2];
             final Local writeLocal = new Local("field" + i, new LocalType.Reference(Object.class));
             writeOps.add(new Op.GetField(fields[i], source, writeLocal));
-            writeOps.add(new Op.WriteExternal(originalType, new Value.LocalValue(writeLocal)));
+            writeOps.add(new Op.WriteExternal(fields[i].originalType(), new Value.LocalValue(writeLocal)));
             i++;
         }
         return new ProgramIr(writeOps);
     }
 
-    private static ProgramIr readProgram(Object[] values, TemplatePlan plan, FieldIr<?, ?>[] fields, ConstructorIr<?> constructor) {
-        final List<Op> readOps = new ArrayList<>(plan.fieldCount() + 2);
-        final List<Value> constructorArgs = new ArrayList<>(plan.fieldCount());
-        final Value[] valuesOut = new Value[plan.fieldCount()];
-        final FieldPlan[] plans = plan.fields();
-        for (int i = 0; i < plans.length; ) {
+    private static ProgramIr readProgram(FieldIr<?, ?>[] fields, ConstructorIr<?> constructor) {
+        final List<Op> readOps = new ArrayList<>(fields.length + 2);
+        final List<Value> constructorArgs = new ArrayList<>(fields.length);
+        final Value[] valuesOut = new Value[fields.length];
+        for (int i = 0; i < fields.length; ) {
             final PrimitiveKind primitive = runPrimitive(fields[i].type());
             if (primitive != null) {
                 final int start = i;
@@ -830,7 +837,7 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
                     items.add(new RunItem.Get(kind.storeKind(), new Value.Const(offset), normalized));
                     offset += kind.storeKind().byteSize();
                     i++;
-                } while (i < plans.length && runPrimitive(fields[i].type()) != null);
+                } while (i < fields.length && runPrimitive(fields[i].type()) != null);
                 readOps.add(new Op.ReadRun(new RunIr(new Value.Const(offset), items)));
                 for (int j = start; j < i; j++) {
                     final PrimitiveKind kind = runPrimitive(fields[j].type());
@@ -872,16 +879,14 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
             if (isByteArray(fields[i].type()) || isStringUtf8(fields[i].type()) ||
                     fields[i].originalType() instanceof NetworkBufferTypeImpl.ListType<?> ||
                     fields[i].originalType() instanceof NetworkBufferTypeImpl.MapType<?, ?>) {
-                final NetworkBuffer.Type<?> originalType = (NetworkBuffer.Type<?>) values[i * 2];
                 final Local readLocal = new Local("field" + i, new LocalType.Reference(Object.class));
-                readOps.add(new Op.ReadExternal(originalType, readLocal));
+                readOps.add(new Op.ReadExternal(fields[i].originalType(), readLocal));
                 valuesOut[i] = new Value.LocalValue(readLocal);
                 i++;
                 continue;
             }
-            final NetworkBuffer.Type<?> originalType = (NetworkBuffer.Type<?>) values[i * 2];
             final Local readLocal = new Local("field" + i, new LocalType.Reference(Object.class));
-            readOps.add(new Op.ReadExternal(originalType, readLocal));
+            readOps.add(new Op.ReadExternal(fields[i].originalType(), readLocal));
             valuesOut[i] = new Value.LocalValue(readLocal);
             i++;
         }
@@ -1183,7 +1188,7 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
         };
     }
 
-    private static @Nullable TemplatePlan nestedTemplatePlan(String path, List<Object> classData, @Nullable TypeIr<?> type) {
+    private static @Nullable IrClassData nestedIrClassData(String path, List<Object> classData, @Nullable TypeIr<?> type) {
         if (type == null) return null;
         while (true) {
             switch (type) {
@@ -1191,7 +1196,7 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
                 case TypeIr.Optional<?> optional -> type = optional.parent();
                 default -> {
                     if (type instanceof TypeIr.Template<?> template) {
-                        return templatePlan(path, classData, template.ir());
+                        return irClassData(path, classData, template.ir());
                     }
                     return null;
                 }
@@ -1215,14 +1220,17 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
         return MethodTypeDesc.of(CD_OBJECT, parameters);
     }
 
-    record TemplatePlan(String path, int fieldCount, FieldPlan[] fields, int ctorDataIndex) {
+    record IrClassData(NetworkIr<?> ir, String path, List<IrFieldData> fields, int ctorDataIndex) {
+        public IrClassData {
+            fields = List.copyOf(fields);
+        }
     }
 
-    record FieldPlan(int index, String path, Object originalType, int typeDataIndex, int getterDataIndex,
-                     @Nullable TypeIr<?> type, @Nullable TemplatePlan nestedPlan) {
+    record IrFieldData(FieldIr<?, ?> ir, String path, int typeDataIndex, int getterDataIndex,
+                       @Nullable TypeIr<?> optimizedType, @Nullable IrClassData nested) {
     }
 
-    record ProgramEmitContext(ClassDesc classDesc, TemplatePlan plan, int directSlot, Map<Local, Integer> locals) {
+    record EmitContext(ClassDesc classDesc, IrClassData data, int directSlot, Map<Local, Integer> locals) {
     }
 
     private static CodeBuilder loadClassDataAt(CodeBuilder codeBuilder, ClassDesc type, int index) {
@@ -1234,7 +1242,7 @@ interface NetworkBufferTemplateImpl<T extends @UnknownNullability Object> extend
                 .checkcast(type);
     }
 
-    private static CodeBuilder loadTransformFunction(CodeBuilder codeBuilder, FieldPlan field, boolean optional, int level, boolean to) {
+    private static CodeBuilder loadTransformFunction(CodeBuilder codeBuilder, IrFieldData field, boolean optional, int level, boolean to) {
         loadClassDataAt(codeBuilder, CD_TYPE, field.typeDataIndex());
         if (optional) {
             codeBuilder.checkcast(CD_OPTIONAL_TYPE)

@@ -27,6 +27,9 @@ public class NetworkBufferTest {
     private record TemplateTriple(int first, String second, long third) {
     }
 
+    private record TemplateUnsigned(short byteValue, int shortValue, long intValue) {
+    }
+
     @Test
     public void resize() {
         var buffer = NetworkBuffer.resizableBuffer(6);
@@ -235,6 +238,16 @@ public class NetworkBufferTest {
         );
         var tripleArray = NetworkBuffer.makeArray(tripleType, new TemplateTriple(1, "test", 3L));
         assertEquals(new TemplateTriple(1, "test", 3L), NetworkBuffer.wrap(tripleArray, 0, tripleArray.length).read(tripleType));
+
+        NetworkBuffer.Type<TemplateUnsigned> unsignedType = NetworkBufferTemplate.template(
+                UNSIGNED_BYTE, TemplateUnsigned::byteValue,
+                UNSIGNED_SHORT, TemplateUnsigned::shortValue,
+                UNSIGNED_INT, TemplateUnsigned::intValue,
+                TemplateUnsigned::new
+        );
+        var unsignedArray = NetworkBuffer.makeArray(unsignedType, new TemplateUnsigned((short) 0xFF, 0xFFFF, 0xFFFFFFFFL));
+        assertArrayEquals(new byte[]{(byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF}, unsignedArray);
+        assertEquals(new TemplateUnsigned((short) 0xFF, 0xFFFF, 0xFFFFFFFFL), NetworkBuffer.wrap(unsignedArray, 0, unsignedArray.length).read(unsignedType));
     }
 
     @Test
