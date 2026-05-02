@@ -150,7 +150,7 @@ public final class NetworkBufferTemplate {
             private final NetworkIr<R> ir = new NetworkIr<>(
                     "ConstantTemplate",
                     java.util.List.of(),
-                    ignored -> value,
+                    new ConstructorIr<>(null, 0),
                     ProgramIr.EMPTY,
                     new ProgramIr(java.util.List.of(new Op.Return(new Value.Const(value))))
             );
