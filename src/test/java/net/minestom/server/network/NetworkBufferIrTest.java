@@ -123,19 +123,83 @@ public class NetworkBufferIrTest {
         assertEquals(value, readValue);
     }
 
-    private record TemplateConstant(int constant, int extra) {}
+    private record TemplateTransformed(byte v1, boolean v2, boolean v3) {}
 
     @Test
-    public void templateConstant() {
-        NetworkBuffer.Type<TemplateConstant> type = NetworkBufferTemplate.template(
-                INT, (TemplateConstant c) -> 123,
-                INT, TemplateConstant::extra,
-                TemplateConstant::new
+    public void templateTransformed() {
+        // This mirrors the user's example where they saw multiple reserveWrite(1L)
+        NetworkBuffer.Type<TemplateTransformed> type = NetworkBufferTemplate.template(
+                BYTE.transform(v -> v, v -> v), TemplateTransformed::v1,
+                BOOLEAN, TemplateTransformed::v2,
+                BOOLEAN, TemplateTransformed::v3,
+                TemplateTransformed::new
         );
 
-        var value = new TemplateConstant(123, 456);
+        var value = new TemplateTransformed((byte) 1, true, false);
         var array = NetworkBuffer.makeArray(type, value);
-        assertEquals(8, array.length); // 4 for constant, 4 for extra
+        assertEquals(3, array.length); // 1 + 1 + 1
+
+        var readValue = NetworkBuffer.wrap(array, 0, array.length).read(type);
+        assertEquals(value, readValue);
+    }
+
+    private record TemplateEither(net.minestom.server.utils.Either<Integer, String> either) {}
+
+    @Test
+    public void templateEitherLeft() {
+        NetworkBuffer.Type<TemplateEither> type = NetworkBufferTemplate.template(
+                NetworkBuffer.Either(INT, STRING), TemplateEither::either,
+                TemplateEither::new
+        );
+
+        var value = new TemplateEither(net.minestom.server.utils.Either.left(123));
+        var array = NetworkBuffer.makeArray(type, value);
+        
+        var readValue = NetworkBuffer.wrap(array, 0, array.length).read(type);
+        assertEquals(value, readValue);
+    }
+
+    @Test
+    public void templateEitherRight() {
+        NetworkBuffer.Type<TemplateEither> type = NetworkBufferTemplate.template(
+                NetworkBuffer.Either(INT, STRING), TemplateEither::either,
+                TemplateEither::new
+        );
+
+        var value = new TemplateEither(net.minestom.server.utils.Either.right("hello"));
+        var array = NetworkBuffer.makeArray(type, value);
+        
+        var readValue = NetworkBuffer.wrap(array, 0, array.length).read(type);
+        assertEquals(value, readValue);
+    }
+
+    private record TemplateEitherFixed(net.minestom.server.utils.Either<Integer, Float> either) {}
+
+    @Test
+    public void templateEitherFixedLeft() {
+        NetworkBuffer.Type<TemplateEitherFixed> type = NetworkBufferTemplate.template(
+                NetworkBuffer.Either(INT, FLOAT), TemplateEitherFixed::either,
+                TemplateEitherFixed::new
+        );
+
+        var value = new TemplateEitherFixed(net.minestom.server.utils.Either.left(123));
+        var array = NetworkBuffer.makeArray(type, value);
+        assertEquals(5, array.length);
+        
+        var readValue = NetworkBuffer.wrap(array, 0, array.length).read(type);
+        assertEquals(value, readValue);
+    }
+
+    @Test
+    public void templateEitherFixedRight() {
+        NetworkBuffer.Type<TemplateEitherFixed> type = NetworkBufferTemplate.template(
+                NetworkBuffer.Either(INT, FLOAT), TemplateEitherFixed::either,
+                TemplateEitherFixed::new
+        );
+
+        var value = new TemplateEitherFixed(net.minestom.server.utils.Either.right(123.45f));
+        var array = NetworkBuffer.makeArray(type, value);
+        assertEquals(5, array.length);
         
         var readValue = NetworkBuffer.wrap(array, 0, array.length).read(type);
         assertEquals(value, readValue);

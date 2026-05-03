@@ -42,6 +42,8 @@ public final class TemplateCompiler {
 
     public static final Function<String, byte[]> STRING_TO_BYTES = s -> s.getBytes(StandardCharsets.UTF_8);
     public static final Function<byte[], String> BYTES_TO_STRING = b -> new String(b, StandardCharsets.UTF_8);
+    public static final Function<Object, net.minestom.server.utils.Either<Object, Object>> EITHER_LEFT = net.minestom.server.utils.Either::left;
+    public static final Function<Object, net.minestom.server.utils.Either<Object, Object>> EITHER_RIGHT = net.minestom.server.utils.Either::right;
 
     @SuppressWarnings("unchecked")
     public static <T extends @UnknownNullability Object> NetworkBuffer.Type<T> template(Object... values) {

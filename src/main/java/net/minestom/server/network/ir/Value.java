@@ -1,6 +1,6 @@
 package net.minestom.server.network.ir;
 public sealed interface Value
-        permits Value.LocalValue, Value.Const, Value.IsNull, Value.IsNotNull, Value.Not, Value.Add, Value.Mul,
+        permits Value.LocalValue, Value.Const, Value.IsNull, Value.IsNotNull, Value.Not, Value.IsLeft, Value.EitherLeft, Value.EitherRight, Value.Add, Value.Mul,
         Value.And, Value.Or, Value.LessThanOrEqual, Value.GreaterThan, Value.ShiftLeft, Value.ShiftRightUnsigned,
         Value.BoolByte, Value.UnsignedByte, Value.VarIntSize, Value.ArrayLength, Value.CollectionSize, Value.MapSize,
         Value.StringUtf8Bytes {
@@ -17,6 +17,15 @@ public sealed interface Value
     }
 
     record Not(Value value) implements Value {
+    }
+
+    record IsLeft(Value value) implements Value {
+    }
+
+    record EitherLeft(Value value) implements Value {
+    }
+
+    record EitherRight(Value value) implements Value {
     }
 
     record Add(Value left, Value right) implements Value {

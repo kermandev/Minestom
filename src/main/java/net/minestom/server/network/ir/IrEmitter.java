@@ -63,6 +63,9 @@ final class IrEmitter {
     static final ClassDesc CD_SET = ClassDesc.of("java.util", "Set");
     static final ClassDesc CD_COLLECTION_FACTORY = CollectionFactory.class.describeConstable().orElseThrow();
     static final ClassDesc CD_MAP_FACTORY = MapFactory.class.describeConstable().orElseThrow();
+    static final ClassDesc CD_EITHER = ClassDesc.of("net.minestom.server.utils", "Either");
+    static final ClassDesc CD_EITHER_LEFT = CD_EITHER.nested("Left");
+    static final ClassDesc CD_EITHER_RIGHT = CD_EITHER.nested("Right");
 
     static final MethodTypeDesc MT_VOID = MethodTypeDesc.of(CD_VOID);
     static final MethodTypeDesc MT_LOOKUP = MethodTypeDesc.of(CD_METHOD_HANDLES_LOOKUP);
@@ -136,8 +139,12 @@ final class IrEmitter {
 
     private static void declareIrFields(ClassBuilder classBuilder, IrClassData data) {
         for (IrFieldData field : data.fields()) {
-            classBuilder.withField(typeName(field.path()), CD_TYPE, FIELD_FLAGS);
-            classBuilder.withField(getterName(field.path()), CD_FUNCTION, FIELD_FLAGS);
+            if (field.typeDataIndex() != -1) {
+                classBuilder.withField(typeName(field.path()), CD_TYPE, FIELD_FLAGS);
+            }
+            if (field.getterDataIndex() != -1) {
+                classBuilder.withField(getterName(field.path()), CD_FUNCTION, FIELD_FLAGS);
+            }
         }
         for (ExternalTypeFieldData external : data.externalTypes()) {
             classBuilder.withField(external.name(), CD_TYPE, FIELD_FLAGS);
@@ -166,10 +173,14 @@ final class IrEmitter {
 
     private static void initIrFields(CodeBuilder codeBuilder, ClassDesc classDesc, IrClassData data) {
         for (IrFieldData field : data.fields()) {
-            loadClassDataAt(codeBuilder, CD_TYPE, field.typeDataIndex())
-                    .putstatic(classDesc, typeName(field.path()), CD_TYPE);
-            loadClassDataAt(codeBuilder, CD_FUNCTION, field.getterDataIndex())
-                    .putstatic(classDesc, getterName(field.path()), CD_FUNCTION);
+            if (field.typeDataIndex() != -1) {
+                loadClassDataAt(codeBuilder, CD_TYPE, field.typeDataIndex())
+                        .putstatic(classDesc, typeName(field.path()), CD_TYPE);
+            }
+            if (field.getterDataIndex() != -1) {
+                loadClassDataAt(codeBuilder, CD_FUNCTION, field.getterDataIndex())
+                        .putstatic(classDesc, getterName(field.path()), CD_FUNCTION);
+            }
         }
         for (ExternalTypeFieldData external : data.externalTypes()) {
             loadClassDataAt(codeBuilder, CD_TYPE, external.dataIndex())
@@ -618,6 +629,20 @@ final class IrEmitter {
                 codeBuilder.iconst_1();
                 codeBuilder.labelBinding(end);
             }
+            case Value.IsLeft isLeft -> {
+                emitValue(codeBuilder, context, isLeft.value());
+                codeBuilder.instanceOf(CD_EITHER_LEFT);
+            }
+            case Value.EitherLeft eitherLeft -> {
+                emitValue(codeBuilder, context, eitherLeft.value());
+                codeBuilder.checkcast(CD_EITHER_LEFT);
+                codeBuilder.invokevirtual(CD_EITHER_LEFT, "value", MethodTypeDesc.of(CD_OBJECT));
+            }
+            case Value.EitherRight eitherRight -> {
+                emitValue(codeBuilder, context, eitherRight.value());
+                codeBuilder.checkcast(CD_EITHER_RIGHT);
+                codeBuilder.invokevirtual(CD_EITHER_RIGHT, "value", MethodTypeDesc.of(CD_OBJECT));
+            }
             case Value.BoolByte boolByte -> emitValue(codeBuilder, context, boolByte.booleanValue());
             case Value.UnsignedByte unsignedByte -> {
                 emitValue(codeBuilder, context, unsignedByte.byteValue());
@@ -802,6 +827,10 @@ final class IrEmitter {
     }
 
     private static void emitOffsetValue(CodeBuilder codeBuilder, EmitContext context, int indexSlot, Value offset) {
+        if (offset instanceof Value.Const(Object c) && ((c instanceof Long l && l == 0L) || (c instanceof Integer i && i == 0))) {
+            codeBuilder.lload(indexSlot);
+            return;
+        }
         codeBuilder.lload(indexSlot);
         emitLongValue(codeBuilder, context, offset);
         codeBuilder.ladd();
@@ -810,6 +839,9 @@ final class IrEmitter {
     private static void emitConstant(CodeBuilder codeBuilder, @Nullable Object value) {
         if (value == null) {
             codeBuilder.aconst_null();
+        } else if (value instanceof Boolean boolValue) {
+            if (boolValue) codeBuilder.iconst_1();
+            else codeBuilder.iconst_0();
         } else if (value instanceof Integer intValue) {
             codeBuilder.loadConstant(intValue);
         } else if (value instanceof Long longValue) {

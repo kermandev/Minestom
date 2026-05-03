@@ -7,7 +7,7 @@ import java.util.function.Function;
 
 public sealed interface TypeIr<T extends @UnknownNullability Object>
         permits TypeIr.External, TypeIr.Template, TypeIr.Constant, TypeIr.Primitive, TypeIr.VarInt, TypeIr.VarLong,
-        TypeIr.Optional, TypeIr.Transform, TypeIr.StringUtf8, TypeIr.ByteArray, TypeIr.FixedBytes,
+        TypeIr.Optional, TypeIr.Either, TypeIr.Transform, TypeIr.StringUtf8, TypeIr.ByteArray, TypeIr.FixedBytes,
         TypeIr.ListType, TypeIr.MapType {
     record External<T extends @UnknownNullability Object>(NetworkBuffer.Type<T> type) implements TypeIr<T> {
     }
@@ -28,6 +28,9 @@ public sealed interface TypeIr<T extends @UnknownNullability Object>
     }
 
     record Optional<T extends @UnknownNullability Object>(TypeIr<T> parent) implements TypeIr<T> {
+    }
+
+    record Either<L extends @UnknownNullability Object, R extends @UnknownNullability Object>(TypeIr<L> left, TypeIr<R> right) implements TypeIr<net.minestom.server.utils.Either<L, R>> {
     }
 
     record Transform<A extends @UnknownNullability Object, B extends @UnknownNullability Object>(

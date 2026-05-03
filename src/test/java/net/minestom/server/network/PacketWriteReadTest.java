@@ -145,6 +145,7 @@ public class PacketWriteReadTest {
 
     @BeforeAll
     public static void setupClient() {
+        MinecraftServer.init(); // Need some tags in here, pretty gross.
         CLIENT_PACKETS.add(new ClientHandshakePacket(755, "localhost", 25565, ClientHandshakePacket.Intent.LOGIN));
         CLIENT_PACKETS.add(new ClientVehicleMovePacket(new Pos(5, 5, 5, 45f, 45f), true));
         CLIENT_PACKETS.add(new ClientVehicleMovePacket(new Pos(6, 5, 6, 82f, 12.5f), false));
