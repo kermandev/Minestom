@@ -55,22 +55,22 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         return size;
     }
 
-    public static void writeVarIntUnchecked(NetworkBufferImpl impl, long index, int value) {
+    public static long writeVarIntUnchecked(NetworkBufferImpl impl, long index, int value) {
         while (true) {
             if ((value & ~SEGMENT_BITS) == 0) {
                 impl._putByteUnchecked(index, (byte) value);
-                return;
+                return index + 1;
             }
             impl._putByteUnchecked(index++, (byte) ((value & SEGMENT_BITS) | CONTINUE_BIT));
             value >>>= 7;
         }
     }
 
-    public static void writeVarLongUnchecked(NetworkBufferImpl impl, long index, long value) {
+    public static long writeVarLongUnchecked(NetworkBufferImpl impl, long index, long value) {
         while (true) {
             if ((value & ~((long) SEGMENT_BITS)) == 0) {
                 impl._putByteUnchecked(index, (byte) value);
-                return;
+                return index + 1;
             }
             impl._putByteUnchecked(index++, (byte) (value & SEGMENT_BITS | CONTINUE_BIT));
             value >>>= 7;

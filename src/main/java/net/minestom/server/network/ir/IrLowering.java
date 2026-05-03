@@ -850,18 +850,14 @@ final class IrLowering {
 
     public static Value addValues(Value left, Value right) {
         if (left instanceof Value.Const(Object lv) && right instanceof Value.Const(Object rv)) {
-            if (lv instanceof Long l && rv instanceof Long r) return new Value.Const(l + r);
-            if (lv instanceof Integer l && rv instanceof Integer r) return new Value.Const((long) l + r);
-            if (lv instanceof Long l && rv instanceof Integer r) return new Value.Const(l + r);
-            if (lv instanceof Integer l && rv instanceof Long r) return new Value.Const(l + r);
+            if (lv instanceof Number l && rv instanceof Number r) return new Value.Const(l.longValue() + r.longValue());
         }
-        if (left instanceof Value.Const(Object lv)) {
-            if (lv instanceof Long l && l == 0) return right;
-            if (lv instanceof Integer l && l == 0) return right;
-        }
-        if (right instanceof Value.Const(Object rv)) {
-            if (rv instanceof Long r && r == 0) return left;
-            if (rv instanceof Integer r && r == 0) return left;
+        if (left instanceof Value.Const(Object lv) && lv instanceof Number n && n.longValue() == 0) return right;
+        if (right instanceof Value.Const(Object rv) && rv instanceof Number n && n.longValue() == 0) return left;
+
+        // Normalize: ensure left-leaning tree
+        if (right instanceof Value.Add rightAdd) {
+            return addValues(addValues(left, rightAdd.left()), rightAdd.right());
         }
         return new Value.Add(left, right);
     }

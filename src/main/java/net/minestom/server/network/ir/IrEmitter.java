@@ -81,8 +81,8 @@ final class IrEmitter {
     static final MethodTypeDesc MT_RESERVE = MethodTypeDesc.of(CD_LONG, CD_LONG);
     static final MethodTypeDesc MT_FUNCTION_APPLY = MethodTypeDesc.of(CD_OBJECT, CD_OBJECT);
     static final MethodTypeDesc MT_STRING_GET_BYTES_CHARSET = MethodTypeDesc.of(CD_BYTE_ARRAY, CD_CHARSET);
-    static final MethodTypeDesc MT_WRITE_VAR_INT_UNCHECKED = MethodTypeDesc.of(CD_VOID, CD_NETWORK_BUFFER_IMPL, CD_LONG, CD_INT);
-    static final MethodTypeDesc MT_WRITE_VAR_LONG_UNCHECKED = MethodTypeDesc.of(CD_VOID, CD_NETWORK_BUFFER_IMPL, CD_LONG, CD_LONG);
+    static final MethodTypeDesc MT_WRITE_VAR_INT_UNCHECKED = MethodTypeDesc.of(CD_LONG, CD_NETWORK_BUFFER_IMPL, CD_LONG, CD_INT);
+    static final MethodTypeDesc MT_WRITE_VAR_LONG_UNCHECKED = MethodTypeDesc.of(CD_LONG, CD_NETWORK_BUFFER_IMPL, CD_LONG, CD_LONG);
     static final MethodTypeDesc MT_READ_VAR_INT = MethodTypeDesc.of(CD_INT, CD_NETWORK_BUFFER);
     static final MethodTypeDesc MT_READ_VAR_LONG = MethodTypeDesc.of(CD_LONG, CD_NETWORK_BUFFER);
     static final MethodTypeDesc MT_VAR_INT_SIZE = MethodTypeDesc.of(CD_INT, CD_INT);
@@ -464,16 +464,25 @@ final class IrEmitter {
             case RunItem.Put put -> {
                 emitValue(codeBuilder, context, put.value());
                 emitStoreKindWrite(codeBuilder, put.kind(), put.value());
+                codeBuilder.lload(addressSlot);
+                codeBuilder.loadConstant((long) put.kind().byteSize());
+                codeBuilder.ladd();
+                codeBuilder.lstore(addressSlot);
             }
             case RunItem.PutVarInt putVarInt -> {
                 emitIntValue(codeBuilder, context, putVarInt.value());
                 codeBuilder.invokestatic(CD_NETWORK_BUFFER_TYPE_IMPL, "writeVarIntUnchecked", MT_WRITE_VAR_INT_UNCHECKED, true);
+                codeBuilder.lstore(addressSlot);
             }
             case RunItem.PutBytes putBytes -> {
                 emitValue(codeBuilder, context, putBytes.byteArray());
                 codeBuilder.iconst_0();
                 emitIntValue(codeBuilder, context, putBytes.length());
                 codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "_putBytesUnchecked", MT_PUT_BYTES);
+                codeBuilder.lload(addressSlot);
+                emitLongValue(codeBuilder, context, putBytes.length());
+                codeBuilder.ladd();
+                codeBuilder.lstore(addressSlot);
             }
             default -> throw new UnsupportedOperationException("Unsupported run item for at-address emission: " + item);
         }
@@ -486,6 +495,10 @@ final class IrEmitter {
                 codeBuilder.lload(addressSlot);
                 emitStoreKindRead(codeBuilder, get.kind(), get.out());
                 emitStoreLocal(codeBuilder, context, get.out());
+                codeBuilder.lload(addressSlot);
+                codeBuilder.loadConstant((long) get.kind().byteSize());
+                codeBuilder.ladd();
+                codeBuilder.lstore(addressSlot);
             }
             case RunItem.GetBytes getBytes -> {
                 final int lengthSlot = codeBuilder.allocateLocal(TypeKind.INT);
@@ -501,6 +514,12 @@ final class IrEmitter {
                 codeBuilder.iconst_0()
                         .iload(lengthSlot)
                         .invokevirtual(CD_NETWORK_BUFFER_IMPL, "_getBytesUnchecked", MT_GET_BYTES);
+
+                codeBuilder.lload(addressSlot);
+                codeBuilder.iload(lengthSlot);
+                codeBuilder.i2l();
+                codeBuilder.ladd();
+                codeBuilder.lstore(addressSlot);
             }
             default -> throw new UnsupportedOperationException("Unsupported run item for at-address emission: " + item);
         }
@@ -517,6 +536,31 @@ final class IrEmitter {
         };
     }
 
+    private static Value itemSize(RunItem item) {
+        return switch (item) {
+            case RunItem.Put put -> new Value.Const((long) put.kind().byteSize());
+            case RunItem.Get get -> new Value.Const((long) get.kind().byteSize());
+            case RunItem.PutVarInt putVarInt -> putVarInt.encodedSize();
+            case RunItem.PutBytes putBytes -> putBytes.length();
+            case RunItem.GetBytes getBytes -> getBytes.length();
+            case RunItem.ForIndex _ -> new Value.Const(0L);
+        };
+    }
+
+    private static Value addValues(Value left, Value right) {
+        if (left instanceof Value.Const(Object lv) && right instanceof Value.Const(Object rv)) {
+            if (lv instanceof Number l && rv instanceof Number r) return new Value.Const(l.longValue() + r.longValue());
+        }
+        if (left instanceof Value.Const(Object lv) && lv instanceof Number n && n.longValue() == 0) return right;
+        if (right instanceof Value.Const(Object rv) && rv instanceof Number n && n.longValue() == 0) return left;
+
+        // Normalize: ensure left-leaning tree
+        if (right instanceof Value.Add rightAdd) {
+            return addValues(addValues(left, rightAdd.left()), rightAdd.right());
+        }
+        return new Value.Add(left, right);
+    }
+
     private static void emitWriteRun(CodeBuilder codeBuilder, EmitContext context, RunIr run) {
         final int indexSlot = codeBuilder.allocateLocal(TypeKind.LONG);
         codeBuilder.aload(context.directSlot());
@@ -525,6 +569,11 @@ final class IrEmitter {
                 .lstore(indexSlot);
 
         int currentSlot = indexSlot;
+        if (run.items().size() > 1) {
+            currentSlot = codeBuilder.allocateLocal(TypeKind.LONG);
+            codeBuilder.lload(indexSlot);
+            codeBuilder.lstore(currentSlot);
+        }
         Value currentOffset = new Value.Const(0L);
 
         for (RunItem item : run.items()) {
@@ -539,7 +588,6 @@ final class IrEmitter {
             Value offset = itemOffset(item);
             Value delta = subtract(offset, currentOffset);
             if (delta == null) {
-                if (currentSlot == indexSlot) currentSlot = codeBuilder.allocateLocal(TypeKind.LONG);
                 codeBuilder.lload(indexSlot);
                 if (!isZero(offset)) {
                     emitLongValue(codeBuilder, context, offset);
@@ -547,19 +595,14 @@ final class IrEmitter {
                 }
                 codeBuilder.lstore(currentSlot);
             } else if (!isZero(delta)) {
-                if (currentSlot == indexSlot) {
-                    currentSlot = codeBuilder.allocateLocal(TypeKind.LONG);
-                    codeBuilder.lload(indexSlot);
-                } else {
-                    codeBuilder.lload(currentSlot);
-                }
+                codeBuilder.lload(currentSlot);
                 emitLongValue(codeBuilder, context, delta);
                 codeBuilder.ladd();
                 codeBuilder.lstore(currentSlot);
             }
 
             emitRunItemWriteAt(codeBuilder, context, currentSlot, item);
-            currentOffset = offset;
+            currentOffset = addValues(offset, itemSize(item));
         }
     }
 
@@ -653,6 +696,11 @@ final class IrEmitter {
                 .lstore(indexSlot);
 
         int currentSlot = indexSlot;
+        if (run.items().size() > 1) {
+            currentSlot = codeBuilder.allocateLocal(TypeKind.LONG);
+            codeBuilder.lload(indexSlot);
+            codeBuilder.lstore(currentSlot);
+        }
         Value currentOffset = new Value.Const(0L);
 
         for (RunItem item : run.items()) {
@@ -667,7 +715,6 @@ final class IrEmitter {
             Value offset = itemOffset(item);
             Value delta = subtract(offset, currentOffset);
             if (delta == null) {
-                if (currentSlot == indexSlot) currentSlot = codeBuilder.allocateLocal(TypeKind.LONG);
                 codeBuilder.lload(indexSlot);
                 if (!isZero(offset)) {
                     emitLongValue(codeBuilder, context, offset);
@@ -675,19 +722,14 @@ final class IrEmitter {
                 }
                 codeBuilder.lstore(currentSlot);
             } else if (!isZero(delta)) {
-                if (currentSlot == indexSlot) {
-                    currentSlot = codeBuilder.allocateLocal(TypeKind.LONG);
-                    codeBuilder.lload(indexSlot);
-                } else {
-                    codeBuilder.lload(currentSlot);
-                }
+                codeBuilder.lload(currentSlot);
                 emitLongValue(codeBuilder, context, delta);
                 codeBuilder.ladd();
                 codeBuilder.lstore(currentSlot);
             }
 
             emitRunItemReadAt(codeBuilder, context, currentSlot, item);
-            currentOffset = offset;
+            currentOffset = addValues(offset, itemSize(item));
         }
     }
 
@@ -1158,6 +1200,20 @@ final class IrEmitter {
         return type.describeConstable().orElseThrow();
     }
 
+    private static void emitBoxedTypeIrValue(CodeBuilder codeBuilder, PrimitiveKind kind) {
+        switch (kind) {
+            case BOOLEAN -> codeBuilder.invokestatic(CD_BOOLEAN_WRAPPER, "valueOf", MT_BOX_BOOLEAN);
+            case BYTE -> codeBuilder.i2b()
+                    .invokestatic(CD_BYTE_WRAPPER, "valueOf", MT_BOX_BYTE);
+            case UNSIGNED_BYTE, SHORT -> codeBuilder.i2s()
+                    .invokestatic(CD_SHORT_WRAPPER, "valueOf", MT_BOX_SHORT);
+            case UNSIGNED_SHORT, INT -> codeBuilder.invokestatic(CD_INTEGER_WRAPPER, "valueOf", MT_BOX_INT);
+            case UNSIGNED_INT, LONG -> codeBuilder.invokestatic(CD_LONG_WRAPPER, "valueOf", MT_BOX_LONG);
+            case FLOAT -> codeBuilder.invokestatic(CD_FLOAT_WRAPPER, "valueOf", MT_BOX_FLOAT);
+            case DOUBLE -> codeBuilder.invokestatic(CD_DOUBLE_WRAPPER, "valueOf", MT_BOX_DOUBLE);
+        }
+    }
+
     private static void emitDirectBuffer(CodeBuilder codeBuilder, int directSlot) {
         codeBuilder.aload(1)
                 .checkcast(CD_NETWORK_BUFFER_IMPL)
@@ -1185,32 +1241,19 @@ final class IrEmitter {
         }
     }
 
+    private static boolean isZero(Value value) {
+        return value instanceof Value.Const(Object c) && c instanceof Number n && n.longValue() == 0;
+    }
+
     private static @Nullable Value subtract(Value offset, Value lastOffset) {
         if (offset.equals(lastOffset)) return new Value.Const(0L);
         if (offset instanceof Value.Add add) {
             if (add.left().equals(lastOffset)) return add.right();
+            // Try recursing left (standard for left-leaning trees)
             Value sub = subtract(add.left(), lastOffset);
-            if (sub != null) return new Value.Add(sub, add.right());
+            if (sub != null) return addValues(sub, add.right());
         }
         return null;
-    }
-
-    private static boolean isZero(Value value) {
-        return value instanceof Value.Const(Object c) && ((c instanceof Long l && l == 0L) || (c instanceof Integer i && i == 0));
-    }
-
-    private static void emitBoxedTypeIrValue(CodeBuilder codeBuilder, PrimitiveKind kind) {
-        switch (kind) {
-            case BOOLEAN -> codeBuilder.invokestatic(CD_BOOLEAN_WRAPPER, "valueOf", MT_BOX_BOOLEAN);
-            case BYTE -> codeBuilder.i2b()
-                    .invokestatic(CD_BYTE_WRAPPER, "valueOf", MT_BOX_BYTE);
-            case UNSIGNED_BYTE, SHORT -> codeBuilder.i2s()
-                    .invokestatic(CD_SHORT_WRAPPER, "valueOf", MT_BOX_SHORT);
-            case UNSIGNED_SHORT, INT -> codeBuilder.invokestatic(CD_INTEGER_WRAPPER, "valueOf", MT_BOX_INT);
-            case UNSIGNED_INT, LONG -> codeBuilder.invokestatic(CD_LONG_WRAPPER, "valueOf", MT_BOX_LONG);
-            case FLOAT -> codeBuilder.invokestatic(CD_FLOAT_WRAPPER, "valueOf", MT_BOX_FLOAT);
-            case DOUBLE -> codeBuilder.invokestatic(CD_DOUBLE_WRAPPER, "valueOf", MT_BOX_DOUBLE);
-        }
     }
 
     private static CodeBuilder loadClassDataAt(CodeBuilder codeBuilder, ClassDesc type, int index) {
