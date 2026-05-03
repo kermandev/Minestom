@@ -542,7 +542,7 @@ final class IrLowering {
             ops.add(new Op.Cast(raw, String.class, str));
 
             final Local bytes = referenceLocal("path" + path + "Bytes");
-            ops.add(new Op.Apply(TemplateCompiler.STRING_TO_BYTES, str, bytes));
+            ops.add(new Op.StringToBytes(str, bytes));
             lowerWrite(ops, new TypeIr.ByteArray(maxSize), null, bytes, path + "Str", depth + 1);
             return;
         }
@@ -664,14 +664,14 @@ final class IrLowering {
             final Value leftValue = lowerRead(thenOps, either.left(), path + "L", depth + 1);
             final Local leftLocal = ensureLocal(thenOps, leftValue, path + "_" + depth + "LL");
             final Local eitherLeft = referenceLocal("path" + path + "_" + depth + "EL");
-            thenOps.add(new Op.Apply(TemplateCompiler.EITHER_LEFT, leftLocal, eitherLeft));
+            thenOps.add(new Op.EitherLeft(leftLocal, eitherLeft));
             thenOps.add(new Op.Store(new Value.LocalValue(eitherLeft), result));
 
             final List<Op> elseOps = new ArrayList<>();
             final Value rightValue = lowerRead(elseOps, either.right(), path + "R", depth + 1);
             final Local rightLocal = ensureLocal(elseOps, rightValue, path + "_" + depth + "RL");
             final Local eitherRight = referenceLocal("path" + path + "_" + depth + "ER");
-            elseOps.add(new Op.Apply(TemplateCompiler.EITHER_RIGHT, rightLocal, eitherRight));
+            elseOps.add(new Op.EitherRight(rightLocal, eitherRight));
             elseOps.add(new Op.Store(new Value.LocalValue(eitherRight), result));
 
             ops.add(new Op.If(new Value.LocalValue(isLeft), thenOps, elseOps));
@@ -743,7 +743,7 @@ final class IrLowering {
             final Value bytes = lowerRead(ops, new TypeIr.ByteArray(maxSize), path + "Str", depth + 1);
             final Local bytesLocal = ensureLocal(ops, bytes, path + "_" + depth + "StrL");
             final Local result = referenceLocal("path" + path + "Result");
-            ops.add(new Op.Apply(TemplateCompiler.BYTES_TO_STRING, bytesLocal, result));
+            ops.add(new Op.BytesToString(bytesLocal, result));
             return new Value.LocalValue(result);
         }
 
@@ -785,8 +785,10 @@ final class IrLowering {
     }
 
     private static List<Op> mergeReadRuns(List<Op> ops) {
-        final List<Op> merged = new ArrayList<>();
-        Op.ReadRun current = null;
+        final List<Op> result = new ArrayList<>();
+        Op.ReadRun pendingRun = null;
+        final List<Op> pureOps = new ArrayList<>();
+
         for (Op op : ops) {
             Op processedOp = switch (op) {
                 case Op.If ifOp -> new Op.If(ifOp.condition(), mergeReadRuns(ifOp.thenOps()), mergeReadRuns(ifOp.elseOps()));
@@ -796,21 +798,28 @@ final class IrLowering {
             };
 
             if (processedOp instanceof Op.ReadRun next) {
-                if (current == null) {
-                    current = next;
+                if (pendingRun == null) {
+                    pendingRun = next;
                 } else {
-                    current = mergeReadRun(current, next);
+                    pendingRun = mergeReadRun(pendingRun, next);
                 }
+            } else if (isPure(processedOp)) {
+                pureOps.add(processedOp);
             } else {
-                if (current != null) {
-                    merged.add(current);
-                    current = null;
+                if (pendingRun != null) {
+                    result.add(pendingRun);
+                    result.addAll(pureOps);
+                    pendingRun = null;
+                } else {
+                    result.addAll(pureOps);
                 }
-                merged.add(processedOp);
+                pureOps.clear();
+                result.add(processedOp);
             }
         }
-        if (current != null) merged.add(current);
-        return merged;
+        if (pendingRun != null) result.add(pendingRun);
+        result.addAll(pureOps);
+        return result;
     }
 
     private static Op.ReadRun mergeReadRun(Op.ReadRun left, Op.ReadRun right) {
@@ -826,7 +835,8 @@ final class IrLowering {
         return switch (op) {
             case Op.GetField _, Op.Apply _, Op.Cast _, Op.Unbox _, Op.Box _, Op.Store _, Op.Check _,
                  Op.Construct _, Op.MapEntrySet _, Op.MapEntryKey _, Op.MapEntryValue _, Op.ElementAt _,
-                 Op.ArrayCreate _, Op.ArraySet _, Op.ListFinish _, Op.MapFinish _ -> true;
+                 Op.ArrayCreate _, Op.ArraySet _, Op.ListFinish _, Op.MapFinish _,
+                 Op.StringToBytes _, Op.BytesToString _, Op.EitherLeft _, Op.EitherRight _ -> true;
             default -> false;
         };
     }

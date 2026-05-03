@@ -8,7 +8,8 @@ public sealed interface Op
         permits Op.GetField, Op.Apply, Op.Cast, Op.Unbox, Op.Box, Op.Store, Op.Check, Op.WriteExternal, Op.ReadExternal,
         Op.ReadVarInt, Op.WriteVarLong, Op.ReadVarLong, Op.WriteRun, Op.ReadRun, Op.If, Op.ForEach,
         Op.ForIndex, Op.ElementAt, Op.MapEntrySet, Op.MapEntryKey, Op.MapEntryValue, Op.ResultElementSet,
-        Op.ArrayCreate, Op.ArraySet, Op.ListFinish, Op.MapFinish, Op.Construct, Op.Return {
+        Op.ArrayCreate, Op.ArraySet, Op.ListFinish, Op.MapFinish, Op.Construct, Op.Return,
+        Op.StringToBytes, Op.BytesToString, Op.EitherLeft, Op.EitherRight {
     record GetField(FieldIr<?, ?> field, String path, Local source, Local out) implements Op {
     }
 
@@ -22,6 +23,18 @@ public sealed interface Op
     }
 
     record Box(PrimitiveKind kind, Local in, Local out) implements Op {
+    }
+
+    record StringToBytes(Local in, Local out) implements Op {
+    }
+
+    record BytesToString(Local in, Local out) implements Op {
+    }
+
+    record EitherLeft(Local in, Local out) implements Op {
+    }
+
+    record EitherRight(Local in, Local out) implements Op {
     }
 
     record Store(Value value, Local out) implements Op {
