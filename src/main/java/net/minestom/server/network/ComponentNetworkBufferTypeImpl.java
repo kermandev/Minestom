@@ -17,7 +17,11 @@ import net.minestom.server.registry.RegistryTranscoder;
 import net.minestom.server.utils.nbt.BinaryTagWriter;
 import net.minestom.server.utils.validate.Check;
 
+import net.minestom.server.network.ir.TypeIr;
+import net.minestom.server.network.ir.TypeIrProvider;
+
 import java.io.IOException;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -27,6 +31,11 @@ import static net.minestom.server.network.NetworkBuffer.*;
 import static net.minestom.server.network.NetworkBufferImpl.impl;
 
 record ComponentNetworkBufferTypeImpl() implements NetworkBufferTypeImpl<Component> {
+
+    @Override
+    public TypeIr<Component> typeIr() {
+        return new TypeIr.External<>(this);
+    }
 
     @Override
     public void write(NetworkBuffer buffer, Component value) {
