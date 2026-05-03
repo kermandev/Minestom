@@ -35,4 +35,28 @@ public enum PrimitiveKind {
     public Class<?> wrapperClass() {
         return wrapperClass;
     }
+
+    public String unboxMethod() {
+        return switch (this) {
+            case BOOLEAN -> "booleanValue";
+            case BYTE -> "byteValue";
+            case UNSIGNED_BYTE, SHORT -> "shortValue";
+            case UNSIGNED_SHORT, INT -> "intValue";
+            case UNSIGNED_INT, LONG -> "longValue";
+            case FLOAT -> "floatValue";
+            case DOUBLE -> "doubleValue";
+        };
+    }
+
+    public TypeKind unboxReturnKind() {
+        return switch (this) {
+            case BOOLEAN -> TypeKind.BOOLEAN;
+            case BYTE -> TypeKind.BYTE;
+            case UNSIGNED_BYTE, SHORT -> TypeKind.SHORT;
+            case UNSIGNED_SHORT, INT -> TypeKind.INT;
+            case UNSIGNED_INT, LONG -> TypeKind.LONG;
+            case FLOAT -> TypeKind.FLOAT;
+            case DOUBLE -> TypeKind.DOUBLE;
+        };
+    }
 }

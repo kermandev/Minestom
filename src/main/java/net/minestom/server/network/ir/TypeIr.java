@@ -52,8 +52,7 @@ public sealed interface TypeIr<T extends @UnknownNullability Object>
     record ListType<E extends @UnknownNullability Object, C extends @UnknownNullability Object>(
             NetworkBuffer.Type<C> originalType,
             TypeIr<E> element,
-            int maxLength,
-            CollectionFactory<E, C> factory
+            int maxLength
     ) implements TypeIr<C> {
     }
 
@@ -61,8 +60,7 @@ public sealed interface TypeIr<T extends @UnknownNullability Object>
             NetworkBuffer.Type<M> originalType,
             TypeIr<K> key,
             TypeIr<V> value,
-            int maxLength,
-            MapFactory<K, V, M> factory
+            int maxLength
     ) implements TypeIr<M> {
     }
 }

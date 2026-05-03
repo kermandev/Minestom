@@ -37,7 +37,6 @@ final class IrLowering {
     static IrClassData collectIrClassData(List<Object> classData, NetworkIr<?> ir) {
         final List<IrFieldData> fields = new ArrayList<>();
         final List<TransformFieldData> transforms = new ArrayList<>();
-        final List<FactoryFieldData> factories = new ArrayList<>();
         final List<ExternalTypeFieldData> externalTypes = new ArrayList<>();
         final Map<String, Integer> constructors = new LinkedHashMap<>();
         final Map<String, ConstructorIr<?>> constructorIrs = new HashMap<>();
@@ -46,7 +45,7 @@ final class IrLowering {
         collectUsage(ir.write(), usage);
         collectUsage(ir.read(), usage);
 
-        collectIrMetadata("", ir, classData, fields, transforms, constructors, constructorIrs, factories, usage);
+        collectIrMetadata("", ir, classData, fields, transforms, constructors, constructorIrs, usage);
 
         // Add standalone transforms that were not found in TypeIr.Transform
         int standaloneIndex = 0;
@@ -78,14 +77,13 @@ final class IrLowering {
             }
         }
 
-        return new IrClassData(ir, "", fields, transforms, constructors, constructorIrs, factories, externalTypes);
+        return new IrClassData(ir, "", fields, transforms, constructors, constructorIrs, externalTypes);
     }
 
     private static class Usage {
         final Set<FieldIr<?, ?>> getters = Collections.newSetFromMap(new IdentityHashMap<>());
         final Set<Function<?, ?>> functions = Collections.newSetFromMap(new IdentityHashMap<>());
         final Set<NetworkBuffer.Type<?>> externalTypes = Collections.newSetFromMap(new IdentityHashMap<>());
-        final Set<Object> factories = Collections.newSetFromMap(new IdentityHashMap<>());
         final Set<ConstructorIr<?>> constructors = Collections.newSetFromMap(new IdentityHashMap<>());
     }
 
@@ -101,12 +99,6 @@ final class IrLowering {
             case Op.Apply apply -> usage.functions.add(apply.function());
             case Op.WriteExternal write -> usage.externalTypes.add(write.type());
             case Op.ReadExternal read -> usage.externalTypes.add(read.type());
-            case Op.CollectionCreate create -> usage.factories.add(create.factory());
-            case Op.CollectionAdd add -> usage.factories.add(add.factory());
-            case Op.CollectionFinish finish -> usage.factories.add(finish.factory());
-            case Op.MapCreate create -> usage.factories.add(create.factory());
-            case Op.MapPut put -> usage.factories.add(put.factory());
-            case Op.MapFinish finish -> usage.factories.add(finish.factory());
             case Op.Construct construct -> usage.constructors.add(construct.constructor());
             case Op.If ifOp -> {
                 collectUsage(new ProgramIr(ifOp.thenOps()), usage);
@@ -139,8 +131,6 @@ final class IrLowering {
         switch (step) {
             case RunStep.GetField getField -> usage.getters.add(getField.field());
             case RunStep.Apply apply -> usage.functions.add(apply.function());
-            case RunStep.CollectionAdd add -> usage.factories.add(add.factory());
-            case RunStep.MapPut put -> usage.factories.add(put.factory());
             case RunStep.Construct construct -> usage.constructors.add(construct.constructor());
             default -> {
             }
@@ -150,7 +140,7 @@ final class IrLowering {
     private static void collectIrMetadata(String path, NetworkIr<?> ir, List<Object> classData,
                                           List<IrFieldData> allFields, List<TransformFieldData> allTransforms,
                                           Map<String, Integer> allConstructors, Map<String, ConstructorIr<?>> allConstructorIrs,
-                                          List<FactoryFieldData> allFactories, Usage usage) {
+                                          Usage usage) {
         final String ctorName = ctorName(path);
         if (usage.constructors.contains(ir.constructor())) {
             allConstructors.put(ctorName, addClassData(classData, ir.constructor().object()));
@@ -168,18 +158,17 @@ final class IrLowering {
                         typeUsed ? addClassData(classData, field.originalType()) : -1,
                         getterUsed ? addClassData(classData, field.getter()) : -1));
             }
-            collectTypeMetadata(fieldPath, field.type(), usage, classData, allFields, allTransforms, allConstructors, allConstructorIrs, allFactories);
+            collectTypeMetadata(fieldPath, field.type(), usage, classData, allFields, allTransforms, allConstructors, allConstructorIrs);
         }
     }
 
     private static void collectTypeMetadata(String path, TypeIr<?> type, Usage usage,
                                             List<Object> classData, List<IrFieldData> allFields,
                                             List<TransformFieldData> allTransforms,
-                                            Map<String, Integer> allConstructors, Map<String, ConstructorIr<?>> allConstructorIrs,
-                                            List<FactoryFieldData> allFactories) {
+                                            Map<String, Integer> allConstructors, Map<String, ConstructorIr<?>> allConstructorIrs) {
         switch (type) {
             case TypeIr.Template<?> template ->
-                    collectIrMetadata(path, template.ir(), classData, allFields, allTransforms, allConstructors, allConstructorIrs, allFactories, usage);
+                    collectIrMetadata(path, template.ir(), classData, allFields, allTransforms, allConstructors, allConstructorIrs, usage);
             case TypeIr.Transform<?, ?> transform -> {
                 if (usage.functions.contains(transform.from())) {
                     allTransforms.add(new TransformFieldData(transformFromName(path, 0), transform.from(), addClassData(classData, transform.from())));
@@ -187,26 +176,20 @@ final class IrLowering {
                 if (usage.functions.contains(transform.to())) {
                     allTransforms.add(new TransformFieldData(transformToName(path, 0), transform.to(), addClassData(classData, transform.to())));
                 }
-                collectTypeMetadata(path + "X", transform.parent(), usage, classData, allFields, allTransforms, allConstructors, allConstructorIrs, allFactories);
+                collectTypeMetadata(path + "X", transform.parent(), usage, classData, allFields, allTransforms, allConstructors, allConstructorIrs);
             }
             case TypeIr.Optional<?> optional ->
-                    collectTypeMetadata(path + "Opt", optional.parent(), usage, classData, allFields, allTransforms, allConstructors, allConstructorIrs, allFactories);
+                    collectTypeMetadata(path + "Opt", optional.parent(), usage, classData, allFields, allTransforms, allConstructors, allConstructorIrs);
             case TypeIr.Either<?, ?> either -> {
-                collectTypeMetadata(path + "L", either.left(), usage, classData, allFields, allTransforms, allConstructors, allConstructorIrs, allFactories);
-                collectTypeMetadata(path + "R", either.right(), usage, classData, allFields, allTransforms, allConstructors, allConstructorIrs, allFactories);
+                collectTypeMetadata(path + "L", either.left(), usage, classData, allFields, allTransforms, allConstructors, allConstructorIrs);
+                collectTypeMetadata(path + "R", either.right(), usage, classData, allFields, allTransforms, allConstructors, allConstructorIrs);
             }
             case TypeIr.ListType<?, ?> list -> {
-                if (usage.factories.contains(list.factory())) {
-                    allFactories.add(new FactoryFieldData(factoryName(path), list.factory(), addClassData(classData, list.factory())));
-                }
-                collectTypeMetadata(path + "E", list.element(), usage, classData, allFields, allTransforms, allConstructors, allConstructorIrs, allFactories);
+                collectTypeMetadata(path + "E", list.element(), usage, classData, allFields, allTransforms, allConstructors, allConstructorIrs);
             }
             case TypeIr.MapType<?, ?, ?> map -> {
-                if (usage.factories.contains(map.factory())) {
-                    allFactories.add(new FactoryFieldData(factoryName(path), map.factory(), addClassData(classData, map.factory())));
-                }
-                collectTypeMetadata(path + "K", map.key(), usage, classData, allFields, allTransforms, allConstructors, allConstructorIrs, allFactories);
-                collectTypeMetadata(path + "V", map.value(), usage, classData, allFields, allTransforms, allConstructors, allConstructorIrs, allFactories);
+                collectTypeMetadata(path + "K", map.key(), usage, classData, allFields, allTransforms, allConstructors, allConstructorIrs);
+                collectTypeMetadata(path + "V", map.value(), usage, classData, allFields, allTransforms, allConstructors, allConstructorIrs);
             }
             default -> {
             }
@@ -702,18 +685,18 @@ final class IrLowering {
                 ops.add(new Op.Check(new Value.LessThanOrEqual(new Value.LocalValue(size), new Value.Const(listType.maxLength())), "Collection too large"));
             }
 
-            final Local collection = referenceLocal("path" + path + "Coll");
-            ops.add(new Op.CollectionCreate(listType.factory(), path, new Value.LocalValue(size), collection));
+            final Local array = referenceLocal("path" + path + "Array");
+            ops.add(new Op.ArrayCreate(new Value.LocalValue(size), array));
 
             final Local index = new Local("path" + path + "Idx", new LocalType.Kind(TypeKind.INT));
             final List<Op> body = new ArrayList<>();
             final Value element = lowerRead(body, listType.element(), path + "E", depth + 1);
-            body.add(new Op.CollectionAdd(listType.factory(), path, collection, element));
+            body.add(new Op.ArraySet(array, new Value.LocalValue(index), element));
 
             ops.add(new Op.ForIndex(index, new Value.Const(0), new Value.LocalValue(size), body));
 
             final Local result = referenceLocal("path" + path + "Res");
-            ops.add(new Op.CollectionFinish(listType.factory(), path, collection, result));
+            ops.add(new Op.ListFinish(array, result));
             return new Value.LocalValue(result);
         }
 
@@ -724,19 +707,22 @@ final class IrLowering {
                 ops.add(new Op.Check(new Value.LessThanOrEqual(new Value.LocalValue(size), new Value.Const(mapType.maxLength())), "Map too large"));
             }
 
-            final Local map = referenceLocal("path" + path + "Map");
-            ops.add(new Op.MapCreate(mapType.factory(), path, new Value.LocalValue(size), map));
+            final Local keys = referenceLocal("path" + path + "Keys");
+            final Local values = referenceLocal("path" + path + "Values");
+            ops.add(new Op.ArrayCreate(new Value.LocalValue(size), keys));
+            ops.add(new Op.ArrayCreate(new Value.LocalValue(size), values));
 
             final Local index = new Local("path" + path + "Idx", new LocalType.Kind(TypeKind.INT));
             final List<Op> body = new ArrayList<>();
             final Value key = lowerRead(body, mapType.key(), path + "K", depth + 1);
             final Value value = lowerRead(body, mapType.value(), path + "V", depth + 1);
-            body.add(new Op.MapPut(mapType.factory(), path, map, key, value));
+            body.add(new Op.ArraySet(keys, new Value.LocalValue(index), key));
+            body.add(new Op.ArraySet(values, new Value.LocalValue(index), value));
 
             ops.add(new Op.ForIndex(index, new Value.Const(0), new Value.LocalValue(size), body));
 
             final Local result = referenceLocal("path" + path + "Res");
-            ops.add(new Op.MapFinish(mapType.factory(), path, map, result));
+            ops.add(new Op.MapFinish(keys, values, new Value.LocalValue(size), result));
             return new Value.LocalValue(result);
         }
 
@@ -840,7 +826,7 @@ final class IrLowering {
         return switch (op) {
             case Op.GetField _, Op.Apply _, Op.Cast _, Op.Unbox _, Op.Box _, Op.Store _, Op.Check _,
                  Op.Construct _, Op.MapEntrySet _, Op.MapEntryKey _, Op.MapEntryValue _, Op.ElementAt _,
-                 Op.CollectionCreate _, Op.CollectionFinish _, Op.MapCreate _, Op.MapFinish _ -> true;
+                 Op.ArrayCreate _, Op.ArraySet _, Op.ListFinish _, Op.MapFinish _ -> true;
             default -> false;
         };
     }
@@ -1124,9 +1110,9 @@ final class IrLowering {
                 case NetworkBufferTypeImpl.TransformType<?, ?> transform ->
                         new TypeIr.Transform(typeIr(transform.parent(), visiting), transform.to(), transform.from());
                 case NetworkBufferTypeImpl.ListType<?> list ->
-                        new TypeIr.ListType(list, typeIr(list.parent(), visiting), list.maxSize(), LIST_FACTORY);
+                        new TypeIr.ListType(list, typeIr(list.parent(), visiting), list.maxSize());
                 case NetworkBufferTypeImpl.MapType<?, ?> map ->
-                        new TypeIr.MapType(map, typeIr(map.parent(), visiting), typeIr(map.valueType(), visiting), map.maxSize(), MAP_FACTORY);
+                        new TypeIr.MapType(map, typeIr(map.parent(), visiting), typeIr(map.valueType(), visiting), map.maxSize());
                 default -> new TypeIr.External(type);
             };
         } finally {
@@ -1167,39 +1153,6 @@ final class IrLowering {
         };
     }
 
-    public static final CollectionFactory<Object, List<Object>> LIST_FACTORY = new CollectionFactory<>() {
-        @Override
-        public Object create(int size) {
-            return new ArrayList<>(size);
-        }
-
-        @Override
-        public void add(Object collection, Object value) {
-            ((List<Object>) collection).add(value);
-        }
-
-        @Override
-        public List<Object> finish(Object collection) {
-            return List.copyOf((List<Object>) collection);
-        }
-    };
-
-    public static final MapFactory<Object, Object, Map<Object, Object>> MAP_FACTORY = new MapFactory<>() {
-        @Override
-        public Object create(int size) {
-            return new LinkedHashMap<>(size);
-        }
-
-        @Override
-        public void put(Object map, Object key, Object value) {
-            ((Map<Object, Object>) map).put(key, value);
-        }
-
-        @Override
-        public Map<Object, Object> finish(Object map) {
-            return Map.copyOf((Map<Object, Object>) map);
-        }
-    };
 
     private static Local referenceLocal(String name) {
         return new Local(name, new LocalType.Reference(Object.class));

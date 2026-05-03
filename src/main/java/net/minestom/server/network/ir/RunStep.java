@@ -6,7 +6,7 @@ import java.util.function.Function;
 public sealed interface RunStep
         permits RunStep.ElementAt, RunStep.GetField, RunStep.Apply, RunStep.Cast, RunStep.Unbox, RunStep.Box,
         RunStep.Put, RunStep.Get, RunStep.PutVarInt, RunStep.PutBytes, RunStep.GetBytes, RunStep.ResultElementSet,
-        RunStep.CollectionAdd, RunStep.MapPut, RunStep.Construct {
+        RunStep.ArraySet, RunStep.Construct {
     record ElementAt(Value source, Value index, Local out) implements RunStep {
     }
 
@@ -43,10 +43,7 @@ public sealed interface RunStep
     record ResultElementSet(Value result, Value index, Value value) implements RunStep {
     }
 
-    record CollectionAdd(CollectionFactory<?, ?> factory, String path, Local collection, Value value) implements RunStep {
-    }
-
-    record MapPut(MapFactory<?, ?, ?> factory, String path, Local map, Value key, Value value) implements RunStep {
+    record ArraySet(Local array, Value index, Value value) implements RunStep {
     }
 
     record Construct(ConstructorIr<?> constructor, String path, List<Value> args, Local out) implements RunStep {

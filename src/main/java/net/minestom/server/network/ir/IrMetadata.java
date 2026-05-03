@@ -11,13 +11,12 @@ final class IrMetadata {
 
     record IrClassData(NetworkIr<?> ir, String path, List<IrFieldData> fields, List<TransformFieldData> transforms,
                        Map<String, Integer> constructors, Map<String, ConstructorIr<?>> constructorIrs,
-                       List<FactoryFieldData> factories, List<ExternalTypeFieldData> externalTypes) {
+                       List<ExternalTypeFieldData> externalTypes) {
         public IrClassData {
             fields = List.copyOf(fields);
             transforms = List.copyOf(transforms);
             constructors = Map.copyOf(constructors);
             constructorIrs = Map.copyOf(constructorIrs);
-            factories = List.copyOf(factories);
             externalTypes = List.copyOf(externalTypes);
         }
 
@@ -36,8 +35,5 @@ final class IrMetadata {
     }
 
     record ExternalTypeFieldData(String name, NetworkBuffer.Type<?> type, int dataIndex) {
-    }
-
-    record FactoryFieldData(String name, Object factory, int dataIndex) {
     }
 }

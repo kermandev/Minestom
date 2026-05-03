@@ -7,8 +7,8 @@ import java.util.function.Function;
 public sealed interface Op
         permits Op.GetField, Op.Apply, Op.Cast, Op.Unbox, Op.Box, Op.Store, Op.Check, Op.WriteExternal, Op.ReadExternal,
         Op.ReadVarInt, Op.WriteVarLong, Op.ReadVarLong, Op.WriteRun, Op.ReadRun, Op.If, Op.ForEach,
-        Op.ForIndex, Op.ElementAt, Op.MapEntrySet, Op.MapEntryKey, Op.MapEntryValue, Op.ResultElementSet, Op.CollectionAdd,
-        Op.MapPut, Op.CollectionCreate, Op.CollectionFinish, Op.MapCreate, Op.MapFinish, Op.Construct, Op.Return {
+        Op.ForIndex, Op.ElementAt, Op.MapEntrySet, Op.MapEntryKey, Op.MapEntryValue, Op.ResultElementSet,
+        Op.ArrayCreate, Op.ArraySet, Op.ListFinish, Op.MapFinish, Op.Construct, Op.Return {
     record GetField(FieldIr<?, ?> field, String path, Local source, Local out) implements Op {
     }
 
@@ -85,22 +85,16 @@ public sealed interface Op
     record ResultElementSet(Value result, Value index, Value value) implements Op {
     }
 
-    record CollectionAdd(CollectionFactory<?, ?> factory, String path, Local collection, Value value) implements Op {
+    record ArrayCreate(Value size, Local out) implements Op {
     }
 
-    record MapPut(MapFactory<?, ?, ?> factory, String path, Local map, Value key, Value value) implements Op {
+    record ArraySet(Local array, Value index, Value value) implements Op {
     }
 
-    record CollectionCreate(CollectionFactory<?, ?> factory, String path, Value size, Local out) implements Op {
+    record ListFinish(Local array, Local out) implements Op {
     }
 
-    record CollectionFinish(CollectionFactory<?, ?> factory, String path, Local collection, Local out) implements Op {
-    }
-
-    record MapCreate(MapFactory<?, ?, ?> factory, String path, Value size, Local out) implements Op {
-    }
-
-    record MapFinish(MapFactory<?, ?, ?> factory, String path, Local map, Local out) implements Op {
+    record MapFinish(Local keys, Local values, Value size, Local out) implements Op {
     }
 
     record Construct(ConstructorIr<?> constructor, String path, List<Value> args, Local out) implements Op {
