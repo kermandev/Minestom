@@ -20,11 +20,13 @@ import net.minestom.server.utils.json.JsonUtil;
 import net.minestom.server.utils.nbt.BinaryTagReader;
 import net.minestom.server.utils.nbt.BinaryTagWriter;
 import net.minestom.server.utils.validate.Check;
+import net.minestom.server.network.ir.*;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.UTFDataFormatException;
+import java.lang.classfile.TypeKind;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.Function;
@@ -33,11 +35,96 @@ import java.util.function.Supplier;
 import static net.minestom.server.network.NetworkBuffer.*;
 import static net.minestom.server.network.NetworkBufferImpl.impl;
 
-public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
+interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, NetworkIrIntrinsic {
+    @Override
+    default void lowerWrite(IrWriteBuilder builder) {
+        builder.push(new Op.WriteExternal(this, new Value.LocalValue(builder.source())));
+    }
+
+    @Override
+    default Value lowerRead(IrReadBuilder builder) {
+        Local out = new Local(new LocalType.Reference(Object.class));
+        builder.push(new Op.ReadExternal(this, out));
+        return new Value.LocalValue(out);
+    }
+
+    static long fixedByteSize(NetworkBuffer.Type<?> type) {
+        if (type instanceof NetworkIrBacked<?> backed) {
+            long total = 0;
+            for (FieldIr<?, ?> field : backed.ir().fields()) {
+                long size = fixedByteSize(field.type());
+                if (size < 0) return -1L;
+                total += size;
+            }
+            return total;
+        }
+        return switch (type) {
+            case UnitType _ -> 0;
+            case BooleanType _, ByteType _, UnsignedByteType _ -> 1;
+            case ShortType _, UnsignedShortType _ -> 2;
+            case IntType _, UnsignedIntType _, FloatType _ -> 4;
+            case LongType _, DoubleType _ -> 8;
+            case RawBytesType raw -> raw.length();
+            case TransformType<?, ?> transform -> fixedByteSize(transform.parent());
+            case EitherType<?, ?> either -> {
+                long left = fixedByteSize(either.left());
+                long right = fixedByteSize(either.right());
+                yield (left == right && left >= 0) ? left : -1L;
+            }
+            default -> -1L;
+        };
+    }
+
+    static Value addValues(Value left, Value right) {
+        if (left instanceof Value.Const(Object lv) && right instanceof Value.Const(Object rv)) {
+            if (lv instanceof Number l && rv instanceof Number r) return new Value.Const(l.longValue() + r.longValue());
+        }
+        if (left instanceof Value.Const(Object lv) && lv instanceof Number n && n.longValue() == 0) return right;
+        if (right instanceof Value.Const(Object rv) && rv instanceof Number n && n.longValue() == 0) return left;
+
+        // Normalize: ensure left-leaning tree
+        if (right instanceof Value.Add rightAdd) {
+            return addValues(addValues(left, rightAdd.left()), rightAdd.right());
+        }
+        return new Value.Add(left, right);
+    }
+
+    static RunItem shiftItem(RunItem item, Value shift) {
+        return switch (item) {
+            case RunItem.Put put -> new RunItem.Put(put.kind(), addValues(shift, put.offset()), put.value());
+            case RunItem.PutVarInt putVarInt ->
+                    new RunItem.PutVarInt(addValues(shift, putVarInt.offset()), putVarInt.value(), putVarInt.encodedSize());
+            case RunItem.PutBytes putBytes ->
+                    new RunItem.PutBytes(addValues(shift, putBytes.offset()), putBytes.byteArray(), putBytes.length());
+            case RunItem.Get get -> new RunItem.Get(get.kind(), addValues(shift, get.offset()), get.out());
+            case RunItem.GetBytes getBytes ->
+                    new RunItem.GetBytes(addValues(shift, getBytes.offset()), getBytes.byteArray(), getBytes.length());
+            case RunItem.ForIndex forIndex -> {
+                final List<RunStep> body = new ArrayList<>();
+                for (RunStep step : forIndex.body()) {
+                    body.add(shiftStep(step, shift));
+                }
+                yield new RunItem.ForIndex(forIndex.index(), forIndex.start(), forIndex.end(), body);
+            }
+        };
+    }
+
+    static RunStep shiftStep(RunStep step, Value shift) {
+        return switch (step) {
+            case RunStep.Put put -> new RunStep.Put(put.kind(), addValues(shift, put.offset()), put.value());
+            case RunStep.Get get -> new RunStep.Get(get.kind(), addValues(shift, get.offset()), get.out());
+            case RunStep.PutBytes putBytes ->
+                    new RunStep.PutBytes(addValues(shift, putBytes.offset()), putBytes.byteArray(), putBytes.length());
+            case RunStep.GetBytes getBytes ->
+                    new RunStep.GetBytes(addValues(shift, getBytes.offset()), getBytes.byteArray(), getBytes.length());
+            default -> step;
+        };
+    }
+
     int SEGMENT_BITS = 0x7F;
     int CONTINUE_BIT = 0x80;
 
-    public static int varIntSize(int value) {
+    static int varIntSize(int value) {
         int size = 1;
         while ((value & ~SEGMENT_BITS) != 0) {
             size++;
@@ -46,7 +133,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         return size;
     }
 
-    public static int varLongSize(long value) {
+    static int varLongSize(long value) {
         int size = 1;
         while ((value & ~((long) SEGMENT_BITS)) != 0) {
             size++;
@@ -55,7 +142,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         return size;
     }
 
-    public static long writeVarIntUnchecked(NetworkBufferImpl impl, long index, int value) {
+    static long writeVarIntUnchecked(NetworkBufferImpl impl, long index, int value) {
         while (true) {
             if ((value & ~SEGMENT_BITS) == 0) {
                 impl._putByteUnchecked(index, (byte) value);
@@ -66,7 +153,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public static long writeVarLongUnchecked(NetworkBufferImpl impl, long index, long value) {
+    static long writeVarLongUnchecked(NetworkBufferImpl impl, long index, long value) {
         while (true) {
             if ((value & ~((long) SEGMENT_BITS)) == 0) {
                 impl._putByteUnchecked(index, (byte) value);
@@ -77,7 +164,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public static int readVarInt(NetworkBuffer buffer) {
+    static int readVarInt(NetworkBuffer buffer) {
         long index = buffer.readIndex();
         int result = 0;
         for (int shift = 0; ; shift += 7) {
@@ -90,7 +177,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public static long readVarLong(NetworkBuffer buffer) {
+    static long readVarLong(NetworkBuffer buffer) {
         int length = 0;
         long value = 0;
         int position = 0;
@@ -157,7 +244,16 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         return new String(bytes, StandardCharsets.UTF_8);
     }
 
-    public record UnitType() implements NetworkBufferTypeImpl<Unit> {
+    record UnitType() implements NetworkBufferTypeImpl<Unit> {
+        @Override
+        public void lowerWrite(IrWriteBuilder builder) {
+        }
+
+        @Override
+        public Value lowerRead(IrReadBuilder builder) {
+            return new Value.Const(Unit.INSTANCE);
+        }
+
         @Override
         public void write(NetworkBuffer buffer, Unit value) {
         }
@@ -168,7 +264,27 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record BooleanType() implements NetworkBufferTypeImpl<Boolean> {
+    record BooleanType() implements NetworkBufferTypeImpl<Boolean> {
+        @Override
+        public void lowerWrite(IrWriteBuilder builder) {
+            Local cast = new Local(new LocalType.Reference(Boolean.class));
+            Local unboxed = new Local(new LocalType.Kind(TypeKind.BOOLEAN));
+            builder.push(new Op.Cast(builder.source(), Boolean.class, cast));
+            builder.push(new Op.Unbox(PrimitiveKind.BOOLEAN, cast, unboxed));
+            builder.push(new Op.WriteRun(new RunIr(new Value.Const(1L),
+                    List.of(new RunItem.Put(StoreKind.BOOLEAN, new Value.Const(0L), new Value.LocalValue(unboxed))))));
+        }
+
+        @Override
+        public Value lowerRead(IrReadBuilder builder) {
+            Local unboxed = new Local(new LocalType.Kind(TypeKind.BOOLEAN));
+            builder.push(new Op.ReadRun(new RunIr(new Value.Const(1L),
+                    List.of(new RunItem.Get(StoreKind.BOOLEAN, new Value.Const(0L), unboxed)))));
+            Local boxed = new Local(new LocalType.Reference(Boolean.class));
+            builder.push(new Op.Box(PrimitiveKind.BOOLEAN, unboxed, boxed));
+            return new Value.LocalValue(boxed);
+        }
+
         @Override
         public void write(NetworkBuffer buffer, Boolean value) {
             final NetworkBufferImpl impl = impl(buffer);
@@ -183,7 +299,27 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record ByteType() implements NetworkBufferTypeImpl<Byte> {
+    record ByteType() implements NetworkBufferTypeImpl<Byte> {
+        @Override
+        public void lowerWrite(IrWriteBuilder builder) {
+            Local cast = new Local(new LocalType.Reference(Byte.class));
+            Local unboxed = new Local(new LocalType.Kind(TypeKind.BYTE));
+            builder.push(new Op.Cast(builder.source(), Byte.class, cast));
+            builder.push(new Op.Unbox(PrimitiveKind.BYTE, cast, unboxed));
+            builder.push(new Op.WriteRun(new RunIr(new Value.Const(1L),
+                    List.of(new RunItem.Put(StoreKind.BYTE, new Value.Const(0L), new Value.LocalValue(unboxed))))));
+        }
+
+        @Override
+        public Value lowerRead(IrReadBuilder builder) {
+            Local unboxed = new Local(new LocalType.Kind(TypeKind.BYTE));
+            builder.push(new Op.ReadRun(new RunIr(new Value.Const(1L),
+                    List.of(new RunItem.Get(StoreKind.BYTE, new Value.Const(0L), unboxed)))));
+            Local boxed = new Local(new LocalType.Reference(Byte.class));
+            builder.push(new Op.Box(PrimitiveKind.BYTE, unboxed, boxed));
+            return new Value.LocalValue(boxed);
+        }
+
         @Override
         public void write(NetworkBuffer buffer, Byte value) {
             final NetworkBufferImpl impl = impl(buffer);
@@ -198,7 +334,27 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record UnsignedByteType() implements NetworkBufferTypeImpl<Short> {
+    record UnsignedByteType() implements NetworkBufferTypeImpl<Short> {
+        @Override
+        public void lowerWrite(IrWriteBuilder builder) {
+            Local cast = new Local(new LocalType.Reference(Short.class));
+            Local unboxed = new Local(new LocalType.Kind(TypeKind.SHORT));
+            builder.push(new Op.Cast(builder.source(), Short.class, cast));
+            builder.push(new Op.Unbox(PrimitiveKind.SHORT, cast, unboxed));
+            builder.push(new Op.WriteRun(new RunIr(new Value.Const(1L),
+                    List.of(new RunItem.Put(StoreKind.BYTE, new Value.Const(0L), new Value.LocalValue(unboxed))))));
+        }
+
+        @Override
+        public Value lowerRead(IrReadBuilder builder) {
+            Local unboxed = new Local(new LocalType.Kind(TypeKind.INT));
+            builder.push(new Op.ReadRun(new RunIr(new Value.Const(1L),
+                    List.of(new RunItem.Get(StoreKind.BYTE, new Value.Const(0L), unboxed)))));
+            Local boxed = new Local(new LocalType.Reference(Short.class));
+            builder.push(new Op.Box(PrimitiveKind.UNSIGNED_BYTE, unboxed, boxed));
+            return new Value.LocalValue(boxed);
+        }
+
         @Override
         public void write(NetworkBuffer buffer, Short value) {
             final NetworkBufferImpl impl = impl(buffer);
@@ -213,7 +369,27 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record ShortType() implements NetworkBufferTypeImpl<Short> {
+    record ShortType() implements NetworkBufferTypeImpl<Short> {
+        @Override
+        public void lowerWrite(IrWriteBuilder builder) {
+            Local cast = new Local(new LocalType.Reference(Short.class));
+            Local unboxed = new Local(new LocalType.Kind(TypeKind.SHORT));
+            builder.push(new Op.Cast(builder.source(), Short.class, cast));
+            builder.push(new Op.Unbox(PrimitiveKind.SHORT, cast, unboxed));
+            builder.push(new Op.WriteRun(new RunIr(new Value.Const(2L),
+                    List.of(new RunItem.Put(StoreKind.SHORT, new Value.Const(0L), new Value.LocalValue(unboxed))))));
+        }
+
+        @Override
+        public Value lowerRead(IrReadBuilder builder) {
+            Local unboxed = new Local(new LocalType.Kind(TypeKind.SHORT));
+            builder.push(new Op.ReadRun(new RunIr(new Value.Const(2L),
+                    List.of(new RunItem.Get(StoreKind.SHORT, new Value.Const(0L), unboxed)))));
+            Local boxed = new Local(new LocalType.Reference(Short.class));
+            builder.push(new Op.Box(PrimitiveKind.SHORT, unboxed, boxed));
+            return new Value.LocalValue(boxed);
+        }
+
         @Override
         public void write(NetworkBuffer buffer, Short value) {
             final NetworkBufferImpl impl = impl(buffer);
@@ -228,7 +404,27 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record UnsignedShortType() implements NetworkBufferTypeImpl<Integer> {
+    record UnsignedShortType() implements NetworkBufferTypeImpl<Integer> {
+        @Override
+        public void lowerWrite(IrWriteBuilder builder) {
+            Local cast = new Local(new LocalType.Reference(Integer.class));
+            Local unboxed = new Local(new LocalType.Kind(TypeKind.INT));
+            builder.push(new Op.Cast(builder.source(), Integer.class, cast));
+            builder.push(new Op.Unbox(PrimitiveKind.INT, cast, unboxed));
+            builder.push(new Op.WriteRun(new RunIr(new Value.Const(2L),
+                    List.of(new RunItem.Put(StoreKind.SHORT, new Value.Const(0L), new Value.LocalValue(unboxed))))));
+        }
+
+        @Override
+        public Value lowerRead(IrReadBuilder builder) {
+            Local unboxed = new Local(new LocalType.Kind(TypeKind.INT));
+            builder.push(new Op.ReadRun(new RunIr(new Value.Const(2L),
+                    List.of(new RunItem.Get(StoreKind.SHORT, new Value.Const(0L), unboxed)))));
+            Local boxed = new Local(new LocalType.Reference(Integer.class));
+            builder.push(new Op.Box(PrimitiveKind.UNSIGNED_SHORT, unboxed, boxed));
+            return new Value.LocalValue(boxed);
+        }
+
         @Override
         public void write(NetworkBuffer buffer, Integer value) {
             final NetworkBufferImpl impl = impl(buffer);
@@ -243,7 +439,27 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record IntType() implements NetworkBufferTypeImpl<Integer> {
+    record IntType() implements NetworkBufferTypeImpl<Integer> {
+        @Override
+        public void lowerWrite(IrWriteBuilder builder) {
+            Local cast = new Local(new LocalType.Reference(Integer.class));
+            Local unboxed = new Local(new LocalType.Kind(TypeKind.INT));
+            builder.push(new Op.Cast(builder.source(), Integer.class, cast));
+            builder.push(new Op.Unbox(PrimitiveKind.INT, cast, unboxed));
+            builder.push(new Op.WriteRun(new RunIr(new Value.Const(4L),
+                    List.of(new RunItem.Put(StoreKind.INT, new Value.Const(0L), new Value.LocalValue(unboxed))))));
+        }
+
+        @Override
+        public Value lowerRead(IrReadBuilder builder) {
+            Local unboxed = new Local(new LocalType.Kind(TypeKind.INT));
+            builder.push(new Op.ReadRun(new RunIr(new Value.Const(4L),
+                    List.of(new RunItem.Get(StoreKind.INT, new Value.Const(0L), unboxed)))));
+            Local boxed = new Local(new LocalType.Reference(Integer.class));
+            builder.push(new Op.Box(PrimitiveKind.INT, unboxed, boxed));
+            return new Value.LocalValue(boxed);
+        }
+
         @Override
         public void write(NetworkBuffer buffer, Integer value) {
             final NetworkBufferImpl impl = impl(buffer);
@@ -258,7 +474,27 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record UnsignedIntType() implements NetworkBufferTypeImpl<Long> {
+    record UnsignedIntType() implements NetworkBufferTypeImpl<Long> {
+        @Override
+        public void lowerWrite(IrWriteBuilder builder) {
+            Local cast = new Local(new LocalType.Reference(Long.class));
+            Local unboxed = new Local(new LocalType.Kind(TypeKind.LONG));
+            builder.push(new Op.Cast(builder.source(), Long.class, cast));
+            builder.push(new Op.Unbox(PrimitiveKind.LONG, cast, unboxed));
+            builder.push(new Op.WriteRun(new RunIr(new Value.Const(4L),
+                    List.of(new RunItem.Put(StoreKind.INT, new Value.Const(0L), new Value.LocalValue(unboxed))))));
+        }
+
+        @Override
+        public Value lowerRead(IrReadBuilder builder) {
+            Local unboxed = new Local(new LocalType.Kind(TypeKind.LONG));
+            builder.push(new Op.ReadRun(new RunIr(new Value.Const(4L),
+                    List.of(new RunItem.Get(StoreKind.INT, new Value.Const(0L), unboxed)))));
+            Local boxed = new Local(new LocalType.Reference(Long.class));
+            builder.push(new Op.Box(PrimitiveKind.UNSIGNED_INT, unboxed, boxed));
+            return new Value.LocalValue(boxed);
+        }
+
         @Override
         public void write(NetworkBuffer buffer, Long value) {
             final NetworkBufferImpl impl = impl(buffer);
@@ -273,7 +509,27 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record LongType() implements NetworkBufferTypeImpl<Long> {
+    record LongType() implements NetworkBufferTypeImpl<Long> {
+        @Override
+        public void lowerWrite(IrWriteBuilder builder) {
+            Local cast = new Local(new LocalType.Reference(Long.class));
+            Local unboxed = new Local(new LocalType.Kind(TypeKind.LONG));
+            builder.push(new Op.Cast(builder.source(), Long.class, cast));
+            builder.push(new Op.Unbox(PrimitiveKind.LONG, cast, unboxed));
+            builder.push(new Op.WriteRun(new RunIr(new Value.Const(8L),
+                    List.of(new RunItem.Put(StoreKind.LONG, new Value.Const(0L), new Value.LocalValue(unboxed))))));
+        }
+
+        @Override
+        public Value lowerRead(IrReadBuilder builder) {
+            Local unboxed = new Local(new LocalType.Kind(TypeKind.LONG));
+            builder.push(new Op.ReadRun(new RunIr(new Value.Const(8L),
+                    List.of(new RunItem.Get(StoreKind.LONG, new Value.Const(0L), unboxed)))));
+            Local boxed = new Local(new LocalType.Reference(Long.class));
+            builder.push(new Op.Box(PrimitiveKind.LONG, unboxed, boxed));
+            return new Value.LocalValue(boxed);
+        }
+
         @Override
         public void write(NetworkBuffer buffer, Long value) {
             final NetworkBufferImpl impl = impl(buffer);
@@ -288,7 +544,27 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record FloatType() implements NetworkBufferTypeImpl<Float> {
+    record FloatType() implements NetworkBufferTypeImpl<Float> {
+        @Override
+        public void lowerWrite(IrWriteBuilder builder) {
+            Local cast = new Local(new LocalType.Reference(Float.class));
+            Local unboxed = new Local(new LocalType.Kind(TypeKind.FLOAT));
+            builder.push(new Op.Cast(builder.source(), Float.class, cast));
+            builder.push(new Op.Unbox(PrimitiveKind.FLOAT, cast, unboxed));
+            builder.push(new Op.WriteRun(new RunIr(new Value.Const(4L),
+                    List.of(new RunItem.Put(StoreKind.FLOAT, new Value.Const(0L), new Value.LocalValue(unboxed))))));
+        }
+
+        @Override
+        public Value lowerRead(IrReadBuilder builder) {
+            Local unboxed = new Local(new LocalType.Kind(TypeKind.FLOAT));
+            builder.push(new Op.ReadRun(new RunIr(new Value.Const(4L),
+                    List.of(new RunItem.Get(StoreKind.FLOAT, new Value.Const(0L), unboxed)))));
+            Local boxed = new Local(new LocalType.Reference(Float.class));
+            builder.push(new Op.Box(PrimitiveKind.FLOAT, unboxed, boxed));
+            return new Value.LocalValue(boxed);
+        }
+
         @Override
         public void write(NetworkBuffer buffer, Float value) {
             final NetworkBufferImpl impl = impl(buffer);
@@ -303,7 +579,27 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record DoubleType() implements NetworkBufferTypeImpl<Double> {
+    record DoubleType() implements NetworkBufferTypeImpl<Double> {
+        @Override
+        public void lowerWrite(IrWriteBuilder builder) {
+            Local cast = new Local(new LocalType.Reference(Double.class));
+            Local unboxed = new Local(new LocalType.Kind(TypeKind.DOUBLE));
+            builder.push(new Op.Cast(builder.source(), Double.class, cast));
+            builder.push(new Op.Unbox(PrimitiveKind.DOUBLE, cast, unboxed));
+            builder.push(new Op.WriteRun(new RunIr(new Value.Const(8L),
+                    List.of(new RunItem.Put(StoreKind.DOUBLE, new Value.Const(0L), new Value.LocalValue(unboxed))))));
+        }
+
+        @Override
+        public Value lowerRead(IrReadBuilder builder) {
+            Local unboxed = new Local(new LocalType.Kind(TypeKind.DOUBLE));
+            builder.push(new Op.ReadRun(new RunIr(new Value.Const(8L),
+                    List.of(new RunItem.Get(StoreKind.DOUBLE, new Value.Const(0L), unboxed)))));
+            Local boxed = new Local(new LocalType.Reference(Double.class));
+            builder.push(new Op.Box(PrimitiveKind.DOUBLE, unboxed, boxed));
+            return new Value.LocalValue(boxed);
+        }
+
         @Override
         public void write(NetworkBuffer buffer, Double value) {
             final NetworkBufferImpl impl = impl(buffer);
@@ -318,7 +614,27 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record VarIntType() implements NetworkBufferTypeImpl<Integer> {
+    record VarIntType() implements NetworkBufferTypeImpl<Integer> {
+        @Override
+        public void lowerWrite(IrWriteBuilder builder) {
+            Local cast = new Local(new LocalType.Reference(Integer.class));
+            Local unboxed = new Local(new LocalType.Kind(TypeKind.INT));
+            builder.push(new Op.Cast(builder.source(), Integer.class, cast));
+            builder.push(new Op.Unbox(PrimitiveKind.INT, cast, unboxed));
+            Value value = new Value.LocalValue(unboxed);
+            Value encodedSize = new Value.VarIntSize(value);
+            builder.push(new Op.WriteRun(new RunIr(encodedSize, List.of(new RunItem.PutVarInt(new Value.Const(0L), value, encodedSize)))));
+        }
+
+        @Override
+        public Value lowerRead(IrReadBuilder builder) {
+            Local unboxed = new Local(new LocalType.Kind(TypeKind.INT));
+            builder.push(new Op.ReadVarInt(unboxed));
+            Local boxed = new Local(new LocalType.Reference(Integer.class));
+            builder.push(new Op.Box(PrimitiveKind.INT, unboxed, boxed));
+            return new Value.LocalValue(boxed);
+        }
+
         @Override
         public void write(NetworkBuffer buffer, Integer boxed) {
             int value = boxed;
@@ -332,7 +648,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record OptionalVarIntType() implements NetworkBufferTypeImpl<@Nullable Integer> {
+    record OptionalVarIntType() implements NetworkBufferTypeImpl<@Nullable Integer> {
         @Override
         public void write(NetworkBuffer buffer, @Nullable Integer value) {
             buffer.write(VAR_INT, value == null ? 0 : value + 1);
@@ -345,7 +661,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record VarInt3Type() implements NetworkBufferTypeImpl<Integer> {
+    record VarInt3Type() implements NetworkBufferTypeImpl<Integer> {
         @Override
         public void write(NetworkBuffer buffer, Integer boxed) {
             final int value = boxed;
@@ -366,7 +682,25 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record VarLongType() implements NetworkBufferTypeImpl<Long> {
+    record VarLongType() implements NetworkBufferTypeImpl<Long> {
+        @Override
+        public void lowerWrite(IrWriteBuilder builder) {
+            Local cast = new Local(new LocalType.Reference(Long.class));
+            Local unboxed = new Local(new LocalType.Kind(TypeKind.LONG));
+            builder.push(new Op.Cast(builder.source(), Long.class, cast));
+            builder.push(new Op.Unbox(PrimitiveKind.LONG, cast, unboxed));
+            builder.push(new Op.WriteVarLong(new Value.LocalValue(unboxed)));
+        }
+
+        @Override
+        public Value lowerRead(IrReadBuilder builder) {
+            Local unboxed = new Local(new LocalType.Kind(TypeKind.LONG));
+            builder.push(new Op.ReadVarLong(unboxed));
+            Local boxed = new Local(new LocalType.Reference(Long.class));
+            builder.push(new Op.Box(PrimitiveKind.LONG, unboxed, boxed));
+            return new Value.LocalValue(boxed);
+        }
+
         @Override
         public void write(NetworkBuffer buffer, Long value) {
             final NetworkBufferImpl impl = impl(buffer);
@@ -379,7 +713,35 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record RawBytesType(int length) implements NetworkBufferTypeImpl<byte[]> {
+    record RawBytesType(int length) implements NetworkBufferTypeImpl<byte[]> {
+        @Override
+        public void lowerWrite(IrWriteBuilder builder) {
+            Local bytes = new Local(new LocalType.Reference(byte[].class));
+            builder.push(new Op.Cast(builder.source(), byte[].class, bytes));
+            if (length != -1) {
+                builder.push(new Op.WriteRun(new RunIr(
+                        new Value.Const((long) length),
+                        List.of(new RunItem.PutBytes(new Value.Const(0L), new Value.LocalValue(bytes), new Value.Const(length)))
+                )));
+            } else {
+                builder.push(new Op.WriteExternal(this, new Value.LocalValue(bytes)));
+            }
+        }
+
+        @Override
+        public Value lowerRead(IrReadBuilder builder) {
+            Local bytes = new Local(new LocalType.Reference(byte[].class));
+            if (length != -1) {
+                builder.push(new Op.ReadRun(new RunIr(
+                        new Value.Const((long) length),
+                        List.of(new RunItem.GetBytes(new Value.Const(0L), bytes, new Value.Const(length)))
+                )));
+            } else {
+                builder.push(new Op.ReadExternal(this, bytes));
+            }
+            return new Value.LocalValue(bytes);
+        }
+
         @Override
         public void write(NetworkBuffer buffer, byte[] value) {
             if (length != -1) {
@@ -407,7 +769,27 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record StringType() implements NetworkBufferTypeImpl<String> {
+    record StringType() implements NetworkBufferTypeImpl<String> {
+        @Override
+        public void lowerWrite(IrWriteBuilder builder) {
+            Local str = new Local(new LocalType.Reference(String.class));
+            builder.push(new Op.Cast(builder.source(), String.class, str));
+
+            final Local bytes = new Local(new LocalType.Reference(byte[].class));
+            builder.push(new Op.StringToBytes(str, bytes));
+            builder.lower(BYTE_ARRAY, new Value.LocalValue(bytes));
+        }
+
+        @Override
+        public Value lowerRead(IrReadBuilder builder) {
+            final Value bytes = builder.lower(BYTE_ARRAY);
+            Local bytesLocal = new Local(new LocalType.Reference(byte[].class));
+            builder.push(new Op.Store(bytes, bytesLocal));
+            final Local result = new Local(new LocalType.Reference(String.class));
+            builder.push(new Op.BytesToString(bytesLocal, result));
+            return new Value.LocalValue(result);
+        }
+
         @Override
         public void write(NetworkBuffer buffer, String value) {
             writeStringUtf8(buffer, value, 1024 * 1024);
@@ -419,7 +801,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record StringTerminatedType() implements NetworkBufferTypeImpl<String> {
+    record StringTerminatedType() implements NetworkBufferTypeImpl<String> {
         @Override
         public void write(NetworkBuffer buffer, String value) {
             final byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
@@ -440,7 +822,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record NbtType() implements NetworkBufferTypeImpl<BinaryTag> {
+    record NbtType() implements NetworkBufferTypeImpl<BinaryTag> {
         @Override
         public void write(NetworkBuffer buffer, BinaryTag value) {
             BinaryTagWriter nbtWriter = impl(buffer).nbtWriter();
@@ -462,7 +844,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record BlockPositionType() implements NetworkBufferTypeImpl<Point> {
+    record BlockPositionType() implements NetworkBufferTypeImpl<Point> {
         @Override
         public void write(NetworkBuffer buffer, Point value) {
             final int blockX = value.blockX();
@@ -484,7 +866,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record JsonComponentType() implements NetworkBufferTypeImpl<Component> {
+    record JsonComponentType() implements NetworkBufferTypeImpl<Component> {
         @Override
         public void write(NetworkBuffer buffer, Component value) {
             final Transcoder<JsonElement> coder = buffer.registries() != null
@@ -504,7 +886,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record UUIDType() implements NetworkBufferTypeImpl<UUID> {
+    record UUIDType() implements NetworkBufferTypeImpl<UUID> {
         @Override
         public void write(NetworkBuffer buffer, java.util.UUID value) {
             buffer.write(LONG, value.getMostSignificantBits());
@@ -519,7 +901,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record PosType() implements NetworkBufferTypeImpl<Pos> {
+    record PosType() implements NetworkBufferTypeImpl<Pos> {
         @Override
         public void write(NetworkBuffer buffer, Pos value) {
             buffer.write(DOUBLE, value.x());
@@ -540,7 +922,37 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record ByteArrayType() implements NetworkBufferTypeImpl<byte[]> {
+    record ByteArrayType() implements NetworkBufferTypeImpl<byte[]> {
+        @Override
+        public void lowerWrite(IrWriteBuilder builder) {
+            Local bytes = new Local(new LocalType.Reference(byte[].class));
+            builder.push(new Op.Cast(builder.source(), byte[].class, bytes));
+
+            final Local lengthLocal = new Local(new LocalType.Kind(TypeKind.INT));
+            builder.push(new Op.Store(new Value.ArrayLength(new Value.LocalValue(bytes)), lengthLocal));
+            final Value lengthVal = new Value.LocalValue(lengthLocal);
+
+            final Local encodedSizeLocal = new Local(new LocalType.Kind(TypeKind.INT));
+            builder.push(new Op.Store(new Value.VarIntSize(lengthVal), encodedSizeLocal));
+            final Value encodedSizeVal = new Value.LocalValue(encodedSizeLocal);
+
+            builder.push(new Op.WriteRun(new RunIr(addValues(encodedSizeVal, lengthVal), List.of(
+                    new RunItem.PutVarInt(new Value.Const(0L), lengthVal, encodedSizeVal),
+                    new RunItem.PutBytes(encodedSizeVal, new Value.LocalValue(bytes), lengthVal)
+            ))));
+        }
+
+        @Override
+        public Value lowerRead(IrReadBuilder builder) {
+            final Local length = new Local(new LocalType.Kind(TypeKind.INT));
+            builder.push(new Op.ReadVarInt(length));
+
+            final Local bytes = new Local(new LocalType.Reference(byte[].class));
+            builder.push(new Op.ReadRun(new RunIr(new Value.LocalValue(length),
+                    List.of(new RunItem.GetBytes(new Value.Const(0L), bytes, new Value.LocalValue(length))))));
+            return new Value.LocalValue(bytes);
+        }
+
         @Override
         public void write(NetworkBuffer buffer, byte[] value) {
             writeByteArray(buffer, value, Integer.MAX_VALUE);
@@ -552,7 +964,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record LongArrayType() implements NetworkBufferTypeImpl<long[]> {
+    record LongArrayType() implements NetworkBufferTypeImpl<long[]> {
         @Override
         public void write(NetworkBuffer buffer, long[] value) {
             final int length = value.length;
@@ -581,7 +993,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record VarIntArrayType() implements NetworkBufferTypeImpl<int[]> {
+    record VarIntArrayType() implements NetworkBufferTypeImpl<int[]> {
         @Override
         public void write(NetworkBuffer buffer, int[] value) {
             buffer.write(VAR_INT, value.length);
@@ -597,7 +1009,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record VarLongArrayType() implements NetworkBufferTypeImpl<long[]> {
+    record VarLongArrayType() implements NetworkBufferTypeImpl<long[]> {
         @Override
         public void write(NetworkBuffer buffer, long[] value) {
             buffer.write(VAR_INT, value.length);
@@ -613,7 +1025,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record Vector3Type() implements NetworkBufferTypeImpl<Point> {
+    record Vector3Type() implements NetworkBufferTypeImpl<Point> {
         @Override
         public void write(NetworkBuffer buffer, Point value) {
             buffer.write(FLOAT, (float) value.x());
@@ -630,7 +1042,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record Vector3DType() implements NetworkBufferTypeImpl<Point> {
+    record Vector3DType() implements NetworkBufferTypeImpl<Point> {
         @Override
         public void write(NetworkBuffer buffer, Point value) {
             buffer.write(DOUBLE, value.x());
@@ -647,7 +1059,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record Vector3IType() implements NetworkBufferTypeImpl<Point> {
+    record Vector3IType() implements NetworkBufferTypeImpl<Point> {
         @Override
         public void write(NetworkBuffer buffer, Point value) {
             buffer.write(VAR_INT, (int) value.x());
@@ -664,7 +1076,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record Vector3BType() implements NetworkBufferTypeImpl<Point> {
+    record Vector3BType() implements NetworkBufferTypeImpl<Point> {
         @Override
         public void write(NetworkBuffer buffer, Point value) {
             buffer.write(BYTE, (byte) value.x());
@@ -681,7 +1093,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record LpVector3Type() implements NetworkBufferTypeImpl<Vec> {
+    record LpVector3Type() implements NetworkBufferTypeImpl<Vec> {
         private static final int DATA_BITS_MASK = 0b111111111111111;
         private static final double MAX_QUANTIZED_VALUE = 32766.0;
         private static final int SCALE_BITS_MASK = 0b11;
@@ -689,8 +1101,8 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         private static final int X_OFFSET = 3;
         private static final int Y_OFFSET = 18;
         private static final int Z_OFFSET = 33;
-        public static final double ABS_MAX_VALUE = 1.7179869183E10;
-        public static final double ABS_MIN_VALUE = 3.051944088384301E-5;
+        static final double ABS_MAX_VALUE = 1.7179869183E10;
+        static final double ABS_MIN_VALUE = 3.051944088384301E-5;
 
         @Override
         public void write(NetworkBuffer buffer, Vec value) {
@@ -747,7 +1159,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record QuaternionType() implements NetworkBufferTypeImpl<float[]> {
+    record QuaternionType() implements NetworkBufferTypeImpl<float[]> {
         @Override
         public void write(NetworkBuffer buffer, float[] value) {
             buffer.write(FLOAT, value[0]);
@@ -768,7 +1180,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
 
     // Combinators
 
-    public record EnumSetType<E extends Enum<E>>(Class<E> enumType,
+    record EnumSetType<E extends Enum<E>>(Class<E> enumType,
                                           E[] values) implements NetworkBufferTypeImpl<EnumSet<E>> {
         @Override
         public void write(NetworkBuffer buffer, EnumSet<E> value) {
@@ -794,7 +1206,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record FixedBitSetType(int length) implements NetworkBufferTypeImpl<BitSet> {
+    record FixedBitSetType(int length) implements NetworkBufferTypeImpl<BitSet> {
         @Override
         public void write(NetworkBuffer buffer, BitSet value) {
             final int setLength = value.length();
@@ -813,7 +1225,71 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record OptionalType<T>(Type<T> parent) implements NetworkBufferTypeImpl<@Nullable T> {
+    record OptionalType<T>(Type<T> parent) implements NetworkBufferTypeImpl<@Nullable T> {
+        @Override
+        public void collectMetadata(MetadataContext context) {
+            context.child("Opt", parent);
+        }
+
+        @Override
+        public void lowerWrite(IrWriteBuilder builder) {
+            final Value present = new Value.IsNotNull(new Value.LocalValue(builder.source()));
+            final long fixedSize = fixedByteSize(parent);
+
+            if (fixedSize >= 0) {
+                final List<Op> thenOps = builder.buildNested(() -> {
+                    builder.lower(parent, new Value.LocalValue(builder.source()));
+                });
+
+                final List<Op> optimizedThenOps = new ArrayList<>();
+                for (Op op : thenOps) {
+                    if (op instanceof Op.WriteRun parentRun) {
+                        final List<RunItem> mergedItems = new ArrayList<>();
+                        mergedItems.add(new RunItem.Put(StoreKind.BOOLEAN, new Value.Const(0L), new Value.Const(true)));
+                        for (RunItem item : parentRun.run().items()) {
+                            mergedItems.add(shiftItem(item, new Value.Const(1L)));
+                        }
+                        optimizedThenOps.add(new Op.WriteRun(new RunIr(new Value.Const(1L + fixedSize), mergedItems)));
+                    } else {
+                        optimizedThenOps.add(op);
+                    }
+                }
+
+                final List<Op> elseOps = new ArrayList<>();
+                elseOps.add(new Op.WriteRun(new RunIr(new Value.Const(1L),
+                        List.of(new RunItem.Put(StoreKind.BOOLEAN, new Value.Const(0L), new Value.Const(false))))));
+
+                builder.push(new Op.If(present, optimizedThenOps, elseOps));
+            } else {
+                builder.push(new Op.WriteRun(new RunIr(new Value.Const(1L),
+                        List.of(new RunItem.Put(StoreKind.BOOLEAN, new Value.Const(0L), new Value.BoolByte(present))))));
+
+                final List<Op> thenOps = builder.buildNested(() -> {
+                    builder.lower(parent, new Value.LocalValue(builder.source()));
+                });
+                builder.push(new Op.If(present, thenOps, List.of()));
+            }
+        }
+
+        @Override
+        public Value lowerRead(IrReadBuilder builder) {
+            final Local present = new Local(new LocalType.Kind(TypeKind.BOOLEAN));
+            builder.push(new Op.ReadRun(new RunIr(new Value.Const(1L),
+                    List.of(new RunItem.Get(StoreKind.BOOLEAN, new Value.Const(0L), present)))));
+
+            final Local result = new Local(new LocalType.Reference(Object.class));
+            final List<Op> thenOps = builder.buildNested(() -> {
+                final Value parentValue = builder.lower(parent);
+                builder.push(new Op.Store(parentValue, result));
+            });
+
+            final List<Op> elseOps = new ArrayList<>();
+            elseOps.add(new Op.Store(new Value.Const(null), result));
+
+            builder.push(new Op.If(new Value.LocalValue(present), thenOps, elseOps));
+            return new Value.LocalValue(result);
+        }
+
         @Override
         public void write(NetworkBuffer buffer, T value) {
             buffer.write(BOOLEAN, value != null);
@@ -826,7 +1302,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record LengthPrefixedType<T>(Type<T> parent, int maxLength) implements NetworkBufferTypeImpl<T> {
+    record LengthPrefixedType<T>(Type<T> parent, int maxLength) implements NetworkBufferTypeImpl<T> {
         @Override
         public void write(NetworkBuffer buffer, T value) {
             // Write to another buffer and copy (kinda inefficient, but currently unused serverside so its ok for now)
@@ -852,8 +1328,25 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         private final Supplier<NetworkBuffer.Type<T>> supplier;
         private Type<T> type;
 
-        public LazyType(Supplier<NetworkBuffer.Type<T>> supplier) {
+        LazyType(Supplier<NetworkBuffer.Type<T>> supplier) {
             this.supplier = supplier;
+        }
+
+        @Override
+        public void collectMetadata(MetadataContext context) {
+            if (type != null) context.child("Lazy", type);
+        }
+
+        @Override
+        public void lowerWrite(IrWriteBuilder builder) {
+            if (type == null) type = supplier.get();
+            builder.lower(type, new Value.LocalValue(builder.source()));
+        }
+
+        @Override
+        public Value lowerRead(IrReadBuilder builder) {
+            if (type == null) type = supplier.get();
+            return builder.lower(type);
         }
 
         @Override
@@ -865,11 +1358,11 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         @Override
         public T read(NetworkBuffer buffer) {
             if (type == null) type = supplier.get();
-            return null;
+            return type.read(buffer);
         }
     }
 
-    public record TypedNbtType<T>(Codec<T> nbtType) implements NetworkBufferTypeImpl<T> {
+    record TypedNbtType<T>(Codec<T> nbtType) implements NetworkBufferTypeImpl<T> {
         @Override
         public void write(NetworkBuffer buffer, T value) {
             final Registries registries = impl(buffer).registries;
@@ -893,10 +1386,114 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record EitherType<L, R>(
+    record EitherType<L, R>(
             NetworkBuffer.Type<L> left,
             NetworkBuffer.Type<R> right
-    ) implements NetworkBuffer.Type<Either<L, R>> {
+    ) implements NetworkBufferTypeImpl<Either<L, R>> {
+        @Override
+        public void collectMetadata(MetadataContext context) {
+            context.child("L", left);
+            context.child("R", right);
+        }
+
+        @Override
+        public void lowerWrite(IrWriteBuilder builder) {
+            final Value isLeft = new Value.IsLeft(new Value.LocalValue(builder.source()));
+            final long leftSize = fixedByteSize(left);
+            final long rightSize = fixedByteSize(right);
+
+            if (leftSize >= 0 && rightSize >= 0 && leftSize == rightSize) {
+                final List<Op> thenOps = builder.buildNested(() -> {
+                    final Local leftRaw = new Local(new LocalType.Reference(Object.class));
+                    builder.push(new Op.Store(new Value.EitherLeft(new Value.LocalValue(builder.source())), leftRaw));
+                    builder.lower(left, new Value.LocalValue(leftRaw));
+                });
+
+                final List<Op> optimizedThenOps = new ArrayList<>();
+                for (Op op : thenOps) {
+                    if (op instanceof Op.WriteRun leftRun) {
+                        final List<RunItem> mergedItems = new ArrayList<>();
+                        mergedItems.add(new RunItem.Put(StoreKind.BOOLEAN, new Value.Const(0L), new Value.Const(true)));
+                        for (RunItem item : leftRun.run().items()) {
+                            mergedItems.add(shiftItem(item, new Value.Const(1L)));
+                        }
+                        optimizedThenOps.add(new Op.WriteRun(new RunIr(new Value.Const(1L + leftSize), mergedItems)));
+                    } else {
+                        optimizedThenOps.add(op);
+                    }
+                }
+
+                final List<Op> elseOps = builder.buildNested(() -> {
+                    final Local rightRaw = new Local(new LocalType.Reference(Object.class));
+                    builder.push(new Op.Store(new Value.EitherRight(new Value.LocalValue(builder.source())), rightRaw));
+                    builder.lower(right, new Value.LocalValue(rightRaw));
+                });
+
+                final List<Op> optimizedElseOps = new ArrayList<>();
+                for (Op op : elseOps) {
+                    if (op instanceof Op.WriteRun rightRun) {
+                        final List<RunItem> mergedItems = new ArrayList<>();
+                        mergedItems.add(new RunItem.Put(StoreKind.BOOLEAN, new Value.Const(0L), new Value.Const(false)));
+                        for (RunItem item : rightRun.run().items()) {
+                            mergedItems.add(shiftItem(item, new Value.Const(1L)));
+                        }
+                        optimizedElseOps.add(new Op.WriteRun(new RunIr(new Value.Const(1L + rightSize), mergedItems)));
+                    } else {
+                        optimizedElseOps.add(op);
+                    }
+                }
+
+                builder.push(new Op.If(isLeft, optimizedThenOps, optimizedElseOps));
+            } else {
+                builder.push(new Op.WriteRun(new RunIr(new Value.Const(1L),
+                        List.of(new RunItem.Put(StoreKind.BOOLEAN, new Value.Const(0L), new Value.BoolByte(isLeft))))));
+
+                final List<Op> thenOps = builder.buildNested(() -> {
+                    final Local leftRaw = new Local(new LocalType.Reference(Object.class));
+                    builder.push(new Op.Store(new Value.EitherLeft(new Value.LocalValue(builder.source())), leftRaw));
+                    builder.lower(left, new Value.LocalValue(leftRaw));
+                });
+
+                final List<Op> elseOps = builder.buildNested(() -> {
+                    final Local rightRaw = new Local(new LocalType.Reference(Object.class));
+                    builder.push(new Op.Store(new Value.EitherRight(new Value.LocalValue(builder.source())), rightRaw));
+                    builder.lower(right, new Value.LocalValue(rightRaw));
+                });
+
+                builder.push(new Op.If(isLeft, thenOps, elseOps));
+            }
+        }
+
+        @Override
+        public Value lowerRead(IrReadBuilder builder) {
+            final Local isLeft = new Local(new LocalType.Kind(TypeKind.BOOLEAN));
+            builder.push(new Op.ReadRun(new RunIr(new Value.Const(1L),
+                    List.of(new RunItem.Get(StoreKind.BOOLEAN, new Value.Const(0L), isLeft)))));
+
+            final Local result = new Local(new LocalType.Reference(Object.class));
+
+            final List<Op> thenOps = builder.buildNested(() -> {
+                final Value leftValue = builder.lower(left);
+                final Local leftLocal = new Local(new LocalType.Reference(Object.class));
+                builder.push(new Op.Store(leftValue, leftLocal));
+                final Local eitherLeft = new Local(new LocalType.Reference(Either.class));
+                builder.push(new Op.EitherLeft(leftLocal, eitherLeft));
+                builder.push(new Op.Store(new Value.LocalValue(eitherLeft), result));
+            });
+
+            final List<Op> elseOps = builder.buildNested(() -> {
+                final Value rightValue = builder.lower(right);
+                final Local rightLocal = new Local(new LocalType.Reference(Object.class));
+                builder.push(new Op.Store(rightValue, rightLocal));
+                final Local eitherRight = new Local(new LocalType.Reference(Either.class));
+                builder.push(new Op.EitherRight(rightLocal, eitherRight));
+                builder.push(new Op.Store(new Value.LocalValue(eitherRight), result));
+            });
+
+            builder.push(new Op.If(new Value.LocalValue(isLeft), thenOps, elseOps));
+            return new Value.LocalValue(result);
+        }
+
         @Override
         public void write(NetworkBuffer buffer, Either<L, R> value) {
             switch (value) {
@@ -919,8 +1516,32 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record TransformType<T, S>(Type<T> parent, Function<T, S> to,
+    record TransformType<T, S>(Type<T> parent, Function<T, S> to,
                                Function<S, T> from) implements NetworkBufferTypeImpl<S> {
+        @Override
+        public void collectMetadata(MetadataContext context) {
+            context.child("X", parent);
+            context.transform("To", to);
+            context.transform("From", from);
+        }
+
+        @Override
+        public void lowerWrite(IrWriteBuilder builder) {
+            final Local parentValue = new Local(new LocalType.Reference(Object.class));
+            builder.push(new Op.Apply(from, builder.source(), parentValue));
+            builder.lower(parent, new Value.LocalValue(parentValue));
+        }
+
+        @Override
+        public Value lowerRead(IrReadBuilder builder) {
+            final Value parentValue = builder.lower(parent);
+            final Local parentLocal = new Local(new LocalType.Reference(Object.class));
+            builder.push(new Op.Store(parentValue, parentLocal));
+            final Local result = new Local(new LocalType.Reference(Object.class));
+            builder.push(new Op.Apply(to, parentLocal, result));
+            return new Value.LocalValue(result);
+        }
+
         @Override
         public void write(NetworkBuffer buffer, S value) {
             parent.write(buffer, from.apply(value));
@@ -932,8 +1553,75 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record MapType<K, V>(Type<K> parent, NetworkBuffer.Type<V> valueType,
+    record MapType<K, V>(Type<K> parent, NetworkBuffer.Type<V> valueType,
                          int maxSize) implements NetworkBufferTypeImpl<Map<K, V>> {
+        @Override
+        public void collectMetadata(MetadataContext context) {
+            context.child("K", parent);
+            context.child("V", valueType);
+        }
+
+        @Override
+        public void lowerWrite(IrWriteBuilder builder) {
+            final Local sizeLocal = new Local(new LocalType.Kind(TypeKind.INT));
+            builder.push(new Op.Store(new Value.MapSize(new Value.LocalValue(builder.source())), sizeLocal));
+            final Value sizeVal = new Value.LocalValue(sizeLocal);
+
+            if (maxSize != Integer.MAX_VALUE) {
+                builder.push(new Op.Check(new Value.LessThanOrEqual(sizeVal, new Value.Const(maxSize)), "Map too large"));
+            }
+
+            final Local encodedSizeLocal = new Local(new LocalType.Kind(TypeKind.INT));
+            builder.push(new Op.Store(new Value.VarIntSize(sizeVal), encodedSizeLocal));
+            final Value encodedSizeVal = new Value.LocalValue(encodedSizeLocal);
+
+            builder.push(new Op.WriteRun(new RunIr(encodedSizeVal,
+                    List.of(new RunItem.PutVarInt(new Value.Const(0L), sizeVal, encodedSizeVal)))));
+
+            final Local entrySet = new Local(new LocalType.Reference(Set.class));
+            builder.push(new Op.MapEntrySet(new Value.LocalValue(builder.source()), entrySet));
+
+            final Local entry = new Local(new LocalType.Reference(Map.Entry.class));
+            final Local key = new Local(new LocalType.Reference(Object.class));
+            final Local value = new Local(new LocalType.Reference(Object.class));
+            final List<Op> body = builder.buildNested(() -> {
+                builder.push(new Op.MapEntryKey(entry, key));
+                builder.push(new Op.MapEntryValue(entry, value));
+                builder.lower(parent, new Value.LocalValue(key));
+                builder.lower(valueType, new Value.LocalValue(value));
+            });
+
+            builder.push(new Op.ForEach(new Value.LocalValue(entrySet), entry, body));
+        }
+
+        @Override
+        public Value lowerRead(IrReadBuilder builder) {
+            final Local size = new Local(new LocalType.Kind(TypeKind.INT));
+            builder.push(new Op.ReadVarInt(size));
+            if (maxSize != Integer.MAX_VALUE) {
+                builder.push(new Op.Check(new Value.LessThanOrEqual(new Value.LocalValue(size), new Value.Const(maxSize)), "Map too large"));
+            }
+
+            final Local keys = new Local(new LocalType.Reference(Object[].class));
+            final Local values = new Local(new LocalType.Reference(Object[].class));
+            builder.push(new Op.ArrayCreate(new Value.LocalValue(size), keys));
+            builder.push(new Op.ArrayCreate(new Value.LocalValue(size), values));
+
+            final Local index = new Local(new LocalType.Kind(TypeKind.INT));
+            final List<Op> body = builder.buildNested(() -> {
+                final Value key = builder.lower(parent);
+                final Value value = builder.lower(valueType);
+                builder.push(new Op.ArraySet(keys, new Value.LocalValue(index), key));
+                builder.push(new Op.ArraySet(values, new Value.LocalValue(index), value));
+            });
+
+            builder.push(new Op.ForIndex(index, new Value.Const(0), new Value.LocalValue(size), body));
+
+            final Local result = new Local(new LocalType.Reference(Map.class));
+            builder.push(new Op.MapFinish(keys, values, new Value.LocalValue(size), result));
+            return new Value.LocalValue(result);
+        }
+
         @Override
         public void write(NetworkBuffer buffer, Map<K, V> map) {
             final int size = map.size();
@@ -961,7 +1649,63 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record ListType<T>(Type<T> parent, int maxSize) implements NetworkBufferTypeImpl<List<T>> {
+    record ListType<T>(Type<T> parent, int maxSize) implements NetworkBufferTypeImpl<List<T>> {
+        @Override
+        public void collectMetadata(MetadataContext context) {
+            context.child("E", parent);
+        }
+
+        @Override
+        public void lowerWrite(IrWriteBuilder builder) {
+            final Local sizeLocal = new Local(new LocalType.Kind(TypeKind.INT));
+            builder.push(new Op.Store(new Value.CollectionSize(new Value.LocalValue(builder.source())), sizeLocal));
+            final Value sizeVal = new Value.LocalValue(sizeLocal);
+
+            if (maxSize != Integer.MAX_VALUE) {
+                builder.push(new Op.Check(new Value.LessThanOrEqual(sizeVal, new Value.Const(maxSize)), "Collection too large"));
+            }
+
+            final Local encodedSizeLocal = new Local(new LocalType.Kind(TypeKind.INT));
+            builder.push(new Op.Store(new Value.VarIntSize(sizeVal), encodedSizeLocal));
+            final Value encodedSizeVal = new Value.LocalValue(encodedSizeLocal);
+
+            builder.push(new Op.WriteRun(new RunIr(encodedSizeVal,
+                    List.of(new RunItem.PutVarInt(new Value.Const(0L), sizeVal, encodedSizeVal)))));
+
+            final Local index = new Local(new LocalType.Kind(TypeKind.INT));
+            final Local element = new Local(new LocalType.Reference(Object.class));
+            final List<Op> body = builder.buildNested(() -> {
+                builder.push(new Op.ElementAt(new Value.LocalValue(builder.source()), new Value.LocalValue(index), element));
+                builder.lower(parent, new Value.LocalValue(element));
+            });
+
+            builder.push(new Op.ForIndex(index, new Value.Const(0), sizeVal, body));
+        }
+
+        @Override
+        public Value lowerRead(IrReadBuilder builder) {
+            final Local size = new Local(new LocalType.Kind(TypeKind.INT));
+            builder.push(new Op.ReadVarInt(size));
+            if (maxSize != Integer.MAX_VALUE) {
+                builder.push(new Op.Check(new Value.LessThanOrEqual(new Value.LocalValue(size), new Value.Const(maxSize)), "Collection too large"));
+            }
+
+            final Local array = new Local(new LocalType.Reference(Object[].class));
+            builder.push(new Op.ArrayCreate(new Value.LocalValue(size), array));
+
+            final Local index = new Local(new LocalType.Kind(TypeKind.INT));
+            final List<Op> body = builder.buildNested(() -> {
+                final Value element = builder.lower(parent);
+                builder.push(new Op.ArraySet(array, new Value.LocalValue(index), element));
+            });
+
+            builder.push(new Op.ForIndex(index, new Value.Const(0), new Value.LocalValue(size), body));
+
+            final Local result = new Local(new LocalType.Reference(List.class));
+            builder.push(new Op.ListFinish(array, result));
+            return new Value.LocalValue(result);
+        }
+
         @Override
         public void write(NetworkBuffer buffer, List<T> values) {
             if (values == null) {
@@ -986,7 +1730,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record SetType<T>(Type<T> parent, int maxSize) implements NetworkBufferTypeImpl<Set<T>> {
+    record SetType<T>(Type<T> parent, int maxSize) implements NetworkBufferTypeImpl<Set<T>> {
         @Override
         public void write(NetworkBuffer buffer, Set<T> values) {
             if (values == null) {
@@ -1011,7 +1755,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         }
     }
 
-    public record UnionType<T, K, TR extends T>(
+    record UnionType<T, K, TR extends T>(
             Type<K> keyType, Function<T, ? extends K> keyFunc,
             Function<K, NetworkBuffer.Type<TR>> serializers
     ) implements NetworkBufferTypeImpl<T> {
@@ -1040,7 +1784,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
      * This is a very gross version of {@link java.io.DataOutputStream#writeUTF(String)} & ${@link DataInputStream#readUTF()}. We need the data in the java
      * modified utf-8 format for Component, and I couldnt find a method without creating a new buffer for it.
      */
-    public record IOUTF8StringType() implements NetworkBufferTypeImpl<String> {
+    record IOUTF8StringType() implements NetworkBufferTypeImpl<String> {
         @Override
         public void write(NetworkBuffer buffer, String value) {
             final int strlen = value.length();

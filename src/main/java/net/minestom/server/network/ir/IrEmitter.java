@@ -202,8 +202,10 @@ final class IrEmitter {
     private static void buildWrite(CodeBuilder codeBuilder, ClassDesc classDesc, IrClassData data, ProgramIr program, int objectSlot) {
         final int directSlot = codeBuilder.allocateLocal(TypeKind.REFERENCE);
         emitDirectBuffer(codeBuilder, directSlot);
-        final EmitContext context = new EmitContext(classDesc, data, directSlot, new HashMap<>());
-        context.locals().put(new Local("value", new LocalType.Reference(Object.class)), objectSlot);
+        final EmitContext context = new EmitContext(classDesc, data, directSlot, new java.util.IdentityHashMap<>());
+        if (program.initialSource() != null) {
+            context.locals().put(program.initialSource(), objectSlot);
+        }
         emitProgram(codeBuilder, context, program);
         codeBuilder.return_();
     }
@@ -211,7 +213,7 @@ final class IrEmitter {
     private static void buildRead(CodeBuilder codeBuilder, ClassDesc classDesc, IrClassData data, ProgramIr program) {
         final int directSlot = codeBuilder.allocateLocal(TypeKind.REFERENCE);
         emitDirectBuffer(codeBuilder, directSlot);
-        final EmitContext context = new EmitContext(classDesc, data, directSlot, new HashMap<>());
+        final EmitContext context = new EmitContext(classDesc, data, directSlot, new java.util.IdentityHashMap<>());
         emitProgram(codeBuilder, context, program);
     }
 
@@ -1168,7 +1170,7 @@ final class IrEmitter {
 
     private static String typeFieldName(IrClassData data, NetworkBuffer.Type<?> type) {
         for (IrFieldData field : data.fields()) {
-            if (field.ir().originalType() == type) return typeName(field.path());
+            if (field.ir().type() == type) return typeName(field.path());
         }
         for (ExternalTypeFieldData external : data.externalTypes()) {
             if (external.type() == type) return external.name();

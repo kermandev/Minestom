@@ -1,7 +1,6 @@
 package net.minestom.server.network.ir;
 
 import net.minestom.server.network.NetworkBuffer;
-import net.minestom.server.network.NetworkBufferTypeImpl;
 import net.minestom.server.utils.Unit;
 import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.Nullable;
@@ -23,9 +22,9 @@ final class IrLowering {
         final List<FieldIr<T, ?>> fields = new ArrayList<>(fieldCount);
         final FieldIr<T, ?>[] fieldArray = new FieldIr[fieldCount];
         for (int i = 0; i < fieldCount; i++) {
-            final NetworkBuffer.Type<?> originalType = (NetworkBuffer.Type<?>) values[i * 2];
+            final NetworkBuffer.Type<?> type = (NetworkBuffer.Type<?>) values[i * 2];
             final Function<? super T, ?> getter = (Function<? super T, ?>) values[i * 2 + 1];
-            final FieldIr<T, ?> field = new FieldIr(i, "field" + i, originalType, typeIr(originalType), getter);
+            final FieldIr<T, ?> field = new FieldIr(i, "field" + i, type, getter);
             fields.add(field);
             fieldArray[i] = field;
         }
@@ -47,7 +46,7 @@ final class IrLowering {
 
         collectIrMetadata("", ir, classData, fields, transforms, constructors, constructorIrs, usage);
 
-        // Add standalone transforms that were not found in TypeIr.Transform
+        // Add standalone transforms
         int standaloneIndex = 0;
         for (Function<?, ?> function : usage.functions) {
             boolean alreadyAdded = false;
@@ -67,7 +66,7 @@ final class IrLowering {
         for (NetworkBuffer.Type<?> type : usage.externalTypes) {
             boolean alreadyAdded = false;
             for (IrFieldData field : fields) {
-                if (field.ir().originalType() == type && field.typeDataIndex() != -1) {
+                if (field.ir().type() == type && field.typeDataIndex() != -1) {
                     alreadyAdded = true;
                     break;
                 }
@@ -152,409 +151,64 @@ final class IrLowering {
             final FieldIr<?, ?> field = irFields.get(i);
             final String fieldPath = childPath(path, i);
             final boolean getterUsed = usage.getters.contains(field);
-            final boolean typeUsed = usage.externalTypes.contains(field.originalType());
+            final boolean typeUsed = usage.externalTypes.contains(field.type());
             if (getterUsed || typeUsed) {
                 allFields.add(new IrFieldData(field, fieldPath,
-                        typeUsed ? addClassData(classData, field.originalType()) : -1,
+                        typeUsed ? addClassData(classData, field.type()) : -1,
                         getterUsed ? addClassData(classData, field.getter()) : -1));
             }
             collectTypeMetadata(fieldPath, field.type(), usage, classData, allFields, allTransforms, allConstructors, allConstructorIrs);
         }
     }
 
-    private static void collectTypeMetadata(String path, TypeIr<?> type, Usage usage,
+    private static void collectTypeMetadata(String path, NetworkBuffer.Type<?> type, Usage usage,
                                             List<Object> classData, List<IrFieldData> allFields,
                                             List<TransformFieldData> allTransforms,
                                             Map<String, Integer> allConstructors, Map<String, ConstructorIr<?>> allConstructorIrs) {
-        switch (type) {
-            case TypeIr.Template<?> template ->
-                    collectIrMetadata(path, template.ir(), classData, allFields, allTransforms, allConstructors, allConstructorIrs, usage);
-            case TypeIr.Transform<?, ?> transform -> {
-                if (usage.functions.contains(transform.from())) {
-                    allTransforms.add(new TransformFieldData(transformFromName(path, 0), transform.from(), addClassData(classData, transform.from())));
+        if (type instanceof NetworkIrBacked<?> backed) {
+            collectIrMetadata(path, backed.ir(), classData, allFields, allTransforms, allConstructors, allConstructorIrs, usage);
+        } else if (type instanceof NetworkIrIntrinsic intrinsic) {
+            intrinsic.collectMetadata(new NetworkIrIntrinsic.MetadataContext() {
+                @Override
+                public void child(String suffix, NetworkBuffer.Type<?> child) {
+                    collectTypeMetadata(path + suffix, child, usage, classData, allFields, allTransforms, allConstructors, allConstructorIrs);
                 }
-                if (usage.functions.contains(transform.to())) {
-                    allTransforms.add(new TransformFieldData(transformToName(path, 0), transform.to(), addClassData(classData, transform.to())));
+
+                @Override
+                public void transform(String suffix, Function<?, ?> function) {
+                    final String name = suffix.equals("From") ? transformFromName(path, 0) : transformToName(path, 0);
+                    if (usage.functions.contains(function)) {
+                        allTransforms.add(new TransformFieldData(name, function, addClassData(classData, function)));
+                    }
                 }
-                collectTypeMetadata(path + "X", transform.parent(), usage, classData, allFields, allTransforms, allConstructors, allConstructorIrs);
-            }
-            case TypeIr.Optional<?> optional ->
-                    collectTypeMetadata(path + "Opt", optional.parent(), usage, classData, allFields, allTransforms, allConstructors, allConstructorIrs);
-            case TypeIr.Either<?, ?> either -> {
-                collectTypeMetadata(path + "L", either.left(), usage, classData, allFields, allTransforms, allConstructors, allConstructorIrs);
-                collectTypeMetadata(path + "R", either.right(), usage, classData, allFields, allTransforms, allConstructors, allConstructorIrs);
-            }
-            case TypeIr.ListType<?, ?> list -> {
-                collectTypeMetadata(path + "E", list.element(), usage, classData, allFields, allTransforms, allConstructors, allConstructorIrs);
-            }
-            case TypeIr.MapType<?, ?, ?> map -> {
-                collectTypeMetadata(path + "K", map.key(), usage, classData, allFields, allTransforms, allConstructors, allConstructorIrs);
-                collectTypeMetadata(path + "V", map.value(), usage, classData, allFields, allTransforms, allConstructors, allConstructorIrs);
-            }
-            default -> {
-            }
+            });
         }
     }
 
     private static ProgramIr writeProgram(FieldIr<?, ?>[] fields) {
-        final List<Op> writeOps = new ArrayList<>();
-        final Local source = referenceLocal("value");
+        final Local initialSource = referenceLocal();
+        final WriteBuilderImpl builder = new WriteBuilderImpl(initialSource);
         for (int i = 0; i < fields.length; i++) {
-            lowerWrite(writeOps, fields[i].type(), fields[i], source, Integer.toString(i + 1), 0);
+            final FieldIr<?, ?> field = fields[i];
+            final Local nested = referenceLocal();
+            builder.push(new Op.GetField(field, Integer.toString(i + 1), builder.source(), nested));
+            builder.pushSource(nested);
+            builder.lower(field.type(), new Value.LocalValue(nested));
+            builder.popSource();
         }
-        return new ProgramIr(mergeWriteRuns(writeOps));
+        return new ProgramIr(mergeWriteRuns(builder.result()), initialSource);
     }
 
-    private static void lowerWrite(List<Op> ops, TypeIr<?> type, @Nullable FieldIr<?, ?> field, Local source, String path, int depth) {
-        if (type instanceof TypeIr.Template<?> template) {
-            final Local nested;
-            if (field != null) {
-                nested = referenceLocal("path" + path);
-                ops.add(new Op.GetField(field, path, source, nested));
-            } else {
-                nested = source;
-            }
-            for (int i = 0; i < template.ir().fields().size(); i++) {
-                final FieldIr<?, ?> subField = template.ir().fields().get(i);
-                lowerWrite(ops, subField.type(), subField, nested, path + "_" + (i + 1), depth + 1);
-            }
-            return;
+    private static ProgramIr readProgram(FieldIr<?, ?>[] fields, ConstructorIr<?> constructor) {
+        final ReadBuilderImpl builder = new ReadBuilderImpl();
+        final List<Value> args = new ArrayList<>(fields.length);
+        for (FieldIr<?, ?> field : fields) {
+            args.add(builder.lower(field.type()));
         }
-
-        if (type instanceof TypeIr.Transform<?, ?> transform) {
-            final Local raw;
-            if (field != null) {
-                raw = referenceLocal("path" + path);
-                ops.add(new Op.GetField(field, path, source, raw));
-            } else {
-                raw = source;
-            }
-            final Local parentValue = referenceLocal("path" + path + "_" + depth + "F");
-            ops.add(new Op.Apply(transform.from(), raw, parentValue));
-            lowerWrite(ops, transform.parent(), null, parentValue, path + "X", depth + 1);
-            return;
-        }
-
-        if (type instanceof TypeIr.Optional<?> optional) {
-            final Local raw;
-            if (field != null) {
-                raw = referenceLocal("path" + path);
-                ops.add(new Op.GetField(field, path, source, raw));
-            } else {
-                raw = source;
-            }
-
-            final Value present = new Value.IsNotNull(new Value.LocalValue(raw));
-            final long fixedSize = fixedByteSize(optional.parent());
-
-            if (fixedSize >= 0) {
-                final List<Op> thenOps = new ArrayList<>();
-                lowerWrite(thenOps, optional.parent(), null, raw, path + "Opt", depth + 1);
-
-                final List<Op> optimizedThenOps = new ArrayList<>();
-                for (Op op : thenOps) {
-                    if (op instanceof Op.WriteRun parentRun) {
-                        final List<RunItem> mergedItems = new ArrayList<>();
-                        mergedItems.add(new RunItem.Put(StoreKind.BOOLEAN, new Value.Const(0L), new Value.Const(true)));
-                        for (RunItem item : parentRun.run().items()) {
-                            mergedItems.add(shiftItem(item, new Value.Const(1L)));
-                        }
-                        optimizedThenOps.add(new Op.WriteRun(new RunIr(new Value.Const(1L + fixedSize), mergedItems)));
-                    } else {
-                        optimizedThenOps.add(op);
-                    }
-                }
-
-                final List<Op> elseOps = new ArrayList<>();
-                elseOps.add(new Op.WriteRun(new RunIr(new Value.Const(1L),
-                        List.of(new RunItem.Put(StoreKind.BOOLEAN, new Value.Const(0L), new Value.Const(false))))));
-
-                ops.add(new Op.If(present, optimizedThenOps, elseOps));
-            } else {
-                ops.add(new Op.WriteRun(new RunIr(new Value.Const(1L),
-                        List.of(new RunItem.Put(StoreKind.BOOLEAN, new Value.Const(0L), new Value.BoolByte(present))))));
-
-                final List<Op> thenOps = new ArrayList<>();
-                lowerWrite(thenOps, optional.parent(), null, raw, path + "Opt", depth + 1);
-                ops.add(new Op.If(present, thenOps, List.of()));
-            }
-            return;
-        }
-
-        if (type instanceof TypeIr.Either<?, ?> either) {
-            final Local raw;
-            if (field != null) {
-                raw = referenceLocal("path" + path);
-                ops.add(new Op.GetField(field, path, source, raw));
-            } else {
-                raw = source;
-            }
-
-            final Value isLeft = new Value.IsLeft(new Value.LocalValue(raw));
-            final long leftSize = fixedByteSize(either.left());
-            final long rightSize = fixedByteSize(either.right());
-
-            if (leftSize >= 0 && rightSize >= 0 && leftSize == rightSize) {
-                final List<Op> thenOps = new ArrayList<>();
-                final Local leftRaw = referenceLocal("path" + path + "L");
-                thenOps.add(new Op.Store(new Value.EitherLeft(new Value.LocalValue(raw)), leftRaw));
-                lowerWrite(thenOps, either.left(), null, leftRaw, path + "L", depth + 1);
-
-                final List<Op> optimizedThenOps = new ArrayList<>();
-                for (Op op : thenOps) {
-                    if (op instanceof Op.WriteRun leftRun) {
-                        final List<RunItem> mergedItems = new ArrayList<>();
-                        mergedItems.add(new RunItem.Put(StoreKind.BOOLEAN, new Value.Const(0L), new Value.Const(true)));
-                        for (RunItem item : leftRun.run().items()) {
-                            mergedItems.add(shiftItem(item, new Value.Const(1L)));
-                        }
-                        optimizedThenOps.add(new Op.WriteRun(new RunIr(new Value.Const(1L + leftSize), mergedItems)));
-                    } else {
-                        optimizedThenOps.add(op);
-                    }
-                }
-
-                final List<Op> elseOps = new ArrayList<>();
-                final Local rightRaw = referenceLocal("path" + path + "R");
-                elseOps.add(new Op.Store(new Value.EitherRight(new Value.LocalValue(raw)), rightRaw));
-                lowerWrite(elseOps, either.right(), null, rightRaw, path + "R", depth + 1);
-
-                final List<Op> optimizedElseOps = new ArrayList<>();
-                for (Op op : elseOps) {
-                    if (op instanceof Op.WriteRun rightRun) {
-                        final List<RunItem> mergedItems = new ArrayList<>();
-                        mergedItems.add(new RunItem.Put(StoreKind.BOOLEAN, new Value.Const(0L), new Value.Const(false)));
-                        for (RunItem item : rightRun.run().items()) {
-                            mergedItems.add(shiftItem(item, new Value.Const(1L)));
-                        }
-                        optimizedElseOps.add(new Op.WriteRun(new RunIr(new Value.Const(1L + rightSize), mergedItems)));
-                    } else {
-                        optimizedElseOps.add(op);
-                    }
-                }
-
-                ops.add(new Op.If(isLeft, optimizedThenOps, optimizedElseOps));
-            } else {
-                ops.add(new Op.WriteRun(new RunIr(new Value.Const(1L),
-                        List.of(new RunItem.Put(StoreKind.BOOLEAN, new Value.Const(0L), new Value.BoolByte(isLeft))))));
-
-                final List<Op> thenOps = new ArrayList<>();
-                final Local leftRaw = referenceLocal("path" + path + "L");
-                thenOps.add(new Op.Store(new Value.EitherLeft(new Value.LocalValue(raw)), leftRaw));
-                lowerWrite(thenOps, either.left(), null, leftRaw, path + "L", depth + 1);
-
-                final List<Op> elseOps = new ArrayList<>();
-                final Local rightRaw = referenceLocal("path" + path + "R");
-                elseOps.add(new Op.Store(new Value.EitherRight(new Value.LocalValue(raw)), rightRaw));
-                lowerWrite(elseOps, either.right(), null, rightRaw, path + "R", depth + 1);
-
-                ops.add(new Op.If(isLeft, thenOps, elseOps));
-            }
-            return;
-        }
-
-        if (type instanceof TypeIr.ListType<?, ?> listType) {
-            final Local raw;
-            if (field != null) {
-                raw = referenceLocal("path" + path);
-                ops.add(new Op.GetField(field, path, source, raw));
-            } else {
-                raw = source;
-            }
-            final Local sizeLocal = new Local("path" + path + "Size", new LocalType.Kind(TypeKind.INT));
-            ops.add(new Op.Store(new Value.CollectionSize(new Value.LocalValue(raw)), sizeLocal));
-            final Value sizeVal = new Value.LocalValue(sizeLocal);
-
-            if (listType.maxLength() != Integer.MAX_VALUE) {
-                ops.add(new Op.Check(new Value.LessThanOrEqual(sizeVal, new Value.Const(listType.maxLength())), "Collection too large"));
-            }
-
-            final Local encodedSizeLocal = new Local("path" + path + "EncSize", new LocalType.Kind(TypeKind.INT));
-            ops.add(new Op.Store(new Value.VarIntSize(sizeVal), encodedSizeLocal));
-            final Value encodedSizeVal = new Value.LocalValue(encodedSizeLocal);
-
-            ops.add(new Op.WriteRun(new RunIr(encodedSizeVal,
-                    List.of(new RunItem.PutVarInt(new Value.Const(0L), sizeVal, encodedSizeVal)))));
-
-            final Local index = new Local("path" + path + "Idx", new LocalType.Kind(TypeKind.INT));
-            final Local element = referenceLocal("path" + path + "Elem");
-            final List<Op> body = new ArrayList<>();
-            body.add(new Op.ElementAt(new Value.LocalValue(raw), new Value.LocalValue(index), element));
-            lowerWrite(body, listType.element(), null, element, path + "E", depth + 1);
-
-            ops.add(new Op.ForIndex(index, new Value.Const(0), sizeVal, body));
-            return;
-        }
-
-        if (type instanceof TypeIr.MapType<?, ?, ?> mapType) {
-            final Local raw;
-            if (field != null) {
-                raw = referenceLocal("path" + path);
-                ops.add(new Op.GetField(field, path, source, raw));
-            } else {
-                raw = source;
-            }
-            final Local sizeLocal = new Local("path" + path + "Size", new LocalType.Kind(TypeKind.INT));
-            ops.add(new Op.Store(new Value.MapSize(new Value.LocalValue(raw)), sizeLocal));
-            final Value sizeVal = new Value.LocalValue(sizeLocal);
-
-            if (mapType.maxLength() != Integer.MAX_VALUE) {
-                ops.add(new Op.Check(new Value.LessThanOrEqual(sizeVal, new Value.Const(mapType.maxLength())), "Map too large"));
-            }
-
-            final Local encodedSizeLocal = new Local("path" + path + "EncSize", new LocalType.Kind(TypeKind.INT));
-            ops.add(new Op.Store(new Value.VarIntSize(sizeVal), encodedSizeLocal));
-            final Value encodedSizeVal = new Value.LocalValue(encodedSizeLocal);
-
-            ops.add(new Op.WriteRun(new RunIr(encodedSizeVal,
-                    List.of(new RunItem.PutVarInt(new Value.Const(0L), sizeVal, encodedSizeVal)))));
-
-            final Local entrySet = referenceLocal("path" + path + "Entries");
-            ops.add(new Op.MapEntrySet(new Value.LocalValue(raw), entrySet));
-
-            final Local entry = referenceLocal("path" + path + "Entry");
-            final Local key = referenceLocal("path" + path + "Key");
-            final Local value = referenceLocal("path" + path + "Value");
-            final List<Op> body = new ArrayList<>();
-            body.add(new Op.MapEntryKey(entry, key));
-            body.add(new Op.MapEntryValue(entry, value));
-            lowerWrite(body, mapType.key(), null, key, path + "K", depth + 1);
-            lowerWrite(body, mapType.value(), null, value, path + "V", depth + 1);
-
-            ops.add(new Op.ForEach(new Value.LocalValue(entrySet), entry, body));
-            return;
-        }
-
-        if (type instanceof TypeIr.Constant<?> constant) {
-            final Object value = constant.value();
-            if (value == net.minestom.server.utils.Unit.INSTANCE) return;
-            final PrimitiveKind primitive = constantPrimitive(value);
-            if (primitive != null) {
-                ops.add(new Op.WriteRun(new RunIr(new Value.Const((long) primitive.storeKind().byteSize()),
-                        List.of(new RunItem.Put(primitive.storeKind(), new Value.Const(0L), new Value.Const(value))))));
-            } else {
-                ops.add(new Op.WriteExternal(field != null ? field.originalType() : ((TypeIr.External<?>) type).type(), new Value.Const(value)));
-            }
-            return;
-        }
-
-        if (type instanceof TypeIr.Constant _) return; // Should be unreachable now
-
-        final PrimitiveKind primitive = runPrimitive(type);
-        if (primitive != null) {
-            final Local raw;
-            if (field != null) {
-                raw = referenceLocal("path" + path);
-                ops.add(new Op.GetField(field, path, source, raw));
-            } else {
-                raw = source;
-            }
-            final Local normalized = normalizeWritePrimitive(ops, type, raw, path, depth);
-            ops.add(new Op.WriteRun(new RunIr(new Value.Const((long) primitive.storeKind().byteSize()),
-                    List.of(new RunItem.Put(primitive.storeKind(), new Value.Const(0L), new Value.LocalValue(normalized))))));
-            return;
-        }
-
-        if (isVarInt(type)) {
-            final Local raw;
-            if (field != null) {
-                raw = referenceLocal("path" + path);
-                ops.add(new Op.GetField(field, path, source, raw));
-            } else {
-                raw = source;
-            }
-            final Local normalized = normalizeWriteVarInt(ops, type, raw, path, depth);
-            final Value value = new Value.LocalValue(normalized);
-            final Value encodedSize = new Value.VarIntSize(value);
-            ops.add(new Op.WriteRun(new RunIr(encodedSize, List.of(new RunItem.PutVarInt(new Value.Const(0L), value, encodedSize)))));
-            return;
-        }
-
-        if (isVarLong(type)) {
-            final Local raw;
-            if (field != null) {
-                raw = referenceLocal("path" + path);
-                ops.add(new Op.GetField(field, path, source, raw));
-            } else {
-                raw = source;
-            }
-            final Local normalized = normalizeWriteVarLong(ops, type, raw, path, depth);
-            ops.add(new Op.WriteVarLong(new Value.LocalValue(normalized)));
-            return;
-        }
-
-        if (fixedBytesLength(type) >= 0) {
-            final int length = fixedBytesLength(type);
-            final Local raw;
-            if (field != null) {
-                raw = referenceLocal("path" + path);
-                ops.add(new Op.GetField(field, path, source, raw));
-            } else {
-                raw = source;
-            }
-            final Local bytes = materializeWriteReference(ops, type, TypeIr.FixedBytes.class, raw, path, depth, byte[].class);
-            ops.add(new Op.WriteRun(new RunIr(
-                    new Value.Const((long) length),
-                    List.of(new RunItem.PutBytes(new Value.Const(0L), new Value.LocalValue(bytes), new Value.Const(length)))
-            )));
-            return;
-        }
-
-        if (type instanceof TypeIr.ByteArray(int maxSize)) {
-            final Local raw;
-            if (field != null) {
-                raw = referenceLocal("path" + path);
-                ops.add(new Op.GetField(field, path, source, raw));
-            } else {
-                raw = source;
-            }
-            final Local bytes = new Local("path" + path + "Cast", new LocalType.Reference(byte[].class));
-            ops.add(new Op.Cast(raw, byte[].class, bytes));
-
-            final Local lengthLocal = new Local("path" + path + "Len", new LocalType.Kind(TypeKind.INT));
-            ops.add(new Op.Store(new Value.ArrayLength(new Value.LocalValue(bytes)), lengthLocal));
-            final Value lengthVal = new Value.LocalValue(lengthLocal);
-
-            if (maxSize != Integer.MAX_VALUE) {
-                ops.add(new Op.Check(new Value.LessThanOrEqual(lengthVal, new Value.Const(maxSize)), "Array too long"));
-            }
-
-            final Local encodedSizeLocal = new Local("path" + path + "EncSize", new LocalType.Kind(TypeKind.INT));
-            ops.add(new Op.Store(new Value.VarIntSize(lengthVal), encodedSizeLocal));
-            final Value encodedSizeVal = new Value.LocalValue(encodedSizeLocal);
-
-            ops.add(new Op.WriteRun(new RunIr(addValues(encodedSizeVal, lengthVal), List.of(
-                    new RunItem.PutVarInt(new Value.Const(0L), lengthVal, encodedSizeVal),
-                    new RunItem.PutBytes(encodedSizeVal, new Value.LocalValue(bytes), lengthVal)
-            ))));
-            return;
-        }
-
-        if (type instanceof TypeIr.StringUtf8(int maxSize)) {
-            final Local raw;
-            if (field != null) {
-                raw = referenceLocal("path" + path);
-                ops.add(new Op.GetField(field, path, source, raw));
-            } else {
-                raw = source;
-            }
-            final Local str = new Local("path" + path + "Cast", new LocalType.Reference(String.class));
-            ops.add(new Op.Cast(raw, String.class, str));
-
-            final Local bytes = referenceLocal("path" + path + "Bytes");
-            ops.add(new Op.StringToBytes(str, bytes));
-            lowerWrite(ops, new TypeIr.ByteArray(maxSize), null, bytes, path + "Str", depth + 1);
-            return;
-        }
-
-        final Local raw;
-        if (field != null) {
-            raw = referenceLocal("path" + path);
-            ops.add(new Op.GetField(field, path, source, raw));
-        } else {
-            raw = source;
-        }
-        ops.add(new Op.WriteExternal(field != null ? field.originalType() : ((TypeIr.External<?>) type).type(), new Value.LocalValue(raw)));
+        final Local result = referenceLocal();
+        builder.push(new Op.Construct(constructor, "", args, result));
+        builder.push(new Op.Return(new Value.LocalValue(result)));
+        return new ProgramIr(mergeReadRuns(builder.result()));
     }
 
     private static List<Op> mergeWriteRuns(List<Op> ops) {
@@ -602,186 +256,6 @@ final class IrLowering {
             newItems.add(shiftItem(item, left.run().size()));
         }
         return new Op.WriteRun(new RunIr(newSize, newItems));
-    }
-
-    private static ProgramIr readProgram(FieldIr<?, ?>[] fields, ConstructorIr<?> constructor) {
-        final List<Op> readOps = new ArrayList<>();
-        final List<Value> args = new ArrayList<>(fields.length);
-        for (int i = 0; i < fields.length; i++) {
-            args.add(lowerRead(readOps, fields[i].type(), Integer.toString(i + 1), 0));
-        }
-        final Local result = referenceLocal("result");
-        readOps.add(new Op.Construct(constructor, "", args, result));
-        readOps.add(new Op.Return(new Value.LocalValue(result)));
-        return new ProgramIr(mergeReadRuns(readOps));
-    }
-
-    private static Value lowerRead(List<Op> ops, TypeIr<?> type, String path, int depth) {
-        if (type instanceof TypeIr.Template<?> template) {
-            final List<Value> args = new ArrayList<>();
-            for (int i = 0; i < template.ir().fields().size(); i++) {
-                final FieldIr<?, ?> subField = template.ir().fields().get(i);
-                args.add(lowerRead(ops, subField.type(), path + "_" + (i + 1), depth + 1));
-            }
-            final Local result = referenceLocal("path" + path + "Result");
-            ops.add(new Op.Construct(template.ir().constructor(), path, args, result));
-            return new Value.LocalValue(result);
-        }
-
-        if (type instanceof TypeIr.Transform<?, ?> transform) {
-            final Value parentValue = lowerRead(ops, transform.parent(), path + "X", depth + 1);
-            final Local parentLocal = ensureLocal(ops, parentValue, path + "_" + depth + "XL");
-            final Local result = referenceLocal("path" + path + "_" + depth + "T");
-            ops.add(new Op.Apply(transform.to(), parentLocal, result));
-            return new Value.LocalValue(result);
-        }
-
-        if (type instanceof TypeIr.Optional<?> optional) {
-            final Local present = new Local("path" + path + "Present", new LocalType.Kind(TypeKind.BOOLEAN));
-            ops.add(new Op.ReadRun(new RunIr(new Value.Const(1L),
-                    List.of(new RunItem.Get(StoreKind.BOOLEAN, new Value.Const(0L), present)))));
-
-            final Local result = referenceLocal("path" + path + "Result");
-            final List<Op> thenOps = new ArrayList<>();
-            final Value parentValue = lowerRead(thenOps, optional.parent(), path + "Opt", depth + 1);
-            thenOps.add(new Op.Store(parentValue, result));
-
-            final List<Op> elseOps = new ArrayList<>();
-            elseOps.add(new Op.Store(new Value.Const(null), result));
-
-            ops.add(new Op.If(new Value.LocalValue(present), thenOps, elseOps));
-            return new Value.LocalValue(result);
-        }
-
-        if (type instanceof TypeIr.Either<?, ?> either) {
-            final Local isLeft = new Local("path" + path + "IsLeft", new LocalType.Kind(TypeKind.BOOLEAN));
-            ops.add(new Op.ReadRun(new RunIr(new Value.Const(1L),
-                    List.of(new RunItem.Get(StoreKind.BOOLEAN, new Value.Const(0L), isLeft)))));
-
-            final Local result = referenceLocal("path" + path + "Result");
-            
-            final List<Op> thenOps = new ArrayList<>();
-            final Value leftValue = lowerRead(thenOps, either.left(), path + "L", depth + 1);
-            final Local leftLocal = ensureLocal(thenOps, leftValue, path + "_" + depth + "LL");
-            final Local eitherLeft = referenceLocal("path" + path + "_" + depth + "EL");
-            thenOps.add(new Op.EitherLeft(leftLocal, eitherLeft));
-            thenOps.add(new Op.Store(new Value.LocalValue(eitherLeft), result));
-
-            final List<Op> elseOps = new ArrayList<>();
-            final Value rightValue = lowerRead(elseOps, either.right(), path + "R", depth + 1);
-            final Local rightLocal = ensureLocal(elseOps, rightValue, path + "_" + depth + "RL");
-            final Local eitherRight = referenceLocal("path" + path + "_" + depth + "ER");
-            elseOps.add(new Op.EitherRight(rightLocal, eitherRight));
-            elseOps.add(new Op.Store(new Value.LocalValue(eitherRight), result));
-
-            ops.add(new Op.If(new Value.LocalValue(isLeft), thenOps, elseOps));
-            return new Value.LocalValue(result);
-        }
-
-        if (type instanceof TypeIr.ListType<?, ?> listType) {
-            final Local size = new Local("path" + path + "Size", new LocalType.Kind(TypeKind.INT));
-            ops.add(new Op.ReadVarInt(size));
-            if (listType.maxLength() != Integer.MAX_VALUE) {
-                ops.add(new Op.Check(new Value.LessThanOrEqual(new Value.LocalValue(size), new Value.Const(listType.maxLength())), "Collection too large"));
-            }
-
-            final Local array = referenceLocal("path" + path + "Array");
-            ops.add(new Op.ArrayCreate(new Value.LocalValue(size), array));
-
-            final Local index = new Local("path" + path + "Idx", new LocalType.Kind(TypeKind.INT));
-            final List<Op> body = new ArrayList<>();
-            final Value element = lowerRead(body, listType.element(), path + "E", depth + 1);
-            body.add(new Op.ArraySet(array, new Value.LocalValue(index), element));
-
-            ops.add(new Op.ForIndex(index, new Value.Const(0), new Value.LocalValue(size), body));
-
-            final Local result = referenceLocal("path" + path + "Res");
-            ops.add(new Op.ListFinish(array, result));
-            return new Value.LocalValue(result);
-        }
-
-        if (type instanceof TypeIr.MapType<?, ?, ?> mapType) {
-            final Local size = new Local("path" + path + "Size", new LocalType.Kind(TypeKind.INT));
-            ops.add(new Op.ReadVarInt(size));
-            if (mapType.maxLength() != Integer.MAX_VALUE) {
-                ops.add(new Op.Check(new Value.LessThanOrEqual(new Value.LocalValue(size), new Value.Const(mapType.maxLength())), "Map too large"));
-            }
-
-            final Local keys = referenceLocal("path" + path + "Keys");
-            final Local values = referenceLocal("path" + path + "Values");
-            ops.add(new Op.ArrayCreate(new Value.LocalValue(size), keys));
-            ops.add(new Op.ArrayCreate(new Value.LocalValue(size), values));
-
-            final Local index = new Local("path" + path + "Idx", new LocalType.Kind(TypeKind.INT));
-            final List<Op> body = new ArrayList<>();
-            final Value key = lowerRead(body, mapType.key(), path + "K", depth + 1);
-            final Value value = lowerRead(body, mapType.value(), path + "V", depth + 1);
-            body.add(new Op.ArraySet(keys, new Value.LocalValue(index), key));
-            body.add(new Op.ArraySet(values, new Value.LocalValue(index), value));
-
-            ops.add(new Op.ForIndex(index, new Value.Const(0), new Value.LocalValue(size), body));
-
-            final Local result = referenceLocal("path" + path + "Res");
-            ops.add(new Op.MapFinish(keys, values, new Value.LocalValue(size), result));
-            return new Value.LocalValue(result);
-        }
-
-        if (type instanceof TypeIr.ByteArray(int maxSize)) {
-            final Local length = new Local("path" + path + "Length", new LocalType.Kind(TypeKind.INT));
-            ops.add(new Op.ReadVarInt(length));
-            if (maxSize != Integer.MAX_VALUE) {
-                ops.add(new Op.Check(new Value.LessThanOrEqual(new Value.LocalValue(length), new Value.Const(maxSize)), "Array too long"));
-            }
-
-            final Local bytes = new Local("path" + path + "Bytes", new LocalType.Reference(byte[].class));
-            ops.add(new Op.ReadRun(new RunIr(new Value.LocalValue(length),
-                    List.of(new RunItem.GetBytes(new Value.Const(0L), bytes, new Value.LocalValue(length))))));
-            return new Value.LocalValue(bytes);
-        }
-
-        if (type instanceof TypeIr.StringUtf8(int maxSize)) {
-            final Value bytes = lowerRead(ops, new TypeIr.ByteArray(maxSize), path + "Str", depth + 1);
-            final Local bytesLocal = ensureLocal(ops, bytes, path + "_" + depth + "StrL");
-            final Local result = referenceLocal("path" + path + "Result");
-            ops.add(new Op.BytesToString(bytesLocal, result));
-            return new Value.LocalValue(result);
-        }
-
-        if (type instanceof TypeIr.Constant(Object value)) return new Value.Const(value);
-
-        final PrimitiveKind primitive = runPrimitive(type);
-        if (primitive != null) {
-            final Local normalized = new Local("path" + path + "Value", new LocalType.Kind(primitive.localKind()));
-            ops.add(new Op.ReadRun(new RunIr(new Value.Const((long) primitive.storeKind().byteSize()),
-                    List.of(new RunItem.Get(primitive.storeKind(), new Value.Const(0L), normalized)))));
-            return new Value.LocalValue(materializeReadPrimitive(ops, type, normalized, path, depth));
-        }
-
-        if (isVarInt(type)) {
-            final Local normalized = new Local("path" + path + "Value", new LocalType.Kind(TypeKind.INT));
-            ops.add(new Op.ReadVarInt(normalized));
-            return new Value.LocalValue(materializeReadVarInt(ops, type, normalized, path, depth));
-        }
-
-        if (isVarLong(type)) {
-            final Local normalized = new Local("path" + path + "Value", new LocalType.Kind(TypeKind.LONG));
-            ops.add(new Op.ReadVarLong(normalized));
-            return new Value.LocalValue(materializeReadVarLong(ops, type, normalized, path, depth));
-        }
-
-        if (fixedBytesLength(type) >= 0) {
-            final int length = fixedBytesLength(type);
-            final Local bytes = new Local("path" + path + "Bytes", new LocalType.Reference(byte[].class));
-            ops.add(new Op.ReadRun(new RunIr(
-                    new Value.Const((long) length),
-                    List.of(new RunItem.GetBytes(new Value.Const(0L), bytes, new Value.Const(length)))
-            )));
-            return new Value.LocalValue(materializeReadReference(ops, type, TypeIr.FixedBytes.class, bytes, path, depth));
-        }
-
-        final Local readLocal = referenceLocal("path" + path);
-        ops.add(new Op.ReadExternal(((TypeIr.External<?>) type).type(), readLocal));
-        return new Value.LocalValue(readLocal);
     }
 
     private static List<Op> mergeReadRuns(List<Op> ops) {
@@ -843,7 +317,7 @@ final class IrLowering {
 
     private static Local ensureLocal(List<Op> ops, Value value, String path) {
         if (value instanceof Value.LocalValue localValue) return localValue.local();
-        final Local local = referenceLocal("path" + path);
+        final Local local = referenceLocal();
         ops.add(new Op.Store(value, local));
         return local;
     }
@@ -860,271 +334,6 @@ final class IrLowering {
             return addValues(addValues(left, rightAdd.left()), rightAdd.right());
         }
         return new Value.Add(left, right);
-    }
-
-    private static Local normalizeWritePrimitive(List<Op> ops, TypeIr<?> type, Local in, String path, int depth) {
-        return switch (type) {
-            case TypeIr.Transform<?, ?> transform -> {
-                final Local out = referenceLocal("path" + path + "F" + depth);
-                ops.add(new Op.Apply(transform.from(), in, out));
-                yield normalizeWritePrimitive(ops, transform.parent(), out, path, depth + 1);
-            }
-            case TypeIr.Primitive<?> primitive -> {
-                final PrimitiveKind kind = primitive.kind();
-                final Local cast = referenceLocal("path" + path + "C" + depth);
-                final Local normalized = new Local("path" + path + "V" + depth, new LocalType.Kind(kind.localKind()));
-                ops.add(new Op.Cast(in, kind.wrapperClass(), cast));
-                ops.add(new Op.Unbox(kind, cast, normalized));
-                yield normalized;
-            }
-            default -> throw new IllegalArgumentException("Type is not primitive run-compatible: " + type);
-        };
-    }
-
-    private static Local materializeReadPrimitive(List<Op> ops, TypeIr<?> type, Local normalized, String path, int depth) {
-        return switch (type) {
-            case TypeIr.Transform<?, ?> transform -> {
-                final Local parent = materializeReadPrimitive(ops, transform.parent(), normalized, path, depth + 1);
-                final Local out = referenceLocal("path" + path + "T" + depth);
-                ops.add(new Op.Apply(transform.to(), parent, out));
-                yield out;
-            }
-            case TypeIr.Primitive<?> primitive -> {
-                final PrimitiveKind kind = primitive.kind();
-                final Local boxed = referenceLocal("path" + path + "B" + depth);
-                ops.add(new Op.Box(kind, normalized, boxed));
-                yield boxed;
-            }
-            default -> throw new IllegalArgumentException("Type is not primitive run-compatible: " + type);
-        };
-    }
-
-    private static Local normalizeWriteVarInt(List<Op> ops, TypeIr<?> type, Local in, String path, int depth) {
-        return switch (type) {
-            case TypeIr.Transform<?, ?> transform -> {
-                final Local out = referenceLocal("path" + path + "F" + depth);
-                ops.add(new Op.Apply(transform.from(), in, out));
-                yield normalizeWriteVarInt(ops, transform.parent(), out, path, depth + 1);
-            }
-            case TypeIr.VarInt _ -> {
-                final Local cast = referenceLocal("path" + path + "C" + depth);
-                final Local normalized = new Local("path" + path + "V" + depth, new LocalType.Kind(TypeKind.INT));
-                ops.add(new Op.Cast(in, Integer.class, cast));
-                ops.add(new Op.Unbox(PrimitiveKind.INT, cast, normalized));
-                yield normalized;
-            }
-            default -> throw new IllegalArgumentException("Type is not VarInt-compatible: " + type);
-        };
-    }
-
-    private static Local materializeReadVarInt(List<Op> ops, TypeIr<?> type, Local normalized, String path, int depth) {
-        return switch (type) {
-            case TypeIr.Transform<?, ?> transform -> {
-                final Local parent = materializeReadVarInt(ops, transform.parent(), normalized, path, depth + 1);
-                final Local out = referenceLocal("path" + path + "T" + depth);
-                ops.add(new Op.Apply(transform.to(), parent, out));
-                yield out;
-            }
-            case TypeIr.VarInt _ -> {
-                final Local boxed = referenceLocal("path" + path + "B" + depth);
-                ops.add(new Op.Box(PrimitiveKind.INT, normalized, boxed));
-                yield boxed;
-            }
-            default -> throw new IllegalArgumentException("Type is not VarInt-compatible: " + type);
-        };
-    }
-
-    private static boolean isVarInt(TypeIr<?> type) {
-        return switch (type) {
-            case TypeIr.VarInt _ -> true;
-            case TypeIr.Transform<?, ?> transform -> isVarInt(transform.parent());
-            case TypeIr.Optional<?> optional -> isVarInt(optional.parent());
-            default -> false;
-        };
-    }
-
-    private static Local normalizeWriteVarLong(List<Op> ops, TypeIr<?> type, Local in, String path, int depth) {
-        return switch (type) {
-            case TypeIr.Transform<?, ?> transform -> {
-                final Local out = referenceLocal("path" + path + "F" + depth);
-                ops.add(new Op.Apply(transform.from(), in, out));
-                yield normalizeWriteVarLong(ops, transform.parent(), out, path, depth + 1);
-            }
-            case TypeIr.VarLong _ -> {
-                final Local cast = referenceLocal("path" + path + "C" + depth);
-                final Local normalized = new Local("path" + path + "V" + depth, new LocalType.Kind(TypeKind.LONG));
-                ops.add(new Op.Cast(in, Long.class, cast));
-                ops.add(new Op.Unbox(PrimitiveKind.LONG, cast, normalized));
-                yield normalized;
-            }
-            default -> throw new IllegalArgumentException("Type is not VarLong-compatible: " + type);
-        };
-    }
-
-    private static Local materializeReadVarLong(List<Op> ops, TypeIr<?> type, Local normalized, String path, int depth) {
-        return switch (type) {
-            case TypeIr.Transform<?, ?> transform -> {
-                final Local parent = materializeReadVarLong(ops, transform.parent(), normalized, path, depth + 1);
-                final Local out = referenceLocal("path" + path + "T" + depth);
-                ops.add(new Op.Apply(transform.to(), parent, out));
-                yield out;
-            }
-            case TypeIr.VarLong _ -> {
-                final Local boxed = referenceLocal("path" + path + "B" + depth);
-                ops.add(new Op.Box(PrimitiveKind.LONG, normalized, boxed));
-                yield boxed;
-            }
-            default -> throw new IllegalArgumentException("Type is not VarLong-compatible: " + type);
-        };
-    }
-
-    private static boolean isVarLong(TypeIr<?> type) {
-        return switch (type) {
-            case TypeIr.VarLong _ -> true;
-            case TypeIr.Transform<?, ?> transform -> isVarLong(transform.parent());
-            case TypeIr.Optional<?> optional -> isVarLong(optional.parent());
-            default -> false;
-        };
-    }
-
-    private static Local materializeWriteReference(List<Op> ops, TypeIr<?> type, Class<?> targetType, Local in,
-                                                   String path, int depth, Class<?> targetClass) {
-        return switch (type) {
-            case TypeIr.Transform<?, ?> transform -> {
-                final Local out = referenceLocal("path" + path + "F" + depth);
-                ops.add(new Op.Apply(transform.from(), in, out));
-                yield materializeWriteReference(ops, transform.parent(), targetType, out, path, depth + 1, targetClass);
-            }
-            default -> {
-                if (!targetType.isInstance(type)) {
-                    throw new IllegalArgumentException("Type is not " + targetType.getSimpleName() + "-compatible: " + type);
-                }
-                final Local cast = new Local("path" + path + "C" + depth, new LocalType.Reference(targetClass));
-                ops.add(new Op.Cast(in, targetClass, cast));
-                yield cast;
-            }
-        };
-    }
-
-    private static Local materializeReadReference(List<Op> ops, TypeIr<?> type, Class<?> targetType, Local in,
-                                                  String path, int depth) {
-        return switch (type) {
-            case TypeIr.Transform<?, ?> transform -> {
-                final Local parent = materializeReadReference(ops, transform.parent(), targetType, in, path, depth + 1);
-                final Local out = referenceLocal("path" + path + "T" + depth);
-                ops.add(new Op.Apply(transform.to(), parent, out));
-                yield out;
-            }
-            default -> {
-                if (!targetType.isInstance(type)) {
-                    throw new IllegalArgumentException("Type is not " + targetType.getSimpleName() + "-compatible: " + type);
-                }
-                yield in;
-            }
-        };
-    }
-
-    private static int fixedBytesLength(TypeIr<?> type) {
-        return switch (type) {
-            case TypeIr.FixedBytes fixedBytes -> fixedBytes.length();
-            case TypeIr.Transform<?, ?> transform -> fixedBytesLength(transform.parent());
-            case TypeIr.Optional<?> optional -> fixedBytesLength(optional.parent());
-            case TypeIr.Either<?, ?> either -> {
-                int left = fixedBytesLength(either.left());
-                int right = fixedBytesLength(either.right());
-                yield (left == right && left >= 0) ? left : -1;
-            }
-            default -> -1;
-        };
-    }
-
-    private static long fixedByteSize(TypeIr<?> type) {
-        return switch (type) {
-            case TypeIr.Constant<?> _ -> 0;
-            case TypeIr.Primitive<?> primitive -> primitive.kind().storeKind().byteSize();
-            case TypeIr.FixedBytes fixedBytes -> fixedBytes.length();
-            case TypeIr.Transform<?, ?> transform -> fixedByteSize(transform.parent());
-            case TypeIr.Either<?, ?> either -> {
-                long left = fixedByteSize(either.left());
-                long right = fixedByteSize(either.right());
-                yield (left == right && left >= 0) ? left : -1L;
-            }
-            case TypeIr.Template<?> template -> {
-                long total = 0;
-                for (FieldIr<?, ?> field : template.ir().fields()) {
-                    long size = fixedByteSize(field.type());
-                    if (size < 0) yield -1L;
-                    total += size;
-                }
-                yield total;
-            }
-            default -> -1L;
-        };
-    }
-
-    private static @Nullable PrimitiveKind constantPrimitive(Object value) {
-        if (value instanceof Boolean) return PrimitiveKind.BOOLEAN;
-        if (value instanceof Byte) return PrimitiveKind.BYTE;
-        if (value instanceof Short) return PrimitiveKind.SHORT;
-        if (value instanceof Integer) return PrimitiveKind.INT;
-        if (value instanceof Long) return PrimitiveKind.LONG;
-        if (value instanceof Float) return PrimitiveKind.FLOAT;
-        if (value instanceof Double) return PrimitiveKind.DOUBLE;
-        return null;
-    }
-
-    private static @Nullable PrimitiveKind runPrimitive(TypeIr<?> type) {
-        return switch (type) {
-            case TypeIr.Primitive<?> primitive -> primitive.kind();
-            case TypeIr.Transform<?, ?> transform -> runPrimitive(transform.parent());
-            default -> null;
-        };
-    }
-
-    private static TypeIr<?> typeIr(NetworkBuffer.Type<?> type) {
-        return typeIr(type, new IdentityHashMap<>());
-    }
-
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    private static TypeIr<?> typeIr(NetworkBuffer.Type<?> type, IdentityHashMap<NetworkBuffer.Type<?>, Boolean> visiting) {
-        if (visiting.put(type, Boolean.TRUE) != null) {
-            return new TypeIr.External(type);
-        }
-
-        final TypeIr<?> result;
-        try {
-            result = switch (type) {
-                case NetworkIrBacked<?> backed -> new TypeIr.Template(backed.ir());
-                case NetworkBufferTypeImpl.UnitType _ -> new TypeIr.Constant<>(Unit.INSTANCE);
-                case NetworkBufferTypeImpl.BooleanType _ -> new TypeIr.Primitive<>(PrimitiveKind.BOOLEAN);
-                case NetworkBufferTypeImpl.ByteType _ -> new TypeIr.Primitive<>(PrimitiveKind.BYTE);
-                case NetworkBufferTypeImpl.UnsignedByteType _ -> new TypeIr.Primitive<>(PrimitiveKind.UNSIGNED_BYTE);
-                case NetworkBufferTypeImpl.ShortType _ -> new TypeIr.Primitive<>(PrimitiveKind.SHORT);
-                case NetworkBufferTypeImpl.UnsignedShortType _ -> new TypeIr.Primitive<>(PrimitiveKind.UNSIGNED_SHORT);
-                case NetworkBufferTypeImpl.IntType _ -> new TypeIr.Primitive<>(PrimitiveKind.INT);
-                case NetworkBufferTypeImpl.UnsignedIntType _ -> new TypeIr.Primitive<>(PrimitiveKind.UNSIGNED_INT);
-                case NetworkBufferTypeImpl.LongType _ -> new TypeIr.Primitive<>(PrimitiveKind.LONG);
-                case NetworkBufferTypeImpl.FloatType _ -> new TypeIr.Primitive<>(PrimitiveKind.FLOAT);
-                case NetworkBufferTypeImpl.DoubleType _ -> new TypeIr.Primitive<>(PrimitiveKind.DOUBLE);
-                case NetworkBufferTypeImpl.VarIntType _ -> new TypeIr.VarInt();
-                case NetworkBufferTypeImpl.VarLongType _ -> new TypeIr.VarLong();
-                case NetworkBufferTypeImpl.StringType _ -> new TypeIr.StringUtf8(Integer.MAX_VALUE);
-                case NetworkBufferTypeImpl.ByteArrayType _ -> new TypeIr.ByteArray(Integer.MAX_VALUE);
-                case NetworkBufferTypeImpl.RawBytesType raw -> raw.length() >= 0 ? new TypeIr.FixedBytes(raw.length()) : new TypeIr.External(type);
-                case NetworkBufferTypeImpl.OptionalType<?> optional -> new TypeIr.Optional(typeIr(optional.parent(), visiting));
-                case NetworkBufferTypeImpl.EitherType<?, ?> either -> new TypeIr.Either(typeIr(either.left(), visiting), typeIr(either.right(), visiting));
-                case NetworkBufferTypeImpl.TransformType<?, ?> transform ->
-                        new TypeIr.Transform(typeIr(transform.parent(), visiting), transform.to(), transform.from());
-                case NetworkBufferTypeImpl.ListType<?> list ->
-                        new TypeIr.ListType(list, typeIr(list.parent(), visiting), list.maxSize());
-                case NetworkBufferTypeImpl.MapType<?, ?> map ->
-                        new TypeIr.MapType(map, typeIr(map.parent(), visiting), typeIr(map.valueType(), visiting), map.maxSize());
-                default -> new TypeIr.External(type);
-            };
-        } finally {
-            visiting.remove(type);
-        }
-        return result;
     }
 
     private static RunItem shiftItem(RunItem item, Value shift) {
@@ -1160,8 +369,8 @@ final class IrLowering {
     }
 
 
-    private static Local referenceLocal(String name) {
-        return new Local(name, new LocalType.Reference(Object.class));
+    private static Local referenceLocal() {
+        return new Local(new LocalType.Reference(Object.class));
     }
 
     private static int addClassData(List<Object> classData, Object value) {
@@ -1189,5 +398,76 @@ final class IrLowering {
 
     private static String factoryName(String path) {
         return TemplateCompiler.FACTORY_PREFIX + path;
+    }
+
+    private static final class WriteBuilderImpl implements IrWriteBuilder {
+        private final Deque<List<Op>> opStack = new ArrayDeque<>();
+        private final Deque<Local> sources = new ArrayDeque<>();
+
+        WriteBuilderImpl(Local initialSource) {
+            opStack.push(new ArrayList<>());
+            sources.push(initialSource);
+        }
+
+        @Override public void push(Op op) { opStack.peek().add(op); }
+        @Override public Local source() { return sources.peek(); }
+        @Override public void pushSource(Local source) { sources.push(source); }
+        @Override public void popSource() { sources.pop(); }
+
+        @Override
+        public void lower(NetworkBuffer.Type<?> type, Value value) {
+            if (type instanceof NetworkIrIntrinsic intrinsic) {
+                if (value instanceof Value.LocalValue localValue) {
+                    pushSource(localValue.local());
+                    intrinsic.lowerWrite(this);
+                    popSource();
+                } else {
+                    Local temp = referenceLocal();
+                    push(new Op.Store(value, temp));
+                    pushSource(temp);
+                    intrinsic.lowerWrite(this);
+                    popSource();
+                }
+            } else {
+                push(new Op.WriteExternal(type, value));
+            }
+        }
+
+        @Override
+        public List<Op> buildNested(Runnable action) {
+            opStack.push(new ArrayList<>());
+            action.run();
+            return opStack.pop();
+        }
+
+        List<Op> result() { return opStack.peek(); }
+    }
+
+    private static final class ReadBuilderImpl implements IrReadBuilder {
+        private final Deque<List<Op>> opStack = new ArrayDeque<>();
+
+        ReadBuilderImpl() { opStack.push(new ArrayList<>()); }
+
+        @Override public void push(Op op) { opStack.peek().add(op); }
+
+        @Override
+        public Value lower(NetworkBuffer.Type<?> type) {
+            if (type instanceof NetworkIrIntrinsic intrinsic) {
+                return intrinsic.lowerRead(this);
+            } else {
+                Local out = referenceLocal();
+                push(new Op.ReadExternal(type, out));
+                return new Value.LocalValue(out);
+            }
+        }
+
+        @Override
+        public List<Op> buildNested(Runnable action) {
+            opStack.push(new ArrayList<>());
+            action.run();
+            return opStack.pop();
+        }
+
+        List<Op> result() { return opStack.peek(); }
     }
 }
