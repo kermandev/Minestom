@@ -2,27 +2,22 @@ package net.minestom.server.network.ir;
 
 import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.network.NetworkBufferTemplate;
-import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.UnknownNullability;
 
 import java.io.IOException;
 import java.lang.constant.ClassDesc;
 import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.invoke.MethodType;
-import java.nio.charset.StandardCharsets;
+import java.lang.invoke.MethodHandles.Lookup;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
-import java.util.function.Function;
 
 import static net.minestom.server.network.ir.IrMetadata.*;
 
-public final class TemplateCompiler {
-    private TemplateCompiler() {}
+public final class IrCompiler {
+    private IrCompiler() {}
 
     public static final String PACKAGE = "net.minestom.server.network";
     public static final String TYPE_PREFIX = "t";
@@ -41,30 +36,30 @@ public final class TemplateCompiler {
     public static final StackWalker STACK_WALKER = StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);
 
     @SuppressWarnings("unchecked")
-    public static <T extends @UnknownNullability Object> NetworkBuffer.Type<T> template(Object... values) {
-        Objects.requireNonNull(values, "values");
-        Check.argCondition(values.length % 2 == 0, "Expected an odd number of values, got: {0}", values.length);
-        Check.argCondition(values.length < 3, "Expected at least three values ([type, getter], ctor), got: {0}", values.length);
-        final int fieldCount = values.length / 2;
-        Check.argCondition(fieldCount > 20, "Templates only support up to 20 fields, got: {0}", fieldCount);
-        for (int i = 0; i < fieldCount; i++) {
-            Objects.requireNonNull(values[i * 2], typeName(i));
-            Objects.requireNonNull(values[i * 2 + 1], getterName(i));
-        }
-        Objects.requireNonNull(values[values.length - 1], CTOR_NAME);
-
+    public static <T extends @UnknownNullability Object> NetworkBuffer.Type<T> compile(NetworkBuffer.Type<T> type) {
         try {
             final ClassDesc classDesc = ClassDesc.of(PACKAGE, "NetworkTemplate");
             final List<Object> classData = new ArrayList<>();
-            final ConstructorIr<T> constructorIr = new ConstructorIr<>(values[values.length - 1], fieldCount);
-            final NetworkIr<T> ir = IrLowering.networkIr("NetworkTemplate", values, fieldCount, constructorIr);
+
+            IrLowering.WriteBuilderImpl writeBuilder = new IrLowering.WriteBuilderImpl(IrLowering.referenceLocal());
+            writeBuilder.lower(type, new Value.LocalValue(writeBuilder.source()));
+            ProgramIr write = IrOptimizer.optimize(new ProgramIr(writeBuilder.result(), writeBuilder.source()));
+
+            IrLowering.ReadBuilderImpl readBuilder = new IrLowering.ReadBuilderImpl();
+            Value readValue = readBuilder.lower(type);
+            Local result = IrLowering.referenceLocal();
+            readBuilder.push(new Op.Store(readValue, result));
+            readBuilder.push(new Op.Return(new Value.LocalValue(result)));
+            ProgramIr read = IrOptimizer.optimize(new ProgramIr(readBuilder.result()));
+
+            NetworkIr<T> ir = new NetworkIr<>(write, read);
             final IrClassData irData = IrLowering.collectIrClassData(classData, ir);
             final int irIndex = addClassData(classData, ir);
 
             final byte[] bytes = IrEmitter.buildClass(classDesc, irData, irIndex);
-            if (DEBUG) dump(bytes, fieldCount);
+            if (DEBUG) dump(bytes, 0); // Field count could be dynamically inferred or left at 0 for dumps
 
-            final Lookup lookup = net.minestom.server.network.NetworkBufferTemplate.lookup().defineHiddenClassWithClassData(bytes, List.copyOf(classData), true);
+            final Lookup lookup = NetworkBufferTemplate.lookup().defineHiddenClassWithClassData(bytes, List.copyOf(classData), true);
             final MethodHandle constructor = lookup.findConstructor(lookup.lookupClass(), MethodType.methodType(void.class));
             return (NetworkBuffer.Type<T>) constructor.invoke();
         } catch (Throwable throwable) {
@@ -76,7 +71,7 @@ public final class TemplateCompiler {
         final StackWalker.StackFrame caller = STACK_WALKER.walk(frames -> frames
                 .filter(frame -> {
                     final Class<?> declaringClass = frame.getDeclaringClass();
-                    return declaringClass != TemplateCompiler.class && declaringClass != NetworkBufferTemplate.class;
+                    return declaringClass != IrCompiler.class && declaringClass != NetworkBufferTemplate.class;
                 })
                 .findFirst()
                 .orElseThrow());

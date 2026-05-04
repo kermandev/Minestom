@@ -19,7 +19,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 import static net.minestom.server.network.ir.IrMetadata.*;
-import static net.minestom.server.network.ir.TemplateCompiler.*;
+import static net.minestom.server.network.ir.IrCompiler.*;
 
 final class IrEmitter {
     private IrEmitter() {}
@@ -143,14 +143,6 @@ final class IrEmitter {
     }
 
     private static void declareIrFields(ClassBuilder classBuilder, IrClassData data) {
-        for (IrFieldData field : data.fields()) {
-            if (field.typeDataIndex() != -1) {
-                classBuilder.withField(typeName(field.path()), CD_TYPE, FIELD_FLAGS);
-            }
-            if (field.getterDataIndex() != -1) {
-                classBuilder.withField(getterName(field.path()), CD_FUNCTION, FIELD_FLAGS);
-            }
-        }
         for (ExternalTypeFieldData external : data.externalTypes()) {
             classBuilder.withField(external.name(), CD_TYPE, FIELD_FLAGS);
         }
@@ -173,16 +165,6 @@ final class IrEmitter {
     }
 
     private static void initIrFields(CodeBuilder codeBuilder, ClassDesc classDesc, IrClassData data) {
-        for (IrFieldData field : data.fields()) {
-            if (field.typeDataIndex() != -1) {
-                loadClassDataAt(codeBuilder, CD_TYPE, field.typeDataIndex())
-                        .putstatic(classDesc, typeName(field.path()), CD_TYPE);
-            }
-            if (field.getterDataIndex() != -1) {
-                loadClassDataAt(codeBuilder, CD_FUNCTION, field.getterDataIndex())
-                        .putstatic(classDesc, getterName(field.path()), CD_FUNCTION);
-            }
-        }
         for (ExternalTypeFieldData external : data.externalTypes()) {
             loadClassDataAt(codeBuilder, CD_TYPE, external.dataIndex())
                     .putstatic(classDesc, external.name(), CD_TYPE);
@@ -225,12 +207,6 @@ final class IrEmitter {
 
     private static void emitOp(CodeBuilder codeBuilder, EmitContext context, Op op) {
         switch (op) {
-            case Op.GetField getField -> {
-                codeBuilder.getstatic(context.classDesc(), getterFieldName(context.data(), getField.field()), CD_FUNCTION);
-                emitLoadLocal(codeBuilder, context, getField.source());
-                codeBuilder.invokeinterface(CD_FUNCTION, "apply", MT_FUNCTION_APPLY);
-                emitStoreLocal(codeBuilder, context, getField.out());
-            }
             case Op.Apply apply -> {
                 codeBuilder.getstatic(context.classDesc(), transformFunctionName(context.data(), apply.function()), CD_FUNCTION);
                 emitLoadLocal(codeBuilder, context, apply.in());
@@ -526,8 +502,8 @@ final class IrEmitter {
                 emitStoreLocal(codeBuilder, context, mapEntryValue.out());
             }
             case Op.Construct construct -> {
-                final ClassDesc constructorType = constructorInterface(construct.constructor().fieldCount());
-                codeBuilder.getstatic(context.classDesc(), ctorFieldName(context.data(), construct.constructor()), constructorType);
+                final ClassDesc constructorType = constructorInterface(construct.args().size());
+                codeBuilder.getstatic(context.classDesc(), ctorFieldName(context.data(), construct.factory()), constructorType);
                 for (Value arg : construct.args()) {
                     emitValue(codeBuilder, context, arg);
                 }
@@ -720,14 +696,6 @@ final class IrEmitter {
                     codeBuilder.invokeinterface(CD_LIST, "get", MethodTypeDesc.of(CD_OBJECT, CD_INT));
                     emitStoreLocal(codeBuilder, context, elementAt.out());
                 }
-                case RunStep.GetField getField -> {
-                    emitLoadLocal(codeBuilder, context, getField.source());
-                    codeBuilder.checkcast(context.classDesc());
-                    codeBuilder.getstatic(context.classDesc(), getterFieldName(context.data(), getField.field()), CD_FUNCTION);
-                    codeBuilder.swap();
-                    codeBuilder.invokeinterface(CD_FUNCTION, "apply", MT_FUNCTION_APPLY);
-                    emitStoreLocal(codeBuilder, context, getField.out());
-                }
                 case RunStep.Apply apply -> {
                     codeBuilder.getstatic(context.classDesc(), transformFunctionName(context.data(), apply.function()), CD_FUNCTION);
                     emitLoadLocal(codeBuilder, context, apply.in());
@@ -897,7 +865,7 @@ final class IrEmitter {
                     codeBuilder.aastore();
                 }
                 case RunStep.Construct construct -> {
-                    codeBuilder.getstatic(context.classDesc(), ctorFieldName(context.data(), construct.constructor()), constructorInterface(construct.args().size()));
+                    codeBuilder.getstatic(context.classDesc(), ctorFieldName(context.data(), construct.factory()), constructorInterface(construct.args().size()));
                     for (Value arg : construct.args()) {
                         emitValue(codeBuilder, context, arg);
                     }
@@ -1265,9 +1233,6 @@ final class IrEmitter {
     }
 
     private static String typeFieldName(IrClassData data, NetworkBuffer.Type<?> type) {
-        for (IrFieldData field : data.fields()) {
-            if (field.ir().type() == type) return typeName(field.path());
-        }
         for (ExternalTypeFieldData external : data.externalTypes()) {
             if (external.type() == type) return external.name();
         }
@@ -1281,16 +1246,9 @@ final class IrEmitter {
         throw new IllegalStateException("Missing transform function field");
     }
 
-    private static String getterFieldName(IrClassData data, FieldIr<?, ?> field) {
-        for (IrFieldData fieldData : data.fields()) {
-            if (fieldData.ir() == field) return getterName(fieldData.path());
-        }
-        throw new IllegalStateException("Missing getter field for " + field);
-    }
-
-    private static String ctorFieldName(IrClassData data, ConstructorIr<?> constructor) {
-        for (Map.Entry<String, Integer> entry : data.constructors().entrySet()) {
-            if (data.constructorIr(entry.getKey()).object() == constructor.object()) return entry.getKey();
+    private static String ctorFieldName(IrClassData data, Object factory) {
+        for (Map.Entry<String, IrCtorData> entry : data.constructorIrs().entrySet()) {
+            if (entry.getValue().factory() == factory) return entry.getKey();
         }
         throw new IllegalStateException("Missing constructor field");
     }

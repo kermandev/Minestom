@@ -4,13 +4,10 @@ import java.util.List;
 import java.util.function.Function;
 
 public sealed interface RunStep
-        permits RunStep.ElementAt, RunStep.GetField, RunStep.Apply, RunStep.Cast, RunStep.Unbox, RunStep.Box,
+        permits RunStep.ElementAt, RunStep.Apply, RunStep.Cast, RunStep.Unbox, RunStep.Box,
         RunStep.Put, RunStep.Get, RunStep.PutVarInt, RunStep.PutVarLong, RunStep.PutBytes, RunStep.GetBytes, RunStep.ResultElementSet,
         RunStep.ArraySet, RunStep.Construct {
     record ElementAt(Value source, Value index, Local out) implements RunStep {
-    }
-
-    record GetField(FieldIr<?, ?> field, String path, Local source, Local out) implements RunStep {
     }
 
     record Apply(Function<?, ?> function, Local in, Local out) implements RunStep {
@@ -49,7 +46,7 @@ public sealed interface RunStep
     record ArraySet(Local array, Value index, Value value) implements RunStep {
     }
 
-    record Construct(ConstructorIr<?> constructor, String path, List<Value> args, Local out) implements RunStep {
+    record Construct(Object factory, List<Value> args, Local out) implements RunStep {
         public Construct {
             args = List.copyOf(args);
         }

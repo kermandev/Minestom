@@ -61,7 +61,7 @@ public final class IrOptimizer {
 
     private static boolean isPure(Op op) {
         return switch (op) {
-            case Op.GetField _, Op.Apply _, Op.Cast _, Op.Unbox _, Op.Box _, Op.Store _, Op.Check _,
+            case Op.Apply _, Op.Cast _, Op.Unbox _, Op.Box _, Op.Store _, Op.Check _,
                  Op.Construct _, Op.MapEntrySet _, Op.MapEntryKey _, Op.MapEntryValue _, Op.ElementAt _,
                  Op.ArrayCreate _, Op.ArraySet _, Op.ListFinish _, Op.MapFinish _,
                  Op.StringToBytes _, Op.BytesToString _, Op.EitherLeft _, Op.EitherRight _ -> true;

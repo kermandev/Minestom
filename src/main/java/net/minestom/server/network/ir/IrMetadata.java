@@ -9,26 +9,22 @@ import java.util.function.Function;
 final class IrMetadata {
     private IrMetadata() {}
 
-    record IrClassData(NetworkIr<?> ir, String path, List<IrFieldData> fields, List<TransformFieldData> transforms,
-                       Map<String, Integer> constructors, Map<String, ConstructorIr<?>> constructorIrs,
+    record IrClassData(NetworkIr<?> ir, String path, List<TransformFieldData> transforms,
+                       Map<String, Integer> constructors, Map<String, IrCtorData> constructorIrs,
                        List<ExternalTypeFieldData> externalTypes) {
         public IrClassData {
-            fields = List.copyOf(fields);
             transforms = List.copyOf(transforms);
             constructors = Map.copyOf(constructors);
             constructorIrs = Map.copyOf(constructorIrs);
             externalTypes = List.copyOf(externalTypes);
         }
 
-        public ConstructorIr<?> constructorIr(String name) {
+        public IrCtorData constructorIr(String name) {
             return constructorIrs.get(name);
         }
     }
 
-    record IrFieldData(FieldIr<?, ?> ir, String path, int typeDataIndex, int getterDataIndex) {
-    }
-
-    record IrCtorData(String name, int fieldCount, int dataIndex) {
+    record IrCtorData(Object factory, String name, int fieldCount, int dataIndex) {
     }
 
     record TransformFieldData(String name, Function<?, ?> function, int dataIndex) {

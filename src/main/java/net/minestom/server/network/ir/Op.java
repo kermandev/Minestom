@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.function.Function;
 
 public sealed interface Op
-        permits Op.GetField, Op.Apply, Op.Cast, Op.Unbox, Op.Box, Op.Store, Op.Check, Op.WriteExternal, Op.ReadExternal,
+        permits Op.Apply, Op.Cast, Op.Unbox, Op.Box, Op.Store, Op.Check, Op.WriteExternal, Op.ReadExternal,
         Op.WritePrimitive, Op.ReadPrimitive, Op.WriteVarInt, Op.ReadVarInt, Op.WriteVarLong, Op.ReadVarLong,
         Op.WriteFixedBytes, Op.ReadFixedBytes, Op.WriteRun, Op.ReadRun, Op.If, Op.ForEach,
         Op.ForIndex, Op.ElementAt, Op.MapEntrySet, Op.MapEntryKey, Op.MapEntryValue, Op.ResultElementSet,
@@ -20,9 +20,6 @@ public sealed interface Op
     record AdvanceWriteIndex(Value amount) implements Op {}
 
     record AdvanceReadIndex(Value amount) implements Op {}
-
-    record GetField(FieldIr<?, ?> field, String path, Local source, Local out) implements Op {
-    }
 
     record Apply(Function<?, ?> function, Local in, Local out) implements Op {
     }
@@ -136,7 +133,7 @@ public sealed interface Op
     record MapFinish(Local keys, Local values, Value size, Local out) implements Op {
     }
 
-    record Construct(ConstructorIr<?> constructor, String path, List<Value> args, Local out) implements Op {
+    record Construct(Object factory, List<Value> args, Local out) implements Op {
         public Construct {
             args = List.copyOf(args);
         }
