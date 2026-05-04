@@ -7,7 +7,7 @@ import java.util.function.Function;
 
 public sealed interface TypeIr<T extends @UnknownNullability Object>
         permits TypeIr.External, TypeIr.Template, TypeIr.Constant, TypeIr.Primitive, TypeIr.VarInt, TypeIr.VarLong,
-        TypeIr.Optional, TypeIr.Either, TypeIr.Transform, TypeIr.String, TypeIr.ByteArray, TypeIr.FixedBytes,
+        TypeIr.Optional, TypeIr.Either, TypeIr.Transform, TypeIr.StringUtf8, TypeIr.ByteArray, TypeIr.FixedBytes,
         TypeIr.ListType, TypeIr.MapType {
     record External<T extends @UnknownNullability Object>(NetworkBuffer.Type<T> type) implements TypeIr<T> {
     }
@@ -40,7 +40,7 @@ public sealed interface TypeIr<T extends @UnknownNullability Object>
     ) implements TypeIr<B> {
     }
 
-    record String(int maxLength) implements TypeIr<java.lang.String> {
+    record StringUtf8(int maxLength) implements TypeIr<String> {
     }
 
     record ByteArray(int maxLength) implements TypeIr<byte[]> {

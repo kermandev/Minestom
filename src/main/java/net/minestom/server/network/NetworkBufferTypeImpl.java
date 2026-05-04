@@ -22,11 +22,6 @@ import net.minestom.server.utils.nbt.BinaryTagWriter;
 import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.Nullable;
 
-import net.minestom.server.network.ir.PrimitiveKind;
-import net.minestom.server.network.ir.TypeIr;
-import net.minestom.server.network.ir.TypeIrProvider;
-import net.minestom.server.network.ir.IrLowering;
-
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.UTFDataFormatException;
@@ -38,7 +33,7 @@ import java.util.function.Supplier;
 import static net.minestom.server.network.NetworkBuffer.*;
 import static net.minestom.server.network.NetworkBufferImpl.impl;
 
-interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider<T> {
+public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
     int SEGMENT_BITS = 0x7F;
     int CONTINUE_BIT = 0x80;
 
@@ -162,7 +157,7 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
         return new String(bytes, StandardCharsets.UTF_8);
     }
 
-    record UnitType() implements NetworkBufferTypeImpl<Unit> {
+    public record UnitType() implements NetworkBufferTypeImpl<Unit> {
         @Override
         public void write(NetworkBuffer buffer, Unit value) {
         }
@@ -171,14 +166,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
         public Unit read(NetworkBuffer buffer) {
             return Unit.INSTANCE;
         }
-
-        @Override
-        public TypeIr<Unit> typeIr() {
-            return new TypeIr.Constant<>(Unit.INSTANCE);
-        }
     }
 
-    record BooleanType() implements NetworkBufferTypeImpl<Boolean> {
+    public record BooleanType() implements NetworkBufferTypeImpl<Boolean> {
         @Override
         public void write(NetworkBuffer buffer, Boolean value) {
             final NetworkBufferImpl impl = impl(buffer);
@@ -191,14 +181,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
             final byte value = impl._getByteUnchecked(impl.reserveRead(1));
             return value != 0;
         }
-
-        @Override
-        public TypeIr<Boolean> typeIr() {
-            return new TypeIr.Primitive<>(PrimitiveKind.BOOLEAN);
-        }
     }
 
-    record ByteType() implements NetworkBufferTypeImpl<Byte> {
+    public record ByteType() implements NetworkBufferTypeImpl<Byte> {
         @Override
         public void write(NetworkBuffer buffer, Byte value) {
             final NetworkBufferImpl impl = impl(buffer);
@@ -211,14 +196,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
             final byte value = impl._getByteUnchecked(impl.reserveRead(1));
             return value;
         }
-
-        @Override
-        public TypeIr<Byte> typeIr() {
-            return new TypeIr.Primitive<>(PrimitiveKind.BYTE);
-        }
     }
 
-    record UnsignedByteType() implements NetworkBufferTypeImpl<Short> {
+    public record UnsignedByteType() implements NetworkBufferTypeImpl<Short> {
         @Override
         public void write(NetworkBuffer buffer, Short value) {
             final NetworkBufferImpl impl = impl(buffer);
@@ -231,14 +211,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
             final byte value = impl._getByteUnchecked(impl.reserveRead(1));
             return (short) (value & 0xFF);
         }
-
-        @Override
-        public TypeIr<Short> typeIr() {
-            return new TypeIr.Primitive<>(PrimitiveKind.UNSIGNED_BYTE);
-        }
     }
 
-    record ShortType() implements NetworkBufferTypeImpl<Short> {
+    public record ShortType() implements NetworkBufferTypeImpl<Short> {
         @Override
         public void write(NetworkBuffer buffer, Short value) {
             final NetworkBufferImpl impl = impl(buffer);
@@ -251,14 +226,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
             final short value = impl._getShortUnchecked(impl.reserveRead(2));
             return value;
         }
-
-        @Override
-        public TypeIr<Short> typeIr() {
-            return new TypeIr.Primitive<>(PrimitiveKind.SHORT);
-        }
     }
 
-    record UnsignedShortType() implements NetworkBufferTypeImpl<Integer> {
+    public record UnsignedShortType() implements NetworkBufferTypeImpl<Integer> {
         @Override
         public void write(NetworkBuffer buffer, Integer value) {
             final NetworkBufferImpl impl = impl(buffer);
@@ -271,14 +241,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
             final short value = impl._getShortUnchecked(impl.reserveRead(2));
             return value & 0xFFFF;
         }
-
-        @Override
-        public TypeIr<Integer> typeIr() {
-            return new TypeIr.Primitive<>(PrimitiveKind.UNSIGNED_SHORT);
-        }
     }
 
-    record IntType() implements NetworkBufferTypeImpl<Integer> {
+    public record IntType() implements NetworkBufferTypeImpl<Integer> {
         @Override
         public void write(NetworkBuffer buffer, Integer value) {
             final NetworkBufferImpl impl = impl(buffer);
@@ -291,14 +256,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
             final int value = impl._getIntUnchecked(impl.reserveRead(4));
             return value;
         }
-
-        @Override
-        public TypeIr<Integer> typeIr() {
-            return new TypeIr.Primitive<>(PrimitiveKind.INT);
-        }
     }
 
-    record UnsignedIntType() implements NetworkBufferTypeImpl<Long> {
+    public record UnsignedIntType() implements NetworkBufferTypeImpl<Long> {
         @Override
         public void write(NetworkBuffer buffer, Long value) {
             final NetworkBufferImpl impl = impl(buffer);
@@ -311,14 +271,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
             final int value = impl._getIntUnchecked(impl.reserveRead(4));
             return value & 0xFFFFFFFFL;
         }
-
-        @Override
-        public TypeIr<Long> typeIr() {
-            return new TypeIr.Primitive<>(PrimitiveKind.UNSIGNED_INT);
-        }
     }
 
-    record LongType() implements NetworkBufferTypeImpl<Long> {
+    public record LongType() implements NetworkBufferTypeImpl<Long> {
         @Override
         public void write(NetworkBuffer buffer, Long value) {
             final NetworkBufferImpl impl = impl(buffer);
@@ -331,14 +286,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
             final long value = impl._getLongUnchecked(impl.reserveRead(8));
             return value;
         }
-
-        @Override
-        public TypeIr<Long> typeIr() {
-            return new TypeIr.Primitive<>(PrimitiveKind.LONG);
-        }
     }
 
-    record FloatType() implements NetworkBufferTypeImpl<Float> {
+    public record FloatType() implements NetworkBufferTypeImpl<Float> {
         @Override
         public void write(NetworkBuffer buffer, Float value) {
             final NetworkBufferImpl impl = impl(buffer);
@@ -351,14 +301,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
             final float value = impl._getFloatUnchecked(impl.reserveRead(4));
             return value;
         }
-
-        @Override
-        public TypeIr<Float> typeIr() {
-            return new TypeIr.Primitive<>(PrimitiveKind.FLOAT);
-        }
     }
 
-    record DoubleType() implements NetworkBufferTypeImpl<Double> {
+    public record DoubleType() implements NetworkBufferTypeImpl<Double> {
         @Override
         public void write(NetworkBuffer buffer, Double value) {
             final NetworkBufferImpl impl = impl(buffer);
@@ -371,14 +316,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
             final double value = impl._getDoubleUnchecked(impl.reserveRead(8));
             return value;
         }
-
-        @Override
-        public TypeIr<Double> typeIr() {
-            return new TypeIr.Primitive<>(PrimitiveKind.DOUBLE);
-        }
     }
 
-    record VarIntType() implements NetworkBufferTypeImpl<Integer> {
+    public record VarIntType() implements NetworkBufferTypeImpl<Integer> {
         @Override
         public void write(NetworkBuffer buffer, Integer boxed) {
             int value = boxed;
@@ -390,14 +330,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
         public Integer read(NetworkBuffer buffer) {
             return readVarInt(buffer);
         }
-
-        @Override
-        public TypeIr<Integer> typeIr() {
-            return new TypeIr.VarInt();
-        }
     }
 
-    record OptionalVarIntType() implements NetworkBufferTypeImpl<@Nullable Integer> {
+    public record OptionalVarIntType() implements NetworkBufferTypeImpl<@Nullable Integer> {
         @Override
         public void write(NetworkBuffer buffer, @Nullable Integer value) {
             buffer.write(VAR_INT, value == null ? 0 : value + 1);
@@ -408,14 +343,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
             final int value = buffer.read(VAR_INT);
             return value == 0 ? null : value - 1;
         }
-
-        @Override
-        public TypeIr<@Nullable Integer> typeIr() {
-            return new TypeIr.External<>(this);
-        }
     }
 
-    record VarInt3Type() implements NetworkBufferTypeImpl<Integer> {
+    public record VarInt3Type() implements NetworkBufferTypeImpl<Integer> {
         @Override
         public void write(NetworkBuffer buffer, Integer boxed) {
             final int value = boxed;
@@ -434,14 +364,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
             // The optimization is mostly relevant for writing
             return buffer.read(VAR_INT);
         }
-
-        @Override
-        public TypeIr<Integer> typeIr() {
-            return new TypeIr.External<>(this);
-        }
     }
 
-    record VarLongType() implements NetworkBufferTypeImpl<Long> {
+    public record VarLongType() implements NetworkBufferTypeImpl<Long> {
         @Override
         public void write(NetworkBuffer buffer, Long value) {
             final NetworkBufferImpl impl = impl(buffer);
@@ -452,14 +377,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
         public Long read(NetworkBuffer buffer) {
             return readVarLong(buffer);
         }
-
-        @Override
-        public TypeIr<Long> typeIr() {
-            return new TypeIr.VarLong();
-        }
     }
 
-    record RawBytesType(int length) implements NetworkBufferTypeImpl<byte[]> {
+    public record RawBytesType(int length) implements NetworkBufferTypeImpl<byte[]> {
         @Override
         public void write(NetworkBuffer buffer, byte[] value) {
             if (length != -1) {
@@ -485,31 +405,21 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
             impl._getBytesUnchecked(impl.reserveRead(arrayLength), bytes, 0, arrayLength);
             return bytes;
         }
-
-        @Override
-        public TypeIr<byte[]> typeIr() {
-            return length >= 0 ? new TypeIr.FixedBytes(length) : new TypeIr.External<>(this);
-        }
     }
 
-    record StringType() implements NetworkBufferTypeImpl<String> {
+    public record StringType() implements NetworkBufferTypeImpl<String> {
         @Override
         public void write(NetworkBuffer buffer, String value) {
-            writeStringUtf8(buffer, value, Integer.MAX_VALUE);
+            writeStringUtf8(buffer, value, 1024 * 1024);
         }
 
         @Override
         public String read(NetworkBuffer buffer) {
-            return readStringUtf8(buffer, Integer.MAX_VALUE);
-        }
-
-        @Override
-        public TypeIr<String> typeIr() {
-            return new TypeIr.String(Integer.MAX_VALUE);
+            return readStringUtf8(buffer, 1024 * 1024);
         }
     }
 
-    record StringTerminatedType() implements NetworkBufferTypeImpl<String> {
+    public record StringTerminatedType() implements NetworkBufferTypeImpl<String> {
         @Override
         public void write(NetworkBuffer buffer, String value) {
             final byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
@@ -528,14 +438,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
             }
             return new String(bytes.elements(), StandardCharsets.UTF_8);
         }
-
-        @Override
-        public TypeIr<String> typeIr() {
-            return new TypeIr.External<>(this);
-        }
     }
 
-    record NbtType() implements NetworkBufferTypeImpl<BinaryTag> {
+    public record NbtType() implements NetworkBufferTypeImpl<BinaryTag> {
         @Override
         public void write(NetworkBuffer buffer, BinaryTag value) {
             BinaryTagWriter nbtWriter = impl(buffer).nbtWriter();
@@ -555,14 +460,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
                 throw new RuntimeException(e);
             }
         }
-
-        @Override
-        public TypeIr<BinaryTag> typeIr() {
-            return new TypeIr.External<>(this);
-        }
     }
 
-    record BlockPositionType() implements NetworkBufferTypeImpl<Point> {
+    public record BlockPositionType() implements NetworkBufferTypeImpl<Point> {
         @Override
         public void write(NetworkBuffer buffer, Point value) {
             final int blockX = value.blockX();
@@ -582,14 +482,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
             final int z = (int) (value << 26 >> 38);
             return new Vec(x, y, z);
         }
-
-        @Override
-        public TypeIr<Point> typeIr() {
-            return new TypeIr.External<>(this);
-        }
     }
 
-    record JsonComponentType() implements NetworkBufferTypeImpl<Component> {
+    public record JsonComponentType() implements NetworkBufferTypeImpl<Component> {
         @Override
         public void write(NetworkBuffer buffer, Component value) {
             final Transcoder<JsonElement> coder = buffer.registries() != null
@@ -607,14 +502,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
             final JsonElement json = JsonUtil.fromJson(buffer.read(STRING));
             return Codec.COMPONENT.decode(coder, json).orElseThrow();
         }
-
-        @Override
-        public TypeIr<Component> typeIr() {
-            return new TypeIr.External<>(this);
-        }
     }
 
-    record UUIDType() implements NetworkBufferTypeImpl<UUID> {
+    public record UUIDType() implements NetworkBufferTypeImpl<UUID> {
         @Override
         public void write(NetworkBuffer buffer, java.util.UUID value) {
             buffer.write(LONG, value.getMostSignificantBits());
@@ -627,14 +517,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
             final long leastSignificantBits = buffer.read(LONG);
             return new UUID(mostSignificantBits, leastSignificantBits);
         }
-
-        @Override
-        public TypeIr<UUID> typeIr() {
-            return new TypeIr.External<>(this);
-        }
     }
 
-    record PosType() implements NetworkBufferTypeImpl<Pos> {
+    public record PosType() implements NetworkBufferTypeImpl<Pos> {
         @Override
         public void write(NetworkBuffer buffer, Pos value) {
             buffer.write(DOUBLE, value.x());
@@ -653,14 +538,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
             final float pitch = buffer.read(FLOAT);
             return new Pos(x, y, z, yaw, pitch);
         }
-
-        @Override
-        public TypeIr<Pos> typeIr() {
-            return new TypeIr.External<>(this);
-        }
     }
 
-    record ByteArrayType() implements NetworkBufferTypeImpl<byte[]> {
+    public record ByteArrayType() implements NetworkBufferTypeImpl<byte[]> {
         @Override
         public void write(NetworkBuffer buffer, byte[] value) {
             writeByteArray(buffer, value, Integer.MAX_VALUE);
@@ -670,14 +550,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
         public byte[] read(NetworkBuffer buffer) {
             return readByteArray(buffer, Integer.MAX_VALUE);
         }
-
-        @Override
-        public TypeIr<byte[]> typeIr() {
-            return new TypeIr.ByteArray(Integer.MAX_VALUE);
-        }
     }
 
-    record LongArrayType() implements NetworkBufferTypeImpl<long[]> {
+    public record LongArrayType() implements NetworkBufferTypeImpl<long[]> {
         @Override
         public void write(NetworkBuffer buffer, long[] value) {
             final int length = value.length;
@@ -704,14 +579,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
             }
             return longs;
         }
-
-        @Override
-        public TypeIr<long[]> typeIr() {
-            return new TypeIr.External<>(this);
-        }
     }
 
-    record VarIntArrayType() implements NetworkBufferTypeImpl<int[]> {
+    public record VarIntArrayType() implements NetworkBufferTypeImpl<int[]> {
         @Override
         public void write(NetworkBuffer buffer, int[] value) {
             buffer.write(VAR_INT, value.length);
@@ -725,14 +595,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
             for (int i = 0; i < length; i++) ints[i] = buffer.read(VAR_INT);
             return ints;
         }
-
-        @Override
-        public TypeIr<int[]> typeIr() {
-            return new TypeIr.External<>(this);
-        }
     }
 
-    record VarLongArrayType() implements NetworkBufferTypeImpl<long[]> {
+    public record VarLongArrayType() implements NetworkBufferTypeImpl<long[]> {
         @Override
         public void write(NetworkBuffer buffer, long[] value) {
             buffer.write(VAR_INT, value.length);
@@ -746,14 +611,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
             for (int i = 0; i < length; i++) longs[i] = buffer.read(VAR_LONG);
             return longs;
         }
-
-        @Override
-        public TypeIr<long[]> typeIr() {
-            return new TypeIr.External<>(this);
-        }
     }
 
-    record Vector3Type() implements NetworkBufferTypeImpl<Point> {
+    public record Vector3Type() implements NetworkBufferTypeImpl<Point> {
         @Override
         public void write(NetworkBuffer buffer, Point value) {
             buffer.write(FLOAT, (float) value.x());
@@ -768,14 +628,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
             final float z = buffer.read(FLOAT);
             return new Vec(x, y, z);
         }
-
-        @Override
-        public TypeIr<Point> typeIr() {
-            return new TypeIr.External<>(this);
-        }
     }
 
-    record Vector3DType() implements NetworkBufferTypeImpl<Point> {
+    public record Vector3DType() implements NetworkBufferTypeImpl<Point> {
         @Override
         public void write(NetworkBuffer buffer, Point value) {
             buffer.write(DOUBLE, value.x());
@@ -790,14 +645,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
             final double z = buffer.read(DOUBLE);
             return new Vec(x, y, z);
         }
-
-        @Override
-        public TypeIr<Point> typeIr() {
-            return new TypeIr.External<>(this);
-        }
     }
 
-    record Vector3IType() implements NetworkBufferTypeImpl<Point> {
+    public record Vector3IType() implements NetworkBufferTypeImpl<Point> {
         @Override
         public void write(NetworkBuffer buffer, Point value) {
             buffer.write(VAR_INT, (int) value.x());
@@ -812,14 +662,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
             final int z = buffer.read(VAR_INT);
             return new Vec(x, y, z);
         }
-
-        @Override
-        public TypeIr<Point> typeIr() {
-            return new TypeIr.External<>(this);
-        }
     }
 
-    record Vector3BType() implements NetworkBufferTypeImpl<Point> {
+    public record Vector3BType() implements NetworkBufferTypeImpl<Point> {
         @Override
         public void write(NetworkBuffer buffer, Point value) {
             buffer.write(BYTE, (byte) value.x());
@@ -834,14 +679,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
             final byte z = buffer.read(BYTE);
             return new Vec(x, y, z);
         }
-
-        @Override
-        public TypeIr<Point> typeIr() {
-            return new TypeIr.External<>(this);
-        }
     }
 
-    record LpVector3Type() implements NetworkBufferTypeImpl<Vec> {
+    public record LpVector3Type() implements NetworkBufferTypeImpl<Vec> {
         private static final int DATA_BITS_MASK = 0b111111111111111;
         private static final double MAX_QUANTIZED_VALUE = 32766.0;
         private static final int SCALE_BITS_MASK = 0b11;
@@ -905,14 +745,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
         private static double unpack(long value) {
             return Math.min((double) (value & DATA_BITS_MASK), MAX_QUANTIZED_VALUE) * 2.0 / MAX_QUANTIZED_VALUE - 1.0;
         }
-
-        @Override
-        public TypeIr<Vec> typeIr() {
-            return new TypeIr.External<>(this);
-        }
     }
 
-    record QuaternionType() implements NetworkBufferTypeImpl<float[]> {
+    public record QuaternionType() implements NetworkBufferTypeImpl<float[]> {
         @Override
         public void write(NetworkBuffer buffer, float[] value) {
             buffer.write(FLOAT, value[0]);
@@ -929,16 +764,11 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
             final float w = buffer.read(FLOAT);
             return new float[]{x, y, z, w};
         }
-
-        @Override
-        public TypeIr<float[]> typeIr() {
-            return new TypeIr.External<>(this);
-        }
     }
 
     // Combinators
 
-    record EnumSetType<E extends Enum<E>>(Class<E> enumType,
+    public record EnumSetType<E extends Enum<E>>(Class<E> enumType,
                                           E[] values) implements NetworkBufferTypeImpl<EnumSet<E>> {
         @Override
         public void write(NetworkBuffer buffer, EnumSet<E> value) {
@@ -962,14 +792,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
             }
             return enumSet;
         }
-
-        @Override
-        public TypeIr<EnumSet<E>> typeIr() {
-            return new TypeIr.External<>(this);
-        }
     }
 
-    record FixedBitSetType(int length) implements NetworkBufferTypeImpl<BitSet> {
+    public record FixedBitSetType(int length) implements NetworkBufferTypeImpl<BitSet> {
         @Override
         public void write(NetworkBuffer buffer, BitSet value) {
             final int setLength = value.length();
@@ -986,14 +811,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
             final byte[] array = buffer.read(FixedRawBytes((length + 7) / 8));
             return BitSet.valueOf(array);
         }
-
-        @Override
-        public TypeIr<BitSet> typeIr() {
-            return new TypeIr.External<>(this);
-        }
     }
 
-    record OptionalType<T>(Type<T> parent) implements NetworkBufferTypeImpl<@Nullable T> {
+    public record OptionalType<T>(Type<T> parent) implements NetworkBufferTypeImpl<@Nullable T> {
         @Override
         public void write(NetworkBuffer buffer, T value) {
             buffer.write(BOOLEAN, value != null);
@@ -1004,14 +824,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
         public T read(NetworkBuffer buffer) {
             return buffer.read(BOOLEAN) ? buffer.read(parent) : null;
         }
-
-        @Override
-        public TypeIr<@Nullable T> typeIr() {
-            return new TypeIr.Optional((TypeIr) IrLowering.typeIr(parent));
-        }
     }
 
-    record LengthPrefixedType<T>(Type<T> parent, int maxLength) implements NetworkBufferTypeImpl<T> {
+    public record LengthPrefixedType<T>(Type<T> parent, int maxLength) implements NetworkBufferTypeImpl<T> {
         @Override
         public void write(NetworkBuffer buffer, T value) {
             // Write to another buffer and copy (kinda inefficient, but currently unused serverside so its ok for now)
@@ -1031,18 +846,13 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
 
             return value;
         }
-
-        @Override
-        public TypeIr<T> typeIr() {
-            return new TypeIr.External<>(this);
-        }
     }
 
     final class LazyType<T> implements NetworkBufferTypeImpl<T> {
         private final Supplier<NetworkBuffer.Type<T>> supplier;
         private Type<T> type;
 
-        LazyType(Supplier<NetworkBuffer.Type<T>> supplier) {
+        public LazyType(Supplier<NetworkBuffer.Type<T>> supplier) {
             this.supplier = supplier;
         }
 
@@ -1055,17 +865,11 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
         @Override
         public T read(NetworkBuffer buffer) {
             if (type == null) type = supplier.get();
-            return type.read(buffer);
-        }
-
-        @Override
-        public TypeIr<T> typeIr() {
-            if (type == null) type = supplier.get();
-            return (TypeIr<T>) IrLowering.typeIr(type);
+            return null;
         }
     }
 
-    record TypedNbtType<T>(Codec<T> nbtType) implements NetworkBufferTypeImpl<T> {
+    public record TypedNbtType<T>(Codec<T> nbtType) implements NetworkBufferTypeImpl<T> {
         @Override
         public void write(NetworkBuffer buffer, T value) {
             final Registries registries = impl(buffer).registries;
@@ -1087,17 +891,12 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
                 case Result.Error(String message) -> throw new IllegalArgumentException("Invalid NBT tag: " + message);
             };
         }
-
-        @Override
-        public TypeIr<T> typeIr() {
-            return new TypeIr.External<>(this);
-        }
     }
 
-    record EitherType<L, R>(
+    public record EitherType<L, R>(
             NetworkBuffer.Type<L> left,
             NetworkBuffer.Type<R> right
-    ) implements NetworkBufferTypeImpl<Either<L, R>> {
+    ) implements NetworkBuffer.Type<Either<L, R>> {
         @Override
         public void write(NetworkBuffer buffer, Either<L, R> value) {
             switch (value) {
@@ -1118,14 +917,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
                 return Either.left(buffer.read(left));
             return Either.right(buffer.read(right));
         }
-
-        @Override
-        public TypeIr<Either<L, R>> typeIr() {
-            return new TypeIr.Either((TypeIr) IrLowering.typeIr(left), (TypeIr) IrLowering.typeIr(right));
-        }
     }
 
-    record TransformType<T, S>(Type<T> parent, Function<T, S> to,
+    public record TransformType<T, S>(Type<T> parent, Function<T, S> to,
                                Function<S, T> from) implements NetworkBufferTypeImpl<S> {
         @Override
         public void write(NetworkBuffer buffer, S value) {
@@ -1136,14 +930,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
         public S read(NetworkBuffer buffer) {
             return to.apply(parent.read(buffer));
         }
-
-        @Override
-        public TypeIr<S> typeIr() {
-            return new TypeIr.Transform((TypeIr) IrLowering.typeIr(parent), to, from);
-        }
     }
 
-    record MapType<K, V>(Type<K> parent, NetworkBuffer.Type<V> valueType,
+    public record MapType<K, V>(Type<K> parent, NetworkBuffer.Type<V> valueType,
                          int maxSize) implements NetworkBufferTypeImpl<Map<K, V>> {
         @Override
         public void write(NetworkBuffer buffer, Map<K, V> map) {
@@ -1170,14 +959,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
             }
             return Map.copyOf(new Object2ObjectArrayMap<>(keys, values, size));
         }
-
-        @Override
-        public TypeIr<Map<K, V>> typeIr() {
-            return new TypeIr.MapType(this, (TypeIr) IrLowering.typeIr(parent), (TypeIr) IrLowering.typeIr(valueType), maxSize);
-        }
     }
 
-    record ListType<T>(Type<T> parent, int maxSize) implements NetworkBufferTypeImpl<List<T>> {
+    public record ListType<T>(Type<T> parent, int maxSize) implements NetworkBufferTypeImpl<List<T>> {
         @Override
         public void write(NetworkBuffer buffer, List<T> values) {
             if (values == null) {
@@ -1200,14 +984,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
             for (int i = 0; i < size; i++) values[i] = buffer.read(parent);
             return List.of(values);
         }
-
-        @Override
-        public TypeIr<List<T>> typeIr() {
-            return new TypeIr.ListType(this, (TypeIr) IrLowering.typeIr(parent), maxSize);
-        }
     }
 
-    record SetType<T>(Type<T> parent, int maxSize) implements NetworkBufferTypeImpl<Set<T>> {
+    public record SetType<T>(Type<T> parent, int maxSize) implements NetworkBufferTypeImpl<Set<T>> {
         @Override
         public void write(NetworkBuffer buffer, Set<T> values) {
             if (values == null) {
@@ -1230,14 +1009,9 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
             for (int i = 0; i < size; i++) values[i] = buffer.read(parent);
             return Set.of(values);
         }
-
-        @Override
-        public TypeIr<Set<T>> typeIr() {
-            return new TypeIr.External<>(this);
-        }
     }
 
-    record UnionType<T, K, TR extends T>(
+    public record UnionType<T, K, TR extends T>(
             Type<K> keyType, Function<T, ? extends K> keyFunc,
             Function<K, NetworkBuffer.Type<TR>> serializers
     ) implements NetworkBufferTypeImpl<T> {
@@ -1260,18 +1034,13 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
             if (serializer == null) throw new UnsupportedOperationException("Unrecognized type: " + key);
             return serializer.read(buffer);
         }
-
-        @Override
-        public TypeIr<T> typeIr() {
-            return new TypeIr.External<>(this);
-        }
     }
 
     /**
      * This is a very gross version of {@link java.io.DataOutputStream#writeUTF(String)} & ${@link DataInputStream#readUTF()}. We need the data in the java
      * modified utf-8 format for Component, and I couldnt find a method without creating a new buffer for it.
      */
-    record IOUTF8StringType() implements NetworkBufferTypeImpl<String> {
+    public record IOUTF8StringType() implements NetworkBufferTypeImpl<String> {
         @Override
         public void write(NetworkBuffer buffer, String value) {
             final int strlen = value.length();
@@ -1377,11 +1146,6 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T>, TypeIrProvider
             }
             // The number of chars produced may be less than utflen
             return new String(chararr, 0, chararr_count);
-        }
-
-        @Override
-        public TypeIr<String> typeIr() {
-            return new TypeIr.External<>(this);
         }
     }
 

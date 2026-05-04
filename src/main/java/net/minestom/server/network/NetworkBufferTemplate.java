@@ -194,11 +194,6 @@ public final class NetworkBufferTemplate {
             public R read(NetworkBuffer buffer) {
                 return supplier.get();
             }
-
-            @Override
-            public TypeIr<R> typeIr() {
-                return new TypeIr.Constant<>(supplier.get());
-            }
         };
     }
 

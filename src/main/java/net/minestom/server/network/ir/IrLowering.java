@@ -1,16 +1,20 @@
 package net.minestom.server.network.ir;
 
 import net.minestom.server.network.NetworkBuffer;
+import net.minestom.server.network.NetworkBufferTypeImpl;
+import net.minestom.server.utils.Unit;
+import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.UnknownNullability;
 
 import java.lang.classfile.TypeKind;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.Function;
 
 import static net.minestom.server.network.ir.IrMetadata.*;
 
-public final class IrLowering {
+final class IrLowering {
     private IrLowering() {}
 
     @SuppressWarnings({"unchecked", "rawtypes"})
@@ -526,7 +530,7 @@ public final class IrLowering {
             return;
         }
 
-        if (type instanceof TypeIr.String(int maxSize)) {
+        if (type instanceof TypeIr.StringUtf8(int maxSize)) {
             final Local raw;
             if (field != null) {
                 raw = referenceLocal("path" + path);
@@ -735,7 +739,7 @@ public final class IrLowering {
             return new Value.LocalValue(bytes);
         }
 
-        if (type instanceof TypeIr.String(int maxSize)) {
+        if (type instanceof TypeIr.StringUtf8(int maxSize)) {
             final Value bytes = lowerRead(ops, new TypeIr.ByteArray(maxSize), path + "Str", depth + 1);
             final Local bytesLocal = ensureLocal(ops, bytes, path + "_" + depth + "StrL");
             final Local result = referenceLocal("path" + path + "Result");
@@ -1077,15 +1081,50 @@ public final class IrLowering {
         };
     }
 
+    private static TypeIr<?> typeIr(NetworkBuffer.Type<?> type) {
+        return typeIr(type, new IdentityHashMap<>());
+    }
+
     @SuppressWarnings({"unchecked", "rawtypes"})
-    public static TypeIr<?> typeIr(NetworkBuffer.Type<?> type) {
-        if (type instanceof TypeIrProvider<?> provider) {
-            return provider.typeIr();
+    private static TypeIr<?> typeIr(NetworkBuffer.Type<?> type, IdentityHashMap<NetworkBuffer.Type<?>, Boolean> visiting) {
+        if (visiting.put(type, Boolean.TRUE) != null) {
+            return new TypeIr.External(type);
         }
-        if (type instanceof NetworkIrBacked<?> backed) {
-            return new TypeIr.Template(backed.ir());
+
+        final TypeIr<?> result;
+        try {
+            result = switch (type) {
+                case NetworkIrBacked<?> backed -> new TypeIr.Template(backed.ir());
+                case NetworkBufferTypeImpl.UnitType _ -> new TypeIr.Constant<>(Unit.INSTANCE);
+                case NetworkBufferTypeImpl.BooleanType _ -> new TypeIr.Primitive<>(PrimitiveKind.BOOLEAN);
+                case NetworkBufferTypeImpl.ByteType _ -> new TypeIr.Primitive<>(PrimitiveKind.BYTE);
+                case NetworkBufferTypeImpl.UnsignedByteType _ -> new TypeIr.Primitive<>(PrimitiveKind.UNSIGNED_BYTE);
+                case NetworkBufferTypeImpl.ShortType _ -> new TypeIr.Primitive<>(PrimitiveKind.SHORT);
+                case NetworkBufferTypeImpl.UnsignedShortType _ -> new TypeIr.Primitive<>(PrimitiveKind.UNSIGNED_SHORT);
+                case NetworkBufferTypeImpl.IntType _ -> new TypeIr.Primitive<>(PrimitiveKind.INT);
+                case NetworkBufferTypeImpl.UnsignedIntType _ -> new TypeIr.Primitive<>(PrimitiveKind.UNSIGNED_INT);
+                case NetworkBufferTypeImpl.LongType _ -> new TypeIr.Primitive<>(PrimitiveKind.LONG);
+                case NetworkBufferTypeImpl.FloatType _ -> new TypeIr.Primitive<>(PrimitiveKind.FLOAT);
+                case NetworkBufferTypeImpl.DoubleType _ -> new TypeIr.Primitive<>(PrimitiveKind.DOUBLE);
+                case NetworkBufferTypeImpl.VarIntType _ -> new TypeIr.VarInt();
+                case NetworkBufferTypeImpl.VarLongType _ -> new TypeIr.VarLong();
+                case NetworkBufferTypeImpl.StringType _ -> new TypeIr.StringUtf8(Integer.MAX_VALUE);
+                case NetworkBufferTypeImpl.ByteArrayType _ -> new TypeIr.ByteArray(Integer.MAX_VALUE);
+                case NetworkBufferTypeImpl.RawBytesType raw -> raw.length() >= 0 ? new TypeIr.FixedBytes(raw.length()) : new TypeIr.External(type);
+                case NetworkBufferTypeImpl.OptionalType<?> optional -> new TypeIr.Optional(typeIr(optional.parent(), visiting));
+                case NetworkBufferTypeImpl.EitherType<?, ?> either -> new TypeIr.Either(typeIr(either.left(), visiting), typeIr(either.right(), visiting));
+                case NetworkBufferTypeImpl.TransformType<?, ?> transform ->
+                        new TypeIr.Transform(typeIr(transform.parent(), visiting), transform.to(), transform.from());
+                case NetworkBufferTypeImpl.ListType<?> list ->
+                        new TypeIr.ListType(list, typeIr(list.parent(), visiting), list.maxSize());
+                case NetworkBufferTypeImpl.MapType<?, ?> map ->
+                        new TypeIr.MapType(map, typeIr(map.parent(), visiting), typeIr(map.valueType(), visiting), map.maxSize());
+                default -> new TypeIr.External(type);
+            };
+        } finally {
+            visiting.remove(type);
         }
-        return new TypeIr.External(type);
+        return result;
     }
 
     private static RunItem shiftItem(RunItem item, Value shift) {
