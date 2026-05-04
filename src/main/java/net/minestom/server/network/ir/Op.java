@@ -2,173 +2,96 @@ package net.minestom.server.network.ir;
 import net.minestom.server.network.NetworkBuffer;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.function.Function;
 
 public sealed interface Op
-        permits Op.GetField, Op.Apply, Op.Cast, Op.Unbox, Op.Box, Op.Store, Op.Check, Op.StringToBytes, Op.BytesToString, Op.EitherLeft, Op.EitherRight, Op.WriteExternal, Op.ReadExternal, Op.WritePrimitive, Op.ReadPrimitive, Op.WriteVarInt, Op.ReadVarInt, Op.WriteVarLong, Op.ReadVarLong, Op.WriteFixedBytes, Op.ReadFixedBytes, Op.WriteRun, Op.ReadRun, Op.If, Op.ForEach, Op.ForIndex, Op.ReserveWrite, Op.ReserveRead, Op.AdvanceWriteIndex, Op.AdvanceReadIndex, Op.Return {
+        permits Op.GetField, Op.Apply, Op.Cast, Op.Unbox, Op.Box, Op.Store, Op.Check, Op.WriteExternal, Op.ReadExternal,
+        Op.WritePrimitive, Op.ReadPrimitive, Op.WriteVarInt, Op.ReadVarInt, Op.WriteVarLong, Op.ReadVarLong,
+        Op.WriteFixedBytes, Op.ReadFixedBytes, Op.WriteRun, Op.ReadRun, Op.If, Op.ForEach,
+        Op.ForIndex, Op.ElementAt, Op.MapEntrySet, Op.MapEntryKey, Op.MapEntryValue, Op.ResultElementSet,
+        Op.ArrayCreate, Op.ArraySet, Op.ListFinish, Op.MapFinish, Op.Construct, Op.Return,
+        Op.StringToBytes, Op.BytesToString, Op.EitherLeft, Op.EitherRight,
+        Op.ReserveWrite, Op.ReserveRead, Op.AdvanceWriteIndex, Op.AdvanceReadIndex {
+
+    record ReserveWrite(Value size, Local addressOut) implements Op {}
+
+    record ReserveRead(Value size, Local addressOut) implements Op {}
+
+    record AdvanceWriteIndex(Value amount) implements Op {}
+
+    record AdvanceReadIndex(Value amount) implements Op {}
+
     record GetField(FieldIr<?, ?> field, String path, Local source, Local out) implements Op {
-        public GetField {
-            Objects.requireNonNull(field, "field");
-            Objects.requireNonNull(source, "source");
-            Objects.requireNonNull(out, "out");
-        }
     }
 
-    record Apply(Function<?, ?> function, String path, Local in, Local out) implements Op {
-        public Apply {
-            Objects.requireNonNull(function, "function");
-            Objects.requireNonNull(in, "in");
-            Objects.requireNonNull(out, "out");
-        }
+    record Apply(Function<?, ?> function, Local in, Local out) implements Op {
     }
 
     record Cast(Local in, Class<?> targetClass, Local out) implements Op {
-        public Cast {
-            Objects.requireNonNull(in, "in");
-            Objects.requireNonNull(targetClass, "targetClass");
-            Objects.requireNonNull(out, "out");
-        }
     }
 
     record Unbox(PrimitiveKind kind, Local in, Local out) implements Op {
-        public Unbox {
-            Objects.requireNonNull(kind, "kind");
-            Objects.requireNonNull(in, "in");
-            Objects.requireNonNull(out, "out");
-        }
     }
 
     record Box(PrimitiveKind kind, Local in, Local out) implements Op {
-        public Box {
-            Objects.requireNonNull(kind, "kind");
-            Objects.requireNonNull(in, "in");
-            Objects.requireNonNull(out, "out");
-        }
-    }
-
-    record Store(Value value, Local out) implements Op {
-        public Store {
-            Objects.requireNonNull(value, "value");
-            Objects.requireNonNull(out, "out");
-        }
-    }
-
-    record Check(Value condition, String message) implements Op {
-        public Check {
-            Objects.requireNonNull(condition, "condition");
-            Objects.requireNonNull(message, "message");
-        }
     }
 
     record StringToBytes(Local in, Local out) implements Op {
-        public StringToBytes {
-            Objects.requireNonNull(in, "in");
-            Objects.requireNonNull(out, "out");
-        }
     }
 
     record BytesToString(Local in, Local out) implements Op {
-        public BytesToString {
-            Objects.requireNonNull(in, "in");
-            Objects.requireNonNull(out, "out");
-        }
     }
 
     record EitherLeft(Local in, Local out) implements Op {
-        public EitherLeft {
-            Objects.requireNonNull(in, "in");
-            Objects.requireNonNull(out, "out");
-        }
     }
 
     record EitherRight(Local in, Local out) implements Op {
-        public EitherRight {
-            Objects.requireNonNull(in, "in");
-            Objects.requireNonNull(out, "out");
-        }
+    }
+
+    record Store(Value value, Local out) implements Op {
+    }
+
+    record Check(Value condition, String message) implements Op {
     }
 
     record WriteExternal(NetworkBuffer.Type<?> type, Value value) implements Op {
-        public WriteExternal {
-            Objects.requireNonNull(type, "type");
-            Objects.requireNonNull(value, "value");
-        }
     }
 
     record ReadExternal(NetworkBuffer.Type<?> type, Local out) implements Op {
-        public ReadExternal {
-            Objects.requireNonNull(type, "type");
-            Objects.requireNonNull(out, "out");
-        }
     }
 
-    record WritePrimitive(PrimitiveKind kind, Value value, Value address) implements Op {
-        public WritePrimitive {
-            Objects.requireNonNull(kind, "kind");
-            Objects.requireNonNull(value, "value");
-        }
+    record WritePrimitive(PrimitiveKind kind, Value value, Local address) implements Op {
     }
 
-    record ReadPrimitive(PrimitiveKind kind, Value address, Local out) implements Op {
-        public ReadPrimitive {
-            Objects.requireNonNull(kind, "kind");
-            Objects.requireNonNull(out, "out");
-        }
+    record ReadPrimitive(PrimitiveKind kind, Local address, Local out) implements Op {
     }
 
-    record WriteVarInt(Value value, Value address) implements Op {
-        public WriteVarInt {
-            Objects.requireNonNull(value, "value");
-        }
+    record WriteVarInt(Value value, Local address) implements Op {
     }
 
-    record ReadVarInt(Value address, Local out) implements Op {
-        public ReadVarInt {
-            Objects.requireNonNull(out, "out");
-        }
+    record ReadVarInt(Local address, Local out) implements Op {
     }
 
-    record WriteVarLong(Value value, Value address) implements Op {
-        public WriteVarLong {
-            Objects.requireNonNull(value, "value");
-        }
+    record WriteVarLong(Value value, Local address) implements Op {
     }
 
-    record ReadVarLong(Value address, Local out) implements Op {
-        public ReadVarLong {
-            Objects.requireNonNull(out, "out");
-        }
+    record ReadVarLong(Local address, Local out) implements Op {
     }
 
-    record WriteFixedBytes(Value value, Value address) implements Op {
-        public WriteFixedBytes {
-            Objects.requireNonNull(value, "value");
-        }
+    record WriteFixedBytes(Value value, Local address) implements Op {
     }
 
-    record ReadFixedBytes(Value length, Value address, Local out) implements Op {
-        public ReadFixedBytes {
-            Objects.requireNonNull(length, "length");
-            Objects.requireNonNull(out, "out");
-        }
+    record ReadFixedBytes(Value length, Local address, Local out) implements Op {
     }
 
-    record WriteRun(Value address, RunIr run) implements Op {
-        public WriteRun {
-            Objects.requireNonNull(run, "run");
-        }
+    record WriteRun(RunIr run) implements Op {
     }
 
-    record ReadRun(Value address, RunIr run) implements Op {
-        public ReadRun {
-            Objects.requireNonNull(run, "run");
-        }
+    record ReadRun(RunIr run) implements Op {
     }
 
     record If(Value condition, List<Op> thenOps, List<Op> elseOps) implements Op {
         public If {
-            Objects.requireNonNull(condition, "condition");
             thenOps = List.copyOf(thenOps);
             elseOps = List.copyOf(elseOps);
         }
@@ -176,58 +99,49 @@ public sealed interface Op
 
     record ForEach(Value source, Local element, List<Op> body) implements Op {
         public ForEach {
-            Objects.requireNonNull(source, "source");
-            Objects.requireNonNull(element, "element");
             body = List.copyOf(body);
         }
     }
 
     record ForIndex(Local index, Value start, Value end, List<Op> body) implements Op {
         public ForIndex {
-            Objects.requireNonNull(index, "index");
-            Objects.requireNonNull(start, "start");
-            Objects.requireNonNull(end, "end");
             body = List.copyOf(body);
         }
     }
 
-    record ReserveWrite(Value size, Local addressOut) implements Op {
-        public ReserveWrite {
-            Objects.requireNonNull(size, "size");
-            Objects.requireNonNull(addressOut, "addressOut");
-        }
+    record ElementAt(Value source, Value index, Local out) implements Op {
     }
 
-    record ReserveRead(Value size, Local addressOut) implements Op {
-        public ReserveRead {
-            Objects.requireNonNull(size, "size");
-            Objects.requireNonNull(addressOut, "addressOut");
-        }
+    record MapEntrySet(Value map, Local out) implements Op {
     }
 
-    record AdvanceWriteIndex(Value amount) implements Op {
-        public AdvanceWriteIndex {
-            Objects.requireNonNull(amount, "amount");
-        }
+    record MapEntryKey(Local entry, Local out) implements Op {
     }
 
-    record AdvanceReadIndex(Value amount) implements Op {
-        public AdvanceReadIndex {
-            Objects.requireNonNull(amount, "amount");
-        }
+    record MapEntryValue(Local entry, Local out) implements Op {
+    }
+
+    record ResultElementSet(Value result, Value index, Value value) implements Op {
+    }
+
+    record ArrayCreate(Value size, Local out) implements Op {
+    }
+
+    record ArraySet(Local array, Value index, Value value) implements Op {
+    }
+
+    record ListFinish(Local array, Local out) implements Op {
+    }
+
+    record MapFinish(Local keys, Local values, Value size, Local out) implements Op {
     }
 
     record Construct(ConstructorIr<?> constructor, String path, List<Value> args, Local out) implements Op {
         public Construct {
-            Objects.requireNonNull(constructor, "constructor");
-            Objects.requireNonNull(out, "out");
             args = List.copyOf(args);
         }
     }
 
     record Return(Value value) implements Op {
-        public Return {
-            Objects.requireNonNull(value, "value");
-        }
     }
 }

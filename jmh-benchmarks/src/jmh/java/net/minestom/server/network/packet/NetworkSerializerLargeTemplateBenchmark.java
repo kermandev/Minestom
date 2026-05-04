@@ -18,36 +18,32 @@ public class NetworkSerializerLargeTemplateBenchmark {
     record Packet(boolean var1, boolean var2, boolean var3, boolean var4, boolean var5, boolean var6, boolean var7, boolean var8, boolean var9, boolean var10, boolean var11, boolean var12, boolean var13, boolean var14, boolean var15, boolean var16, boolean var17, boolean var18, boolean var19, boolean var20) {
         private static final NetworkBuffer.Type<Packet> SERIALIZER =
                 NetworkBufferTemplate.template(
-                        NetworkBuffer.BOOLEAN.optional(), Packet::var1,
-                        NetworkBuffer.BOOLEAN.optional(), Packet::var2,
-                        NetworkBuffer.BOOLEAN.optional(), Packet::var3,
-                        NetworkBuffer.BOOLEAN.optional(), Packet::var4,
-                        NetworkBuffer.BOOLEAN.optional(), Packet::var5,
-                        NetworkBuffer.BOOLEAN.optional(), Packet::var6,
-                        NetworkBuffer.BOOLEAN.optional(), Packet::var7,
-                        NetworkBuffer.BOOLEAN.optional(), Packet::var8,
-                        NetworkBuffer.BOOLEAN.optional(), Packet::var9,
-                        NetworkBuffer.BOOLEAN.optional(), Packet::var10,
-                        NetworkBuffer.BOOLEAN.optional(), Packet::var11,
-                        NetworkBuffer.BOOLEAN.optional(), Packet::var12,
-                        NetworkBuffer.BOOLEAN.optional(), Packet::var13,
-                        NetworkBuffer.BOOLEAN.optional(), Packet::var14,
-                        NetworkBuffer.BOOLEAN.optional(), Packet::var15,
-                        NetworkBuffer.BOOLEAN.optional(), Packet::var16,
-                        NetworkBuffer.BOOLEAN.optional(), Packet::var17,
-                        NetworkBuffer.BOOLEAN.optional(), Packet::var18,
-                        NetworkBuffer.BOOLEAN.optional(), Packet::var19,
-                        NetworkBuffer.BOOLEAN.optional(), Packet::var20,
+                        NetworkBuffer.BOOLEAN, Packet::var1,
+                        NetworkBuffer.BOOLEAN, Packet::var2,
+                        NetworkBuffer.BOOLEAN, Packet::var3,
+                        NetworkBuffer.BOOLEAN, Packet::var4,
+                        NetworkBuffer.BOOLEAN, Packet::var5,
+                        NetworkBuffer.BOOLEAN, Packet::var6,
+                        NetworkBuffer.BOOLEAN, Packet::var7,
+                        NetworkBuffer.BOOLEAN, Packet::var8,
+                        NetworkBuffer.BOOLEAN, Packet::var9,
+                        NetworkBuffer.BOOLEAN, Packet::var10,
+                        NetworkBuffer.BOOLEAN, Packet::var11,
+                        NetworkBuffer.BOOLEAN, Packet::var12,
+                        NetworkBuffer.BOOLEAN, Packet::var13,
+                        NetworkBuffer.BOOLEAN, Packet::var14,
+                        NetworkBuffer.BOOLEAN, Packet::var15,
+                        NetworkBuffer.BOOLEAN, Packet::var16,
+                        NetworkBuffer.BOOLEAN, Packet::var17,
+                        NetworkBuffer.BOOLEAN, Packet::var18,
+                        NetworkBuffer.BOOLEAN, Packet::var19,
+                        NetworkBuffer.BOOLEAN, Packet::var20,
                         Packet::new
                 );
 
         public Packet() {
             this(true, false, true, true, false, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false);
         }
-//
-//        public Packet(Object var1, Object var2, Object var3, Object var4, Object var5, Object var6, Object var7, Object var8, Object var9, Object var10, Object var11, Object var12, Object var13, Object var14, Object var15, Object var16, Object var17, Object var18, Object var19, Object var20) {
-//            this();
-//        }
     }
     
     private NetworkBuffer.Type<Packet> serializer;

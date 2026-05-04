@@ -36,7 +36,87 @@ import static net.minestom.server.network.NetworkBuffer.*;
 import static net.minestom.server.network.NetworkBufferImpl.impl;
 
 interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
-    Value DUMMY_ADDRESS = null;
+    Local DUMMY_ADDRESS = new Local(new LocalType.Kind(TypeKind.LONG));
+
+    static long fixedByteSize(NetworkBuffer.Type<?> type) {
+        if (type instanceof NetworkIrBacked<?> backed) {
+            long total = 0;
+            for (FieldIr<?, ?> field : backed.ir().fields()) {
+                long size = fixedByteSize(field.type());
+                if (size < 0) return -1L;
+                total += size;
+            }
+            return total;
+        }
+        return switch (type) {
+            case UnitType _ -> 0;
+            case BooleanType _, ByteType _, UnsignedByteType _ -> 1;
+            case ShortType _, UnsignedShortType _ -> 2;
+            case IntType _, UnsignedIntType _, FloatType _ -> 4;
+            case LongType _, DoubleType _ -> 8;
+            case RawBytesType raw -> raw.length();
+            case TransformType<?, ?> transform -> fixedByteSize(transform.parent());
+            case EitherType<?, ?> either -> {
+                long left = fixedByteSize(either.left());
+                long right = fixedByteSize(either.right());
+                yield (left == right && left >= 0) ? left : -1L;
+            }
+            default -> -1L;
+        };
+    }
+
+    static Value addValues(Value left, Value right) {
+        if (left instanceof Value.Const(Object lv) && right instanceof Value.Const(Object rv)) {
+            if (lv instanceof Number l && rv instanceof Number r) return new Value.Const(l.longValue() + r.longValue());
+        }
+        if (left instanceof Value.Const(Object lv) && lv instanceof Number n && n.longValue() == 0) return right;
+        if (right instanceof Value.Const(Object rv) && rv instanceof Number n && n.longValue() == 0) return left;
+
+        // Normalize: ensure left-leaning tree
+        if (right instanceof Value.Add rightAdd) {
+            return addValues(addValues(left, rightAdd.left()), rightAdd.right());
+        }
+        return new Value.Add(left, right);
+    }
+
+    static RunItem shiftItem(RunItem item, Value shift) {
+        return switch (item) {
+            case RunItem.Put put -> new RunItem.Put(put.kind(), addValues(shift, put.offset()), put.value());
+            case RunItem.PutVarInt putVarInt ->
+                    new RunItem.PutVarInt(addValues(shift, putVarInt.offset()), putVarInt.value(), putVarInt.encodedSize());
+            case RunItem.PutVarLong putVarLong ->
+                    new RunItem.PutVarLong(addValues(shift, putVarLong.offset()), putVarLong.value(), putVarLong.encodedSize());
+            case RunItem.PutBytes putBytes ->
+                    new RunItem.PutBytes(addValues(shift, putBytes.offset()), putBytes.byteArray(), putBytes.length());
+            case RunItem.Get get -> new RunItem.Get(get.kind(), addValues(shift, get.offset()), get.out());
+            case RunItem.GetBytes getBytes ->
+                    new RunItem.GetBytes(addValues(shift, getBytes.offset()), getBytes.byteArray(), getBytes.length());
+            case RunItem.ForIndex forIndex -> {
+                final List<RunStep> body = new ArrayList<>();
+                for (RunStep step : forIndex.body()) {
+                    body.add(shiftStep(step, shift));
+                }
+                yield new RunItem.ForIndex(forIndex.index(), forIndex.start(), forIndex.end(), body);
+            }
+        };
+    }
+
+    static RunStep shiftStep(RunStep step, Value shift) {
+        return switch (step) {
+            case RunStep.Put put -> new RunStep.Put(put.kind(), addValues(shift, put.offset()), put.value());
+            case RunStep.Get get -> new RunStep.Get(get.kind(), addValues(shift, get.offset()), get.out());
+            case RunStep.PutVarInt putVarInt ->
+                    new RunStep.PutVarInt(addValues(shift, putVarInt.offset()), putVarInt.value(), putVarInt.encodedSize());
+            case RunStep.PutVarLong putVarLong ->
+                    new RunStep.PutVarLong(addValues(shift, putVarLong.offset()), putVarLong.value(), putVarLong.encodedSize());
+            case RunStep.PutBytes putBytes ->
+                    new RunStep.PutBytes(addValues(shift, putBytes.offset()), putBytes.byteArray(), putBytes.length());
+            case RunStep.GetBytes getBytes ->
+                    new RunStep.GetBytes(addValues(shift, getBytes.offset()), getBytes.byteArray(), getBytes.length());
+            default -> step;
+        };
+    }
+
     int SEGMENT_BITS = 0x7F;
     int CONTINUE_BIT = 0x80;
 
