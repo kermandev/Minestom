@@ -9,6 +9,12 @@ import net.minestom.server.coordinate.Point;
 import net.minestom.server.coordinate.Pos;
 import net.minestom.server.coordinate.Vec;
 import net.minestom.server.entity.EntityPose;
+import net.minestom.server.network.ir.IrReadBuilder;
+import net.minestom.server.network.ir.IrWriteBuilder;
+import net.minestom.server.network.ir.Local;
+import net.minestom.server.network.ir.LocalType;
+import net.minestom.server.network.ir.Op;
+import net.minestom.server.network.ir.Value;
 import net.minestom.server.registry.Registries;
 import net.minestom.server.utils.Direction;
 import net.minestom.server.utils.Either;
@@ -182,6 +188,16 @@ public sealed interface NetworkBuffer permits NetworkBufferImpl {
         void write(NetworkBuffer buffer, T value);
 
         T read(NetworkBuffer buffer);
+
+        default void lowerWrite(net.minestom.server.network.ir.IrWriteBuilder builder) {
+            builder.push(new Op.WriteExternal(this, new Value.LocalValue(builder.source())));
+        }
+
+        default Value lowerRead(IrReadBuilder builder) {
+            Local out = new Local(new LocalType.Reference(Object.class)); // T.class
+            builder.push(new Op.ReadExternal(this, out));
+            return new Value.LocalValue(out);
+        }
 
         default long sizeOf(T value, @Nullable Registries registries) {
             return NetworkBufferTypeImpl.sizeOf(this, value, registries);

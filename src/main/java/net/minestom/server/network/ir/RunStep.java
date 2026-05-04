@@ -5,7 +5,7 @@ import java.util.function.Function;
 
 public sealed interface RunStep
         permits RunStep.ElementAt, RunStep.GetField, RunStep.Apply, RunStep.Cast, RunStep.Unbox, RunStep.Box,
-        RunStep.Put, RunStep.Get, RunStep.PutVarInt, RunStep.PutBytes, RunStep.GetBytes, RunStep.ResultElementSet,
+        RunStep.Put, RunStep.Get, RunStep.PutVarInt, RunStep.PutVarLong, RunStep.PutBytes, RunStep.GetBytes, RunStep.ResultElementSet,
         RunStep.ArraySet, RunStep.Construct {
     record ElementAt(Value source, Value index, Local out) implements RunStep {
     }
@@ -32,6 +32,9 @@ public sealed interface RunStep
     }
 
     record PutVarInt(Value offset, Value value, Value encodedSize) implements RunStep {
+    }
+
+    record PutVarLong(Value offset, Value value, Value encodedSize) implements RunStep {
     }
 
     record PutBytes(Value offset, Value byteArray, Value length) implements RunStep {

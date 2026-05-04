@@ -7,7 +7,7 @@ public enum StoreKind {
     INT(Integer.BYTES),
     LONG(Long.BYTES),
     FLOAT(Float.BYTES),
-    DOUBLE(Double.BYTES),;
+    DOUBLE(Double.BYTES);
 
     private final int byteSize;
 

@@ -6,7 +6,8 @@ import java.util.function.Function;
 
 public sealed interface Op
         permits Op.GetField, Op.Apply, Op.Cast, Op.Unbox, Op.Box, Op.Store, Op.Check, Op.WriteExternal, Op.ReadExternal,
-        Op.ReadVarInt, Op.WriteVarLong, Op.ReadVarLong, Op.WriteRun, Op.ReadRun, Op.If, Op.ForEach,
+        Op.WritePrimitive, Op.ReadPrimitive, Op.WriteVarInt, Op.ReadVarInt, Op.WriteVarLong, Op.ReadVarLong,
+        Op.WriteFixedBytes, Op.ReadFixedBytes, Op.WriteRun, Op.ReadRun, Op.If, Op.ForEach,
         Op.ForIndex, Op.ElementAt, Op.MapEntrySet, Op.MapEntryKey, Op.MapEntryValue, Op.ResultElementSet,
         Op.ArrayCreate, Op.ArraySet, Op.ListFinish, Op.MapFinish, Op.Construct, Op.Return,
         Op.StringToBytes, Op.BytesToString, Op.EitherLeft, Op.EitherRight {
@@ -49,6 +50,15 @@ public sealed interface Op
     record ReadExternal(NetworkBuffer.Type<?> type, Local out) implements Op {
     }
 
+    record WritePrimitive(PrimitiveKind kind, Value value) implements Op {
+    }
+
+    record ReadPrimitive(PrimitiveKind kind, Local out) implements Op {
+    }
+
+    record WriteVarInt(Value value) implements Op {
+    }
+
     record ReadVarInt(Local out) implements Op {
     }
 
@@ -56,6 +66,12 @@ public sealed interface Op
     }
 
     record ReadVarLong(Local out) implements Op {
+    }
+
+    record WriteFixedBytes(Value value) implements Op {
+    }
+
+    record ReadFixedBytes(Value length, Local out) implements Op {
     }
 
     record WriteRun(RunIr run) implements Op {

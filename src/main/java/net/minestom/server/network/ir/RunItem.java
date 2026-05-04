@@ -3,7 +3,7 @@ package net.minestom.server.network.ir;
 import java.util.List;
 
 public sealed interface RunItem
-        permits RunItem.Put, RunItem.Get, RunItem.PutVarInt, RunItem.PutBytes, RunItem.GetBytes, RunItem.ForIndex {
+        permits RunItem.Put, RunItem.Get, RunItem.PutVarInt, RunItem.PutVarLong, RunItem.PutBytes, RunItem.GetBytes, RunItem.ForIndex {
     record Put(StoreKind kind, Value offset, Value value) implements RunItem {
     }
 
@@ -11,6 +11,9 @@ public sealed interface RunItem
     }
 
     record PutVarInt(Value offset, Value value, Value encodedSize) implements RunItem {
+    }
+
+    record PutVarLong(Value offset, Value value, Value encodedSize) implements RunItem {
     }
 
     record PutBytes(Value offset, Value byteArray, Value length) implements RunItem {
