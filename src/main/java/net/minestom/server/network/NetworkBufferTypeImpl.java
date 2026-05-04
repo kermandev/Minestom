@@ -36,6 +36,8 @@ import static net.minestom.server.network.NetworkBuffer.*;
 import static net.minestom.server.network.NetworkBufferImpl.impl;
 
 interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
+    Local DUMMY_ADDRESS = new Local(new LocalType.Kind(TypeKind.LONG));
+
     static long fixedByteSize(NetworkBuffer.Type<?> type) {
         if (type instanceof NetworkIrBacked<?> backed) {
             long total = 0;
@@ -265,13 +267,13 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
             Local unboxed = new Local(new LocalType.Kind(TypeKind.BOOLEAN));
             builder.push(new Op.Cast(builder.source(), Boolean.class, cast));
             builder.push(new Op.Unbox(PrimitiveKind.BOOLEAN, cast, unboxed));
-            builder.push(new Op.WritePrimitive(PrimitiveKind.BOOLEAN, new Value.LocalValue(unboxed)));
+            builder.push(new Op.WritePrimitive(PrimitiveKind.BOOLEAN, new Value.LocalValue(unboxed), DUMMY_ADDRESS));
         }
 
         @Override
         public Value lowerRead(IrReadBuilder builder) {
             Local unboxed = new Local(new LocalType.Kind(TypeKind.BOOLEAN));
-            builder.push(new Op.ReadPrimitive(PrimitiveKind.BOOLEAN, unboxed));
+            builder.push(new Op.ReadPrimitive(PrimitiveKind.BOOLEAN, DUMMY_ADDRESS, unboxed));
             Local boxed = new Local(new LocalType.Reference(Boolean.class));
             builder.push(new Op.Box(PrimitiveKind.BOOLEAN, unboxed, boxed));
             return new Value.LocalValue(boxed);
@@ -298,13 +300,13 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
             Local unboxed = new Local(new LocalType.Kind(TypeKind.BYTE));
             builder.push(new Op.Cast(builder.source(), Byte.class, cast));
             builder.push(new Op.Unbox(PrimitiveKind.BYTE, cast, unboxed));
-            builder.push(new Op.WritePrimitive(PrimitiveKind.BYTE, new Value.LocalValue(unboxed)));
+            builder.push(new Op.WritePrimitive(PrimitiveKind.BYTE, new Value.LocalValue(unboxed), DUMMY_ADDRESS));
         }
 
         @Override
         public Value lowerRead(IrReadBuilder builder) {
             Local unboxed = new Local(new LocalType.Kind(TypeKind.BYTE));
-            builder.push(new Op.ReadPrimitive(PrimitiveKind.BYTE, unboxed));
+            builder.push(new Op.ReadPrimitive(PrimitiveKind.BYTE, DUMMY_ADDRESS, unboxed));
             Local boxed = new Local(new LocalType.Reference(Byte.class));
             builder.push(new Op.Box(PrimitiveKind.BYTE, unboxed, boxed));
             return new Value.LocalValue(boxed);
@@ -331,13 +333,13 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
             Local unboxed = new Local(new LocalType.Kind(TypeKind.SHORT));
             builder.push(new Op.Cast(builder.source(), Short.class, cast));
             builder.push(new Op.Unbox(PrimitiveKind.SHORT, cast, unboxed));
-            builder.push(new Op.WritePrimitive(PrimitiveKind.UNSIGNED_BYTE, new Value.LocalValue(unboxed)));
+            builder.push(new Op.WritePrimitive(PrimitiveKind.UNSIGNED_BYTE, new Value.LocalValue(unboxed), DUMMY_ADDRESS));
         }
 
         @Override
         public Value lowerRead(IrReadBuilder builder) {
             Local unboxed = new Local(new LocalType.Kind(TypeKind.INT));
-            builder.push(new Op.ReadPrimitive(PrimitiveKind.UNSIGNED_BYTE, unboxed));
+            builder.push(new Op.ReadPrimitive(PrimitiveKind.UNSIGNED_BYTE, DUMMY_ADDRESS, unboxed));
             Local boxed = new Local(new LocalType.Reference(Short.class));
             builder.push(new Op.Box(PrimitiveKind.UNSIGNED_BYTE, unboxed, boxed));
             return new Value.LocalValue(boxed);
@@ -364,13 +366,13 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
             Local unboxed = new Local(new LocalType.Kind(TypeKind.SHORT));
             builder.push(new Op.Cast(builder.source(), Short.class, cast));
             builder.push(new Op.Unbox(PrimitiveKind.SHORT, cast, unboxed));
-            builder.push(new Op.WritePrimitive(PrimitiveKind.SHORT, new Value.LocalValue(unboxed)));
+            builder.push(new Op.WritePrimitive(PrimitiveKind.SHORT, new Value.LocalValue(unboxed), DUMMY_ADDRESS));
         }
 
         @Override
         public Value lowerRead(IrReadBuilder builder) {
             Local unboxed = new Local(new LocalType.Kind(TypeKind.SHORT));
-            builder.push(new Op.ReadPrimitive(PrimitiveKind.SHORT, unboxed));
+            builder.push(new Op.ReadPrimitive(PrimitiveKind.SHORT, DUMMY_ADDRESS, unboxed));
             Local boxed = new Local(new LocalType.Reference(Short.class));
             builder.push(new Op.Box(PrimitiveKind.SHORT, unboxed, boxed));
             return new Value.LocalValue(boxed);
@@ -397,13 +399,13 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
             Local unboxed = new Local(new LocalType.Kind(TypeKind.INT));
             builder.push(new Op.Cast(builder.source(), Integer.class, cast));
             builder.push(new Op.Unbox(PrimitiveKind.INT, cast, unboxed));
-            builder.push(new Op.WritePrimitive(PrimitiveKind.UNSIGNED_SHORT, new Value.LocalValue(unboxed)));
+            builder.push(new Op.WritePrimitive(PrimitiveKind.UNSIGNED_SHORT, new Value.LocalValue(unboxed), DUMMY_ADDRESS));
         }
 
         @Override
         public Value lowerRead(IrReadBuilder builder) {
             Local unboxed = new Local(new LocalType.Kind(TypeKind.INT));
-            builder.push(new Op.ReadPrimitive(PrimitiveKind.UNSIGNED_SHORT, unboxed));
+            builder.push(new Op.ReadPrimitive(PrimitiveKind.UNSIGNED_SHORT, DUMMY_ADDRESS, unboxed));
             Local boxed = new Local(new LocalType.Reference(Integer.class));
             builder.push(new Op.Box(PrimitiveKind.UNSIGNED_SHORT, unboxed, boxed));
             return new Value.LocalValue(boxed);
@@ -430,13 +432,13 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
             Local unboxed = new Local(new LocalType.Kind(TypeKind.INT));
             builder.push(new Op.Cast(builder.source(), Integer.class, cast));
             builder.push(new Op.Unbox(PrimitiveKind.INT, cast, unboxed));
-            builder.push(new Op.WritePrimitive(PrimitiveKind.INT, new Value.LocalValue(unboxed)));
+            builder.push(new Op.WritePrimitive(PrimitiveKind.INT, new Value.LocalValue(unboxed), DUMMY_ADDRESS));
         }
 
         @Override
         public Value lowerRead(IrReadBuilder builder) {
             Local unboxed = new Local(new LocalType.Kind(TypeKind.INT));
-            builder.push(new Op.ReadPrimitive(PrimitiveKind.INT, unboxed));
+            builder.push(new Op.ReadPrimitive(PrimitiveKind.INT, DUMMY_ADDRESS, unboxed));
             Local boxed = new Local(new LocalType.Reference(Integer.class));
             builder.push(new Op.Box(PrimitiveKind.INT, unboxed, boxed));
             return new Value.LocalValue(boxed);
@@ -463,13 +465,13 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
             Local unboxed = new Local(new LocalType.Kind(TypeKind.LONG));
             builder.push(new Op.Cast(builder.source(), Long.class, cast));
             builder.push(new Op.Unbox(PrimitiveKind.LONG, cast, unboxed));
-            builder.push(new Op.WritePrimitive(PrimitiveKind.UNSIGNED_INT, new Value.LocalValue(unboxed)));
+            builder.push(new Op.WritePrimitive(PrimitiveKind.UNSIGNED_INT, new Value.LocalValue(unboxed), DUMMY_ADDRESS));
         }
 
         @Override
         public Value lowerRead(IrReadBuilder builder) {
             Local unboxed = new Local(new LocalType.Kind(TypeKind.LONG));
-            builder.push(new Op.ReadPrimitive(PrimitiveKind.UNSIGNED_INT, unboxed));
+            builder.push(new Op.ReadPrimitive(PrimitiveKind.UNSIGNED_INT, DUMMY_ADDRESS, unboxed));
             Local boxed = new Local(new LocalType.Reference(Long.class));
             builder.push(new Op.Box(PrimitiveKind.UNSIGNED_INT, unboxed, boxed));
             return new Value.LocalValue(boxed);
@@ -496,13 +498,13 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
             Local unboxed = new Local(new LocalType.Kind(TypeKind.LONG));
             builder.push(new Op.Cast(builder.source(), Long.class, cast));
             builder.push(new Op.Unbox(PrimitiveKind.LONG, cast, unboxed));
-            builder.push(new Op.WritePrimitive(PrimitiveKind.LONG, new Value.LocalValue(unboxed)));
+            builder.push(new Op.WritePrimitive(PrimitiveKind.LONG, new Value.LocalValue(unboxed), DUMMY_ADDRESS));
         }
 
         @Override
         public Value lowerRead(IrReadBuilder builder) {
             Local unboxed = new Local(new LocalType.Kind(TypeKind.LONG));
-            builder.push(new Op.ReadPrimitive(PrimitiveKind.LONG, unboxed));
+            builder.push(new Op.ReadPrimitive(PrimitiveKind.LONG, DUMMY_ADDRESS, unboxed));
             Local boxed = new Local(new LocalType.Reference(Long.class));
             builder.push(new Op.Box(PrimitiveKind.LONG, unboxed, boxed));
             return new Value.LocalValue(boxed);
@@ -529,13 +531,13 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
             Local unboxed = new Local(new LocalType.Kind(TypeKind.FLOAT));
             builder.push(new Op.Cast(builder.source(), Float.class, cast));
             builder.push(new Op.Unbox(PrimitiveKind.FLOAT, cast, unboxed));
-            builder.push(new Op.WritePrimitive(PrimitiveKind.FLOAT, new Value.LocalValue(unboxed)));
+            builder.push(new Op.WritePrimitive(PrimitiveKind.FLOAT, new Value.LocalValue(unboxed), DUMMY_ADDRESS));
         }
 
         @Override
         public Value lowerRead(IrReadBuilder builder) {
             Local unboxed = new Local(new LocalType.Kind(TypeKind.FLOAT));
-            builder.push(new Op.ReadPrimitive(PrimitiveKind.FLOAT, unboxed));
+            builder.push(new Op.ReadPrimitive(PrimitiveKind.FLOAT, DUMMY_ADDRESS, unboxed));
             Local boxed = new Local(new LocalType.Reference(Float.class));
             builder.push(new Op.Box(PrimitiveKind.FLOAT, unboxed, boxed));
             return new Value.LocalValue(boxed);
@@ -562,13 +564,13 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
             Local unboxed = new Local(new LocalType.Kind(TypeKind.DOUBLE));
             builder.push(new Op.Cast(builder.source(), Double.class, cast));
             builder.push(new Op.Unbox(PrimitiveKind.DOUBLE, cast, unboxed));
-            builder.push(new Op.WritePrimitive(PrimitiveKind.DOUBLE, new Value.LocalValue(unboxed)));
+            builder.push(new Op.WritePrimitive(PrimitiveKind.DOUBLE, new Value.LocalValue(unboxed), DUMMY_ADDRESS));
         }
 
         @Override
         public Value lowerRead(IrReadBuilder builder) {
             Local unboxed = new Local(new LocalType.Kind(TypeKind.DOUBLE));
-            builder.push(new Op.ReadPrimitive(PrimitiveKind.DOUBLE, unboxed));
+            builder.push(new Op.ReadPrimitive(PrimitiveKind.DOUBLE, DUMMY_ADDRESS, unboxed));
             Local boxed = new Local(new LocalType.Reference(Double.class));
             builder.push(new Op.Box(PrimitiveKind.DOUBLE, unboxed, boxed));
             return new Value.LocalValue(boxed);
@@ -595,13 +597,13 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
             Local unboxed = new Local(new LocalType.Kind(TypeKind.INT));
             builder.push(new Op.Cast(builder.source(), Integer.class, cast));
             builder.push(new Op.Unbox(PrimitiveKind.INT, cast, unboxed));
-            builder.push(new Op.WriteVarInt(new Value.LocalValue(unboxed)));
+            builder.push(new Op.WriteVarInt(new Value.LocalValue(unboxed), DUMMY_ADDRESS));
         }
 
         @Override
         public Value lowerRead(IrReadBuilder builder) {
             Local unboxed = new Local(new LocalType.Kind(TypeKind.INT));
-            builder.push(new Op.ReadVarInt(unboxed));
+            builder.push(new Op.ReadVarInt(DUMMY_ADDRESS, unboxed));
             Local boxed = new Local(new LocalType.Reference(Integer.class));
             builder.push(new Op.Box(PrimitiveKind.INT, unboxed, boxed));
             return new Value.LocalValue(boxed);
@@ -661,13 +663,13 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
             Local unboxed = new Local(new LocalType.Kind(TypeKind.LONG));
             builder.push(new Op.Cast(builder.source(), Long.class, cast));
             builder.push(new Op.Unbox(PrimitiveKind.LONG, cast, unboxed));
-            builder.push(new Op.WriteVarLong(new Value.LocalValue(unboxed)));
+            builder.push(new Op.WriteVarLong(new Value.LocalValue(unboxed), DUMMY_ADDRESS));
         }
 
         @Override
         public Value lowerRead(IrReadBuilder builder) {
             Local unboxed = new Local(new LocalType.Kind(TypeKind.LONG));
-            builder.push(new Op.ReadVarLong(unboxed));
+            builder.push(new Op.ReadVarLong(DUMMY_ADDRESS, unboxed));
             Local boxed = new Local(new LocalType.Reference(Long.class));
             builder.push(new Op.Box(PrimitiveKind.LONG, unboxed, boxed));
             return new Value.LocalValue(boxed);
@@ -691,7 +693,7 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
             Local bytes = new Local(new LocalType.Reference(byte[].class));
             builder.push(new Op.Cast(builder.source(), byte[].class, bytes));
             if (length != -1) {
-                builder.push(new Op.WriteFixedBytes(new Value.LocalValue(bytes)));
+                builder.push(new Op.WriteFixedBytes(new Value.LocalValue(bytes), DUMMY_ADDRESS));
             } else {
                 builder.push(new Op.WriteExternal(this, new Value.LocalValue(bytes)));
             }
@@ -701,7 +703,7 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         public Value lowerRead(IrReadBuilder builder) {
             Local bytes = new Local(new LocalType.Reference(byte[].class));
             if (length != -1) {
-                builder.push(new Op.ReadFixedBytes(new Value.Const((long) length), bytes));
+                builder.push(new Op.ReadFixedBytes(new Value.Const((long) length), DUMMY_ADDRESS, bytes));
             } else {
                 builder.push(new Op.ReadExternal(this, bytes));
             }
@@ -898,17 +900,17 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
             builder.push(new Op.Store(new Value.ArrayLength(new Value.LocalValue(bytes)), lengthLocal));
             final Value lengthVal = new Value.LocalValue(lengthLocal);
 
-            builder.push(new Op.WriteVarInt(lengthVal));
-            builder.push(new Op.WriteFixedBytes(new Value.LocalValue(bytes)));
+            builder.push(new Op.WriteVarInt(lengthVal, DUMMY_ADDRESS));
+            builder.push(new Op.WriteFixedBytes(new Value.LocalValue(bytes), DUMMY_ADDRESS));
         }
 
         @Override
         public Value lowerRead(IrReadBuilder builder) {
             final Local length = new Local(new LocalType.Kind(TypeKind.INT));
-            builder.push(new Op.ReadVarInt(length));
+            builder.push(new Op.ReadVarInt(DUMMY_ADDRESS, length));
 
             final Local bytes = new Local(new LocalType.Reference(byte[].class));
-            builder.push(new Op.ReadFixedBytes(new Value.LocalValue(length), bytes));
+            builder.push(new Op.ReadFixedBytes(new Value.LocalValue(length), DUMMY_ADDRESS, bytes));
             return new Value.LocalValue(bytes);
         }
 
@@ -1188,7 +1190,7 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         @Override
         public void lowerWrite(IrWriteBuilder builder) {
             final Value present = new Value.IsNotNull(new Value.LocalValue(builder.source()));
-            builder.push(new Op.WritePrimitive(PrimitiveKind.BOOLEAN, present));
+            builder.push(new Op.WritePrimitive(PrimitiveKind.BOOLEAN, present, DUMMY_ADDRESS));
 
             final List<Op> thenOps = builder.buildNested(() -> {
                 builder.lower(parent, new Value.LocalValue(builder.source()));
@@ -1199,7 +1201,7 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         @Override
         public Value lowerRead(IrReadBuilder builder) {
             final Local present = new Local(new LocalType.Kind(TypeKind.BOOLEAN));
-            builder.push(new Op.ReadPrimitive(PrimitiveKind.BOOLEAN, present));
+            builder.push(new Op.ReadPrimitive(PrimitiveKind.BOOLEAN, DUMMY_ADDRESS, present));
 
             final Local result = new Local(new LocalType.Reference(Object.class));
             final List<Op> thenOps = builder.buildNested(() -> {
@@ -1312,7 +1314,7 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         @Override
         public void lowerWrite(IrWriteBuilder builder) {
             final Value isLeft = new Value.IsLeft(new Value.LocalValue(builder.source()));
-            builder.push(new Op.WritePrimitive(PrimitiveKind.BOOLEAN, isLeft));
+            builder.push(new Op.WritePrimitive(PrimitiveKind.BOOLEAN, isLeft, DUMMY_ADDRESS));
 
             final List<Op> thenOps = builder.buildNested(() -> {
                 final Local leftRaw = new Local(new LocalType.Reference(Object.class));
@@ -1332,7 +1334,7 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         @Override
         public Value lowerRead(IrReadBuilder builder) {
             final Local isLeft = new Local(new LocalType.Kind(TypeKind.BOOLEAN));
-            builder.push(new Op.ReadPrimitive(PrimitiveKind.BOOLEAN, isLeft));
+            builder.push(new Op.ReadPrimitive(PrimitiveKind.BOOLEAN, DUMMY_ADDRESS, isLeft));
 
             final Local result = new Local(new LocalType.Reference(Object.class));
 
@@ -1422,7 +1424,7 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
                 builder.push(new Op.Check(new Value.LessThanOrEqual(sizeVal, new Value.Const(maxSize)), "Map too large"));
             }
 
-            builder.push(new Op.WriteVarInt(sizeVal));
+            builder.push(new Op.WriteVarInt(sizeVal, DUMMY_ADDRESS));
 
             final Local entrySet = new Local(new LocalType.Reference(Set.class));
             builder.push(new Op.MapEntrySet(new Value.LocalValue(builder.source()), entrySet));
@@ -1443,7 +1445,7 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         @Override
         public Value lowerRead(IrReadBuilder builder) {
             final Local size = new Local(new LocalType.Kind(TypeKind.INT));
-            builder.push(new Op.ReadVarInt(size));
+            builder.push(new Op.ReadVarInt(DUMMY_ADDRESS, size));
             if (maxSize != Integer.MAX_VALUE) {
                 builder.push(new Op.Check(new Value.LessThanOrEqual(new Value.LocalValue(size), new Value.Const(maxSize)), "Map too large"));
             }
@@ -1506,7 +1508,7 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
                 builder.push(new Op.Check(new Value.LessThanOrEqual(sizeVal, new Value.Const(maxSize)), "Collection too large"));
             }
 
-            builder.push(new Op.WriteVarInt(sizeVal));
+            builder.push(new Op.WriteVarInt(sizeVal, DUMMY_ADDRESS));
 
             final Local index = new Local(new LocalType.Kind(TypeKind.INT));
             final Local element = new Local(new LocalType.Reference(Object.class));
@@ -1521,7 +1523,7 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         @Override
         public Value lowerRead(IrReadBuilder builder) {
             final Local size = new Local(new LocalType.Kind(TypeKind.INT));
-            builder.push(new Op.ReadVarInt(size));
+            builder.push(new Op.ReadVarInt(DUMMY_ADDRESS, size));
             if (maxSize != Integer.MAX_VALUE) {
                 builder.push(new Op.Check(new Value.LessThanOrEqual(new Value.LocalValue(size), new Value.Const(maxSize)), "Collection too large"));
             }

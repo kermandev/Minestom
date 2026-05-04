@@ -10,7 +10,17 @@ public sealed interface Op
         Op.WriteFixedBytes, Op.ReadFixedBytes, Op.WriteRun, Op.ReadRun, Op.If, Op.ForEach,
         Op.ForIndex, Op.ElementAt, Op.MapEntrySet, Op.MapEntryKey, Op.MapEntryValue, Op.ResultElementSet,
         Op.ArrayCreate, Op.ArraySet, Op.ListFinish, Op.MapFinish, Op.Construct, Op.Return,
-        Op.StringToBytes, Op.BytesToString, Op.EitherLeft, Op.EitherRight {
+        Op.StringToBytes, Op.BytesToString, Op.EitherLeft, Op.EitherRight,
+        Op.ReserveWrite, Op.ReserveRead, Op.AdvanceWriteIndex, Op.AdvanceReadIndex {
+
+    record ReserveWrite(Value size, Local addressOut) implements Op {}
+
+    record ReserveRead(Value size, Local addressOut) implements Op {}
+
+    record AdvanceWriteIndex(Value amount) implements Op {}
+
+    record AdvanceReadIndex(Value amount) implements Op {}
+
     record GetField(FieldIr<?, ?> field, String path, Local source, Local out) implements Op {
     }
 
@@ -50,28 +60,28 @@ public sealed interface Op
     record ReadExternal(NetworkBuffer.Type<?> type, Local out) implements Op {
     }
 
-    record WritePrimitive(PrimitiveKind kind, Value value) implements Op {
+    record WritePrimitive(PrimitiveKind kind, Value value, Local address) implements Op {
     }
 
-    record ReadPrimitive(PrimitiveKind kind, Local out) implements Op {
+    record ReadPrimitive(PrimitiveKind kind, Local address, Local out) implements Op {
     }
 
-    record WriteVarInt(Value value) implements Op {
+    record WriteVarInt(Value value, Local address) implements Op {
     }
 
-    record ReadVarInt(Local out) implements Op {
+    record ReadVarInt(Local address, Local out) implements Op {
     }
 
-    record WriteVarLong(Value value) implements Op {
+    record WriteVarLong(Value value, Local address) implements Op {
     }
 
-    record ReadVarLong(Local out) implements Op {
+    record ReadVarLong(Local address, Local out) implements Op {
     }
 
-    record WriteFixedBytes(Value value) implements Op {
+    record WriteFixedBytes(Value value, Local address) implements Op {
     }
 
-    record ReadFixedBytes(Value length, Local out) implements Op {
+    record ReadFixedBytes(Value length, Local address, Local out) implements Op {
     }
 
     record WriteRun(RunIr run) implements Op {
