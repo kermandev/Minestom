@@ -26,8 +26,6 @@ public final class IrCompiler {
     public static final String TRANSFORM_FROM_PREFIX = "from";
     public static final String FACTORY_PREFIX = "fac";
     public static final String CTOR_NAME = "ctor";
-    public static final String IR_FIELD_NAME = "networkIr";
-    public static final String IR = "ir";
     public static final String READ = "read";
     public static final String WRITE = "write";
 
@@ -52,11 +50,8 @@ public final class IrCompiler {
             readBuilder.push(new Op.Return(new Value.LocalValue(result)));
             ProgramIr read = IrOptimizer.optimize(new ProgramIr(readBuilder.result()));
 
-            NetworkIr<T> ir = new NetworkIr<>(write, read);
-            final IrClassData irData = IrLowering.collectIrClassData(classData, ir);
-            final int irIndex = addClassData(classData, ir);
-
-            final byte[] bytes = IrEmitter.buildClass(classDesc, irData, irIndex);
+            final IrClassData irData = IrLowering.collectIrClassData(classData, write, read);
+            final byte[] bytes = IrEmitter.buildClass(classDesc, irData);
             if (DEBUG) dump(bytes, 0); // Field count could be dynamically inferred or left at 0 for dumps
 
             final Lookup lookup = NetworkBufferTemplate.lookup().defineHiddenClassWithClassData(bytes, List.copyOf(classData), true);

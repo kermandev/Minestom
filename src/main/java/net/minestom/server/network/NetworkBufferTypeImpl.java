@@ -39,9 +39,6 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
     Local DUMMY_ADDRESS = new Local(new LocalType.Kind(TypeKind.LONG));
 
     static long fixedByteSize(NetworkBuffer.Type<?> type) {
-        if (type instanceof NetworkIrBacked<?>) {
-            return -1L;
-        }
         return switch (type) {
             case UnitType _ -> 0;
             case BooleanType _, ByteType _, UnsignedByteType _ -> 1;

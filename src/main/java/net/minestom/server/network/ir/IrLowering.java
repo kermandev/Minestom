@@ -16,15 +16,15 @@ import static net.minestom.server.network.ir.IrMetadata.*;
 final class IrLowering {
     private IrLowering() {}
 
-    static IrClassData collectIrClassData(List<Object> classData, NetworkIr<?> ir) {
+    static IrClassData collectIrClassData(List<Object> classData, ProgramIr write, ProgramIr read) {
         final List<TransformFieldData> transforms = new ArrayList<>();
         final List<ExternalTypeFieldData> externalTypes = new ArrayList<>();
         final Map<String, Integer> constructors = new LinkedHashMap<>();
         final Map<String, IrCtorData> constructorIrs = new HashMap<>();
 
         final Usage usage = new Usage();
-        collectUsage(ir.write(), usage);
-        collectUsage(ir.read(), usage);
+        collectUsage(write, usage);
+        collectUsage(read, usage);
 
         int ctorIndex = 0;
         for (Map.Entry<Object, Integer> entry : usage.constructors.entrySet()) {
@@ -46,7 +46,7 @@ final class IrLowering {
             externalTypes.add(new ExternalTypeFieldData("ext" + extIndex++, type, addClassData(classData, type)));
         }
 
-        return new IrClassData(ir, "", transforms, constructors, constructorIrs, externalTypes);
+        return new IrClassData(write, read, "", transforms, constructors, constructorIrs, externalTypes);
     }
 
     private static class Usage {

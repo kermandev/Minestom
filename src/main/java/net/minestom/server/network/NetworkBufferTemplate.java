@@ -151,12 +151,7 @@ public final class NetworkBufferTemplate {
      * @return the new template
      */
     public static <R extends @UnknownNullability Object> Type<R> template(R value) {
-        return new NetworkIrBacked<R>() {
-            private final NetworkIr<R> ir = new NetworkIr<>(
-                    ProgramIr.EMPTY,
-                    new ProgramIr(java.util.List.of(new Op.Return(new Value.Const(value))))
-            );
-
+        return new NetworkBufferTypeImpl<R>() {
             @Override
             public void write(NetworkBuffer buffer, R value) {
             }
@@ -167,8 +162,8 @@ public final class NetworkBufferTemplate {
             }
 
             @Override
-            public NetworkIr<R> ir() {
-                return ir;
+            public Value lowerRead(IrReadBuilder builder) {
+                return new Value.Const(value);
             }
         };
     }

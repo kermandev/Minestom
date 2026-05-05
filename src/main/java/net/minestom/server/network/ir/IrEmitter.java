@@ -49,8 +49,6 @@ final class IrEmitter {
     static final ClassDesc CD_NETWORK_BUFFER_IMPL = ClassDesc.of("net.minestom.server.network", "NetworkBufferImpl");
     static final ClassDesc CD_NETWORK_BUFFER_TYPE_IMPL = ClassDesc.of("net.minestom.server.network", "NetworkBufferTypeImpl");
     static final ClassDesc CD_TYPE = NetworkBuffer.Type.class.describeConstable().orElseThrow();
-    static final ClassDesc CD_TEMPLATE_IMPL = NetworkIrBacked.class.describeConstable().orElseThrow();
-    static final ClassDesc CD_NETWORK_IR = NetworkIr.class.describeConstable().orElseThrow();
     static final ClassDesc CD_FUNCTION = Function.class.describeConstable().orElseThrow();
     static final ClassDesc CD_UNIT = Unit.class.describeConstable().orElseThrow();
     static final ClassDesc CD_STANDARD_CHARSETS = ClassDesc.of("java.nio.charset", "StandardCharsets");
@@ -77,7 +75,6 @@ final class IrEmitter {
     static final MethodTypeDesc MT_ARRAY_LIST_CTOR = MethodTypeDesc.of(CD_VOID, CD_INT);
     static final MethodTypeDesc MT_COLLECTION_ADD = MethodTypeDesc.of(CD_BOOLEAN, CD_OBJECT);
     static final MethodTypeDesc MT_WRITE_OBJECT = MethodTypeDesc.of(CD_VOID, CD_NETWORK_BUFFER, CD_OBJECT);
-    static final MethodTypeDesc MT_NETWORK_IR = MethodTypeDesc.of(CD_NETWORK_IR);
     static final MethodTypeDesc MT_RESERVE = MethodTypeDesc.of(CD_LONG, CD_LONG);
     static final MethodTypeDesc MT_FUNCTION_APPLY = MethodTypeDesc.of(CD_OBJECT, CD_OBJECT);
     static final MethodTypeDesc MT_STRING_GET_BYTES_CHARSET = MethodTypeDesc.of(CD_BYTE_ARRAY, CD_CHARSET);
@@ -120,25 +117,22 @@ final class IrEmitter {
     static final int METHOD_FLAGS = ClassFile.ACC_PUBLIC | ClassFile.ACC_FINAL | ClassFile.ACC_SYNTHETIC;
     static final int CLASS_FLAGS = ClassFile.ACC_FINAL | ClassFile.ACC_SUPER | ClassFile.ACC_SYNTHETIC;
 
-    static byte[] buildClass(ClassDesc classDesc, IrClassData data, int irIndex) {
+    static byte[] buildClass(ClassDesc classDesc, IrClassData data) {
         return ClassFile.of().build(classDesc, classBuilder -> {
             classBuilder.withFlags(CLASS_FLAGS)
                     .withSuperclass(CD_OBJECT)
-                    .withInterfaceSymbols(CD_TEMPLATE_IMPL);
+                    .withInterfaceSymbols(CD_TYPE);
 
-            classBuilder.withField(IR_FIELD_NAME, CD_NETWORK_IR, FIELD_FLAGS);
             declareIrFields(classBuilder, data);
 
             classBuilder.withMethodBody(ConstantDescs.CLASS_INIT_NAME, MT_VOID, ClassFile.ACC_STATIC | ClassFile.ACC_SYNTHETIC,
-                    codeBuilder -> buildClassInitializer(codeBuilder, classDesc, data, irIndex));
+                    codeBuilder -> buildClassInitializer(codeBuilder, classDesc, data));
             classBuilder.withMethodBody(ConstantDescs.INIT_NAME, MT_VOID, ClassFile.ACC_PRIVATE | ClassFile.ACC_SYNTHETIC,
                     codeBuilder -> codeBuilder.aload(0).invokespecial(CD_OBJECT, ConstantDescs.INIT_NAME, MT_VOID).return_());
-            classBuilder.withMethodBody(IR, MT_NETWORK_IR, METHOD_FLAGS,
-                    codeBuilder -> codeBuilder.getstatic(classDesc, IR_FIELD_NAME, CD_NETWORK_IR).areturn());
             classBuilder.withMethodBody(WRITE, MT_WRITE_OBJECT, METHOD_FLAGS,
-                    codeBuilder -> buildWrite(codeBuilder, classDesc, data, data.ir().write(), 2));
+                    codeBuilder -> buildWrite(codeBuilder, classDesc, data, data.write(), 2));
             classBuilder.withMethodBody(READ, MT_READ_OBJECT, METHOD_FLAGS,
-                    codeBuilder -> buildRead(codeBuilder, classDesc, data, data.ir().read()));
+                    codeBuilder -> buildRead(codeBuilder, classDesc, data, data.read()));
         });
     }
 
@@ -155,11 +149,9 @@ final class IrEmitter {
         }
     }
 
-    private static void buildClassInitializer(CodeBuilder codeBuilder, ClassDesc classDesc, IrClassData data, int irIndex) {
+    private static void buildClassInitializer(CodeBuilder codeBuilder, ClassDesc classDesc, IrClassData data) {
         codeBuilder.invokestatic(CD_METHOD_HANDLES, "lookup", MT_LOOKUP)
                 .astore(0);
-        loadClassDataAt(codeBuilder, CD_NETWORK_IR, irIndex)
-                .putstatic(classDesc, IR_FIELD_NAME, CD_NETWORK_IR);
         initIrFields(codeBuilder, classDesc, data);
         codeBuilder.return_();
     }

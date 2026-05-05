@@ -9,7 +9,7 @@ import java.util.function.Function;
 final class IrMetadata {
     private IrMetadata() {}
 
-    record IrClassData(NetworkIr<?> ir, String path, List<TransformFieldData> transforms,
+    record IrClassData(ProgramIr write, ProgramIr read, String path, List<TransformFieldData> transforms,
                        Map<String, Integer> constructors, Map<String, IrCtorData> constructorIrs,
                        List<ExternalTypeFieldData> externalTypes) {
         public IrClassData {

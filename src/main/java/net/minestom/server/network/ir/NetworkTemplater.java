@@ -12,7 +12,6 @@ import java.util.function.Function;
 public final class NetworkTemplater {
     private NetworkTemplater() {}
 
-    @SuppressWarnings("unchecked")
     public static <T extends @UnknownNullability Object> NetworkBuffer.Type<T> template(Object... values) {
         Objects.requireNonNull(values, "values");
         Check.argCondition(values.length % 2 == 0, "Expected an odd number of values, got: {0}", values.length);
