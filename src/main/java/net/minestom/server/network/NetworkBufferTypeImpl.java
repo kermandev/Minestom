@@ -41,7 +41,7 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
     int SEGMENT_BITS = 0x7F;
     int CONTINUE_BIT = 0x80;
 
-    static int varIntSize(int value) {
+    public static int varIntSize(int value) {
         int size = 1;
         while ((value & ~SEGMENT_BITS) != 0) {
             size++;
@@ -50,7 +50,7 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         return size;
     }
 
-    static int varLongSize(long value) {
+    public static int varLongSize(long value) {
         int size = 1;
         while ((value & ~((long) SEGMENT_BITS)) != 0) {
             size++;

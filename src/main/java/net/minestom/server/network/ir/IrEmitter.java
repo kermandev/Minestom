@@ -14,7 +14,6 @@ import java.lang.constant.ConstantDesc;
 import java.lang.constant.ConstantDescs;
 import java.lang.constant.MethodTypeDesc;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.function.Function;
@@ -56,7 +55,6 @@ final class IrEmitter {
     static final ClassDesc CD_CHARSET = ClassDesc.of("java.nio.charset", "Charset");
     static final ClassDesc CD_COLLECTION = ClassDesc.of("java.util", "Collection");
     static final ClassDesc CD_LIST = ClassDesc.of("java.util", "List");
-    static final ClassDesc CD_ARRAY_LIST = ClassDesc.of("java.util", "ArrayList");
     static final ClassDesc CD_ARRAY_UTILS = ClassDesc.of("net.minestom.server.utils", "ArrayUtils");
     static final ClassDesc CD_ITERABLE = ClassDesc.of("java.lang", "Iterable");
     static final ClassDesc CD_ITERATOR = ClassDesc.of("java.util", "Iterator");
@@ -595,32 +593,6 @@ final class IrEmitter {
         };
     }
 
-    private static Value itemSize(RunItem item) {
-        return switch (item) {
-            case RunItem.Put put -> new Value.Const((long) put.kind().byteSize());
-            case RunItem.Get get -> new Value.Const((long) get.kind().byteSize());
-            case RunItem.PutVarInt putVarInt -> putVarInt.encodedSize();
-            case RunItem.PutVarLong putVarLong -> putVarLong.encodedSize();
-            case RunItem.PutBytes putBytes -> putBytes.length();
-            case RunItem.GetBytes getBytes -> getBytes.length();
-            case RunItem.ForIndex _ -> new Value.Const(0L);
-        };
-    }
-
-    private static Value addValues(Value left, Value right) {
-        if (left instanceof Value.Const(Object lv) && right instanceof Value.Const(Object rv)) {
-            if (lv instanceof Number l && rv instanceof Number r) return new Value.Const(l.longValue() + r.longValue());
-        }
-        if (left instanceof Value.Const(Object lv) && lv instanceof Number n && n.longValue() == 0) return right;
-        if (right instanceof Value.Const(Object rv) && rv instanceof Number n && n.longValue() == 0) return left;
-
-        // Normalize: ensure left-leaning tree
-        if (right instanceof Value.Add rightAdd) {
-            return addValues(addValues(left, rightAdd.left()), rightAdd.right());
-        }
-        return new Value.Add(left, right);
-    }
-
     private static void emitWriteRun(CodeBuilder codeBuilder, EmitContext context, RunIr run) {
         final int indexSlot = codeBuilder.allocateLocal(TypeKind.LONG);
         codeBuilder.aload(context.directSlot());
@@ -628,41 +600,21 @@ final class IrEmitter {
         codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "reserveWrite", MT_RESERVE)
                 .lstore(indexSlot);
 
-        int currentSlot = indexSlot;
-        if (run.items().size() > 1) {
-            currentSlot = codeBuilder.allocateLocal(TypeKind.LONG);
-            codeBuilder.lload(indexSlot);
-            codeBuilder.lstore(currentSlot);
-        }
-        Value currentOffset = new Value.Const(0L);
-
+        final int currentSlot = codeBuilder.allocateLocal(TypeKind.LONG);
         for (RunItem item : run.items()) {
             if (item instanceof RunItem.ForIndex loop) {
                 // For now, treat loops as barriers and use absolute offset from indexSlot
                 emitLoopWrite(codeBuilder, context, indexSlot, loop);
-                currentSlot = indexSlot;
-                currentOffset = new Value.Const(0L);
                 continue;
             }
 
             Value offset = itemOffset(item);
-            Value delta = subtract(offset, currentOffset);
-            if (delta == null) {
-                codeBuilder.lload(indexSlot);
-                if (!isZero(offset)) {
-                    emitLongValue(codeBuilder, context, offset);
-                    codeBuilder.ladd();
-                }
-                codeBuilder.lstore(currentSlot);
-            } else if (!isZero(delta)) {
-                codeBuilder.lload(currentSlot);
-                emitLongValue(codeBuilder, context, delta);
-                codeBuilder.ladd();
-                codeBuilder.lstore(currentSlot);
-            }
+            codeBuilder.lload(indexSlot);
+            emitLongValue(codeBuilder, context, offset);
+            codeBuilder.ladd();
+            codeBuilder.lstore(currentSlot);
 
             emitRunItemWriteAt(codeBuilder, context, currentSlot, item);
-            currentOffset = addValues(offset, itemSize(item));
         }
     }
 
@@ -753,41 +705,21 @@ final class IrEmitter {
         codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "reserveRead", MT_RESERVE)
                 .lstore(indexSlot);
 
-        int currentSlot = indexSlot;
-        if (run.items().size() > 1) {
-            currentSlot = codeBuilder.allocateLocal(TypeKind.LONG);
-            codeBuilder.lload(indexSlot);
-            codeBuilder.lstore(currentSlot);
-        }
-        Value currentOffset = new Value.Const(0L);
-
+        final int currentSlot = codeBuilder.allocateLocal(TypeKind.LONG);
         for (RunItem item : run.items()) {
             if (item instanceof RunItem.ForIndex loop) {
                 // For now, treat loops as barriers and use absolute offset from indexSlot
                 emitLoopRead(codeBuilder, context, indexSlot, loop);
-                currentSlot = indexSlot;
-                currentOffset = new Value.Const(0L);
                 continue;
             }
 
             Value offset = itemOffset(item);
-            Value delta = subtract(offset, currentOffset);
-            if (delta == null) {
-                codeBuilder.lload(indexSlot);
-                if (!isZero(offset)) {
-                    emitLongValue(codeBuilder, context, offset);
-                    codeBuilder.ladd();
-                }
-                codeBuilder.lstore(currentSlot);
-            } else if (!isZero(delta)) {
-                codeBuilder.lload(currentSlot);
-                emitLongValue(codeBuilder, context, delta);
-                codeBuilder.ladd();
-                codeBuilder.lstore(currentSlot);
-            }
+            codeBuilder.lload(indexSlot);
+            emitLongValue(codeBuilder, context, offset);
+            codeBuilder.ladd();
+            codeBuilder.lstore(currentSlot);
 
             emitRunItemReadAt(codeBuilder, context, currentSlot, item);
-            currentOffset = addValues(offset, itemSize(item));
         }
     }
 
@@ -1109,10 +1041,6 @@ final class IrEmitter {
     }
 
     private static void emitOffsetValue(CodeBuilder codeBuilder, EmitContext context, int indexSlot, Value offset) {
-        if (offset instanceof Value.Const(Object c) && ((c instanceof Long l && l == 0L) || (c instanceof Integer i && i == 0))) {
-            codeBuilder.lload(indexSlot);
-            return;
-        }
         codeBuilder.lload(indexSlot);
         emitLongValue(codeBuilder, context, offset);
         codeBuilder.ladd();
@@ -1295,21 +1223,6 @@ final class IrEmitter {
             case FLOAT -> codeBuilder.invokevirtual(CD_FLOAT_WRAPPER, "floatValue", MT_FLOAT_VALUE);
             case DOUBLE -> codeBuilder.invokevirtual(CD_DOUBLE_WRAPPER, "doubleValue", MT_DOUBLE_VALUE);
         }
-    }
-
-    private static boolean isZero(Value value) {
-        return value instanceof Value.Const(Object c) && c instanceof Number n && n.longValue() == 0;
-    }
-
-    private static @Nullable Value subtract(Value offset, Value lastOffset) {
-        if (offset.equals(lastOffset)) return new Value.Const(0L);
-        if (offset instanceof Value.Add add) {
-            if (add.left().equals(lastOffset)) return add.right();
-            // Try recursing left (standard for left-leaning trees)
-            Value sub = subtract(add.left(), lastOffset);
-            if (sub != null) return addValues(sub, add.right());
-        }
-        return null;
     }
 
     private static CodeBuilder loadClassDataAt(CodeBuilder codeBuilder, ClassDesc type, int index) {

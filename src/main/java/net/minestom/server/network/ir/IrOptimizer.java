@@ -7,19 +7,20 @@ public final class IrOptimizer {
     private IrOptimizer() {}
 
     public static ProgramIr optimize(ProgramIr program) {
-        return new ProgramIr(optimizeOps(program.ops()), program.initialSource());
+        List<Op> current = program.ops();
+        while (true) {
+            List<Op> optimized = optimizeOps(current);
+            if (optimized.equals(current)) break;
+            current = optimized;
+        }
+        return new ProgramIr(current, program.initialSource());
     }
 
     private static List<Op> optimizeOps(List<Op> ops) {
         List<Op> result = new ArrayList<>();
         for (int i = 0; i < ops.size(); i++) {
             Op op = ops.get(i);
-            op = switch (op) {
-                case Op.If ifOp -> new Op.If(ifOp.condition(), optimizeOps(ifOp.thenOps()), optimizeOps(ifOp.elseOps()));
-                case Op.ForEach forEach -> new Op.ForEach(forEach.source(), forEach.element(), optimizeOps(forEach.body()));
-                case Op.ForIndex forIndex -> new Op.ForIndex(forIndex.index(), forIndex.start(), forIndex.end(), optimizeOps(forIndex.body()));
-                default -> op;
-            };
+            op = optimizeOp(op);
 
             // Try to merge into a write run
             if (isWriteRunCompatible(op)) {
@@ -27,7 +28,7 @@ public final class IrOptimizer {
                 runOps.add(op);
                 while (i + 1 < ops.size() && isWriteRunCompatible(ops.get(i + 1))) {
                     i++;
-                    runOps.add(ops.get(i));
+                    runOps.add(optimizeOp(ops.get(i)));
                 }
                 result.addAll(mergeWriteRunOps(runOps));
                 continue;
@@ -39,7 +40,7 @@ public final class IrOptimizer {
                 runOps.add(op);
                 while (i + 1 < ops.size() && isReadRunCompatible(ops.get(i + 1))) {
                     i++;
-                    runOps.add(ops.get(i));
+                    runOps.add(optimizeOp(ops.get(i)));
                 }
                 result.addAll(mergeReadRunOps(runOps));
                 continue;
@@ -48,6 +49,178 @@ public final class IrOptimizer {
             result.add(op);
         }
         return result;
+    }
+
+    private static Op optimizeOp(Op op) {
+        return switch (op) {
+            case Op.If branch -> new Op.If(optimizeValue(branch.condition()), optimizeOps(branch.thenOps()), optimizeOps(branch.elseOps()));
+            case Op.ForEach loop -> new Op.ForEach(optimizeValue(loop.source()), loop.element(), optimizeOps(loop.body()));
+            case Op.ForIndex loop -> new Op.ForIndex(loop.index(), optimizeValue(loop.start()), optimizeValue(loop.end()), optimizeOps(loop.body()));
+            case Op.Apply apply -> apply;
+            case Op.Cast cast -> cast;
+            case Op.Unbox unbox -> unbox;
+            case Op.Box box -> box;
+            case Op.StringToBytes s2b -> s2b;
+            case Op.BytesToString b2s -> b2s;
+            case Op.EitherLeft left -> left;
+            case Op.EitherRight right -> right;
+            case Op.Store store -> new Op.Store(optimizeValue(store.value()), store.out());
+            case Op.Check check -> new Op.Check(optimizeValue(check.condition()), check.message());
+            case Op.WriteExternal write -> new Op.WriteExternal(write.type(), optimizeValue(write.value()));
+            case Op.ReadExternal read -> read;
+            case Op.WritePrimitive write -> new Op.WritePrimitive(write.kind(), optimizeValue(write.value()), write.address());
+            case Op.ReadPrimitive read -> new Op.ReadPrimitive(read.kind(), read.address(), read.out());
+            case Op.WriteVarInt write -> new Op.WriteVarInt(optimizeValue(write.value()), write.address());
+            case Op.ReadVarInt read -> read;
+            case Op.WriteVarLong write -> new Op.WriteVarLong(optimizeValue(write.value()), write.address());
+            case Op.ReadVarLong read -> read;
+            case Op.WriteFixedBytes write -> new Op.WriteFixedBytes(optimizeValue(write.value()), write.address());
+            case Op.ReadFixedBytes read -> new Op.ReadFixedBytes(optimizeValue(read.length()), read.address(), read.out());
+            case Op.WriteRun(RunIr run) -> new Op.WriteRun(optimizeRun(run));
+            case Op.ReadRun(RunIr run) -> new Op.ReadRun(optimizeRun(run));
+            case Op.ElementAt elementAt -> new Op.ElementAt(optimizeValue(elementAt.source()), optimizeValue(elementAt.index()), elementAt.out());
+            case Op.MapEntrySet mapEntrySet -> new Op.MapEntrySet(optimizeValue(mapEntrySet.map()), mapEntrySet.out());
+            case Op.MapEntryKey mapEntryKey -> mapEntryKey;
+            case Op.MapEntryValue mapEntryValue -> mapEntryValue;
+            case Op.ResultElementSet resultElementSet -> new Op.ResultElementSet(optimizeValue(resultElementSet.result()), optimizeValue(resultElementSet.index()), optimizeValue(resultElementSet.value()));
+            case Op.ArrayCreate arrayCreate -> new Op.ArrayCreate(optimizeValue(arrayCreate.size()), arrayCreate.out());
+            case Op.ArraySet arraySet -> new Op.ArraySet(arraySet.array(), optimizeValue(arraySet.index()), optimizeValue(arraySet.value()));
+            case Op.ListFinish listFinish -> listFinish;
+            case Op.MapFinish mapFinish -> new Op.MapFinish(mapFinish.keys(), mapFinish.values(), optimizeValue(mapFinish.size()), mapFinish.out());
+            case Op.Construct construct -> new Op.Construct(construct.factory(), construct.args().stream().map(IrOptimizer::optimizeValue).toList(), construct.out());
+            case Op.Return ret -> new Op.Return(optimizeValue(ret.value()));
+            case Op.ReserveWrite reserve -> new Op.ReserveWrite(optimizeValue(reserve.size()), reserve.addressOut());
+            case Op.ReserveRead reserve -> new Op.ReserveRead(optimizeValue(reserve.size()), reserve.addressOut());
+            case Op.AdvanceWriteIndex advance -> new Op.AdvanceWriteIndex(optimizeValue(advance.amount()));
+            case Op.AdvanceReadIndex advance -> new Op.AdvanceReadIndex(optimizeValue(advance.amount()));
+        };
+    }
+
+    private static RunIr optimizeRun(RunIr run) {
+        return new RunIr(optimizeValue(run.size()), run.items().stream().map(IrOptimizer::optimizeRunItem).toList());
+    }
+
+    private static RunItem optimizeRunItem(RunItem item) {
+        return switch (item) {
+            case RunItem.Put put -> new RunItem.Put(put.kind(), optimizeValue(put.offset()), optimizeValue(put.value()));
+            case RunItem.Get get -> new RunItem.Get(get.kind(), optimizeValue(get.offset()), get.out());
+            case RunItem.PutVarInt put -> new RunItem.PutVarInt(optimizeValue(put.offset()), optimizeValue(put.value()), optimizeValue(put.encodedSize()));
+            case RunItem.PutVarLong put -> new RunItem.PutVarLong(optimizeValue(put.offset()), optimizeValue(put.value()), optimizeValue(put.encodedSize()));
+            case RunItem.PutBytes put -> new RunItem.PutBytes(optimizeValue(put.offset()), optimizeValue(put.byteArray()), optimizeValue(put.length()));
+            case RunItem.GetBytes get -> new RunItem.GetBytes(optimizeValue(get.offset()), get.byteArray(), optimizeValue(get.length()));
+            case RunItem.ForIndex loop -> new RunItem.ForIndex(loop.index(), optimizeValue(loop.start()), optimizeValue(loop.end()), loop.body().stream().map(IrOptimizer::optimizeRunStep).toList());
+        };
+    }
+
+    private static RunStep optimizeRunStep(RunStep step) {
+        return switch (step) {
+            case RunStep.Put put -> new RunStep.Put(put.kind(), optimizeValue(put.offset()), optimizeValue(put.value()));
+            case RunStep.Get get -> new RunStep.Get(get.kind(), optimizeValue(get.offset()), get.out());
+            case RunStep.PutVarInt put -> new RunStep.PutVarInt(optimizeValue(put.offset()), optimizeValue(put.value()), optimizeValue(put.encodedSize()));
+            case RunStep.PutVarLong put -> new RunStep.PutVarLong(optimizeValue(put.offset()), optimizeValue(put.value()), optimizeValue(put.encodedSize()));
+            case RunStep.PutBytes put -> new RunStep.PutBytes(optimizeValue(put.offset()), optimizeValue(put.byteArray()), optimizeValue(put.length()));
+            case RunStep.GetBytes get -> new RunStep.GetBytes(optimizeValue(get.offset()), get.byteArray(), optimizeValue(get.length()));
+            case RunStep.ElementAt elementAt -> new RunStep.ElementAt(optimizeValue(elementAt.source()), optimizeValue(elementAt.index()), elementAt.out());
+            case RunStep.Apply apply -> apply;
+            case RunStep.Cast cast -> cast;
+            case RunStep.Unbox unbox -> unbox;
+            case RunStep.Box box -> box;
+            case RunStep.ArraySet arraySet -> new RunStep.ArraySet(arraySet.array(), optimizeValue(arraySet.index()), optimizeValue(arraySet.value()));
+            case RunStep.ResultElementSet resultElementSet -> new RunStep.ResultElementSet(optimizeValue(resultElementSet.result()), optimizeValue(resultElementSet.index()), optimizeValue(resultElementSet.value()));
+            case RunStep.Construct construct -> new RunStep.Construct(construct.factory(), construct.args().stream().map(IrOptimizer::optimizeValue).toList(), construct.out());
+        };
+    }
+
+    private static Value optimizeValue(Value value) {
+        return switch (value) {
+            case Value.IsNull isNull -> {
+                Value optimized = optimizeValue(isNull.value());
+                if (optimized instanceof Value.Const(Object value1)) yield new Value.Const(value1 == null);
+                yield new Value.IsNull(optimized);
+            }
+            case Value.IsNotNull isNotNull -> {
+                Value optimized = optimizeValue(isNotNull.value());
+                if (optimized instanceof Value.Const(Object value1)) yield new Value.Const(value1 != null);
+                yield new Value.IsNotNull(optimized);
+            }
+            case Value.Not not -> {
+                Value optimized = optimizeValue(not.value());
+                if (optimized instanceof Value.Const(Object value1) && value1 instanceof Boolean b) yield new Value.Const(!b);
+                yield new Value.Not(optimized);
+            }
+            case Value.IsLeft isLeft -> new Value.IsLeft(optimizeValue(isLeft.value()));
+            case Value.EitherLeft left -> new Value.EitherLeft(optimizeValue(left.value()));
+            case Value.EitherRight right -> new Value.EitherRight(optimizeValue(right.value()));
+            case Value.Add add -> addValues(optimizeValue(add.left()), optimizeValue(add.right()));
+            case Value.Mul mul -> mulValues(optimizeValue(mul.left()), optimizeValue(mul.right()));
+            case Value.And and -> {
+                Value left = optimizeValue(and.left());
+                Value right = optimizeValue(and.right());
+                if (left instanceof Value.Const(Object lv) && right instanceof Value.Const(Object rv)) {
+                    if (lv instanceof Boolean lb && rv instanceof Boolean rb) yield new Value.Const(lb && rb);
+                }
+                yield new Value.And(left, right);
+            }
+            case Value.Or or -> {
+                Value left = optimizeValue(or.left());
+                Value right = optimizeValue(or.right());
+                if (left instanceof Value.Const(Object lv) && right instanceof Value.Const(Object rv)) {
+                    if (lv instanceof Boolean lb && rv instanceof Boolean rb) yield new Value.Const(lb || rb);
+                }
+                yield new Value.Or(left, right);
+            }
+            case Value.LessThanOrEqual cmp -> {
+                Value left = optimizeValue(cmp.left());
+                Value right = optimizeValue(cmp.right());
+                if (left instanceof Value.Const(Object lv) && right instanceof Value.Const(Object rv)) {
+                    if (lv instanceof Number l && rv instanceof Number r) yield new Value.Const(l.longValue() <= r.longValue());
+                }
+                yield new Value.LessThanOrEqual(left, right);
+            }
+            case Value.GreaterThan cmp -> {
+                Value left = optimizeValue(cmp.left());
+                Value right = optimizeValue(cmp.right());
+                if (left instanceof Value.Const(Object lv) && right instanceof Value.Const(Object rv)) {
+                    if (lv instanceof Number l && rv instanceof Number r) yield new Value.Const(l.longValue() > r.longValue());
+                }
+                yield new Value.GreaterThan(left, right);
+            }
+            case Value.ShiftLeft shift -> {
+                Value optimized = optimizeValue(shift.value());
+                if (optimized instanceof Value.Const(Object c) && c instanceof Number n) {
+                    yield new Value.Const(n.longValue() << shift.amount());
+                }
+                yield new Value.ShiftLeft(optimized, shift.amount());
+            }
+            case Value.ShiftRightUnsigned shift -> {
+                Value optimized = optimizeValue(shift.value());
+                if (optimized instanceof Value.Const(Object c) && c instanceof Number n) {
+                    yield new Value.Const(n.longValue() >>> shift.amount());
+                }
+                yield new Value.ShiftRightUnsigned(optimized, shift.amount());
+            }
+            case Value.BoolByte b -> new Value.BoolByte(optimizeValue(b.booleanValue()));
+            case Value.UnsignedByte b -> new Value.UnsignedByte(optimizeValue(b.byteValue()));
+            case Value.VarIntSize v -> {
+                Value optimized = optimizeValue(v.intValue());
+                if (optimized instanceof Value.Const(Object c) && c instanceof Number n) {
+                    yield new Value.Const(varIntSize(n.intValue()));
+                }
+                yield new Value.VarIntSize(optimized);
+            }
+            case Value.VarLongSize v -> {
+                Value optimized = optimizeValue(v.longValue());
+                if (optimized instanceof Value.Const(Object c) && c instanceof Number n) {
+                    yield new Value.Const(varLongSize(n.longValue()));
+                }
+                yield new Value.VarLongSize(optimized);
+            }
+            case Value.ArrayLength a -> new Value.ArrayLength(optimizeValue(a.array()));
+            case Value.CollectionSize s -> new Value.CollectionSize(optimizeValue(s.collection()));
+            case Value.MapSize s -> new Value.MapSize(optimizeValue(s.map()));
+            case Value.StringUtf8Bytes s -> new Value.StringUtf8Bytes(optimizeValue(s.string()));
+            default -> value;
+        };
     }
 
     private static boolean isWriteRunCompatible(Op op) {
@@ -89,7 +262,7 @@ public final class IrOptimizer {
                     item = new RunItem.PutBytes(totalSize, f.value(), new Value.ArrayLength(f.value()));
                     itemSize = new Value.ArrayLength(f.value());
                 }
-                case null, default -> {
+                default -> {
                 }
             }
 
@@ -165,10 +338,26 @@ public final class IrOptimizer {
         if (right instanceof Value.Const(Object rv) && rv instanceof Number n && n.longValue() == 0) return left;
 
         // Normalize: ensure left-leaning tree
-        if (right instanceof Value.Add rightAdd) {
-            return addValues(addValues(left, rightAdd.left()), rightAdd.right());
+        if (right instanceof Value.Add(Value left1, Value right1)) {
+            return addValues(addValues(left, left1), right1);
         }
         return new Value.Add(left, right);
+    }
+
+    private static Value mulValues(Value left, Value right) {
+        if (left instanceof Value.Const(Object lv) && right instanceof Value.Const(Object rv)) {
+            if (lv instanceof Number l && rv instanceof Number r) return new Value.Const(l.longValue() * r.longValue());
+        }
+        if (left instanceof Value.Const(Object lv) && lv instanceof Number n && n.longValue() == 1) return right;
+        if (right instanceof Value.Const(Object rv) && rv instanceof Number n && n.longValue() == 1) return left;
+        if (left instanceof Value.Const(Object lv) && lv instanceof Number n && n.longValue() == 0) return left;
+        if (right instanceof Value.Const(Object rv) && rv instanceof Number n && n.longValue() == 0) return right;
+
+        // Normalize: ensure left-leaning tree
+        if (right instanceof Value.Mul(Value left1, Value right1)) {
+            return mulValues(mulValues(left, left1), right1);
+        }
+        return new Value.Mul(left, right);
     }
 
     private static RunItem shiftItem(RunItem item, Value shift) {
@@ -207,5 +396,23 @@ public final class IrOptimizer {
                     new RunStep.GetBytes(addValues(shift, getBytes.offset()), getBytes.byteArray(), getBytes.length());
             default -> step;
         };
+    }
+
+    public static int varIntSize(int value) {
+        int size = 1;
+        while ((value & ~0x7F) != 0) {
+            size++;
+            value >>>= 7;
+        }
+        return size;
+    }
+
+    public static int varLongSize(long value) {
+        int size = 1;
+        while ((value & ~0x7FL) != 0) {
+            size++;
+            value >>>= 7;
+        }
+        return size;
     }
 }

@@ -1,9 +1,12 @@
 package net.minestom.server.network.ir;
+
+import org.jetbrains.annotations.Nullable;
+
 public sealed interface Value {
     record LocalValue(Local local) implements Value {
     }
 
-    record Const(Object value) implements Value {
+    record Const(@Nullable Object value) implements Value {
     }
 
     record IsNull(Value value) implements Value {
