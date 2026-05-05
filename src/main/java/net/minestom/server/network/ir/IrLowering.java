@@ -1,20 +1,15 @@
 package net.minestom.server.network.ir;
 
 import net.minestom.server.network.NetworkBuffer;
-import net.minestom.server.utils.Unit;
-import net.minestom.server.utils.validate.Check;
-import org.jetbrains.annotations.Nullable;
-import org.jetbrains.annotations.UnknownNullability;
 
-import java.lang.classfile.TypeKind;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.Function;
 
 import static net.minestom.server.network.ir.IrMetadata.*;
 
 final class IrLowering {
-    private IrLowering() {}
+    private IrLowering() {
+    }
 
     static IrClassData collectIrClassData(List<Object> classData, ProgramIr write, ProgramIr read) {
         final List<TransformFieldData> transforms = new ArrayList<>();
@@ -47,12 +42,6 @@ final class IrLowering {
         }
 
         return new IrClassData(write, read, "", transforms, constructors, constructorIrs, externalTypes);
-    }
-
-    private static class Usage {
-        final Set<Function<?, ?>> functions = Collections.newSetFromMap(new IdentityHashMap<>());
-        final Set<NetworkBuffer.Type<?>> externalTypes = Collections.newSetFromMap(new IdentityHashMap<>());
-        final Map<Object, Integer> constructors = new IdentityHashMap<>();
     }
 
     private static void collectUsage(ProgramIr program, Usage usage) {
@@ -103,13 +92,6 @@ final class IrLowering {
         }
     }
 
-    private static Local ensureLocal(List<Op> ops, Value value, String path) {
-        if (value instanceof Value.LocalValue localValue) return localValue.local();
-        final Local local = referenceLocal();
-        ops.add(new Op.Store(value, local));
-        return local;
-    }
-
     static Local referenceLocal() {
         return new Local(new LocalType.Reference(Object.class));
     }
@@ -118,6 +100,12 @@ final class IrLowering {
         final int index = classData.size();
         classData.add(value);
         return index;
+    }
+
+    private static class Usage {
+        final Set<Function<?, ?>> functions = Collections.newSetFromMap(new IdentityHashMap<>());
+        final Set<NetworkBuffer.Type<?>> externalTypes = Collections.newSetFromMap(new IdentityHashMap<>());
+        final Map<Object, Integer> constructors = new IdentityHashMap<>();
     }
 
     static final class WriteBuilderImpl implements IrWriteBuilder {
@@ -129,24 +117,37 @@ final class IrLowering {
             sources.push(initialSource);
         }
 
-        @Override public void push(Op op) { opStack.peek().add(op); }
-        @Override public Local source() { return sources.peek(); }
-        @Override public void pushSource(Local source) { sources.push(source); }
-        @Override public void popSource() { sources.pop(); }
+        @Override
+        public void push(Op op) {
+            opStack.peek().add(op);
+        }
+
+        @Override
+        public Local source() {
+            return sources.peek();
+        }
+
+        @Override
+        public void pushSource(Local source) {
+            sources.push(source);
+        }
+
+        @Override
+        public void popSource() {
+            sources.pop();
+        }
 
         @Override
         public void lower(NetworkBuffer.Type<?> type, Value value) {
-            if (value instanceof Value.LocalValue localValue) {
-                pushSource(localValue.local());
-                type.lowerWrite(this);
-                popSource();
+            if (value instanceof Value.LocalValue(Local local)) {
+                pushSource(local);
             } else {
                 Local temp = referenceLocal();
                 push(new Op.Store(value, temp));
                 pushSource(temp);
-                type.lowerWrite(this);
-                popSource();
             }
+            type.lowerWrite(this);
+            popSource();
         }
 
         @Override
@@ -156,15 +157,22 @@ final class IrLowering {
             return opStack.pop();
         }
 
-        List<Op> result() { return opStack.peek(); }
+        List<Op> result() {
+            return opStack.peek();
+        }
     }
 
     static final class ReadBuilderImpl implements IrReadBuilder {
         private final Deque<List<Op>> opStack = new ArrayDeque<>();
 
-        ReadBuilderImpl() { opStack.push(new ArrayList<>()); }
+        ReadBuilderImpl() {
+            opStack.push(new ArrayList<>());
+        }
 
-        @Override public void push(Op op) { opStack.peek().add(op); }
+        @Override
+        public void push(Op op) {
+            opStack.peek().add(op);
+        }
 
         @Override
         public Value lower(NetworkBuffer.Type<?> type) {
@@ -178,6 +186,8 @@ final class IrLowering {
             return opStack.pop();
         }
 
-        List<Op> result() { return opStack.peek(); }
+        List<Op> result() {
+            return opStack.peek();
+        }
     }
 }

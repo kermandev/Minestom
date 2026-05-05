@@ -857,11 +857,12 @@ final class IrEmitter {
                     codeBuilder.aastore();
                 }
                 case RunStep.Construct construct -> {
-                    codeBuilder.getstatic(context.classDesc(), ctorFieldName(context.data(), construct.factory()), constructorInterface(construct.args().size()));
+                    final ClassDesc constructorType = constructorInterface(construct.args().size());
+                    codeBuilder.getstatic(context.classDesc(), ctorFieldName(context.data(), construct.factory()), constructorType);
                     for (Value arg : construct.args()) {
                         emitValue(codeBuilder, context, arg);
                     }
-                    codeBuilder.invokeinterface(constructorInterface(construct.args().size()), "apply", constructorMethodType(construct.args().size()));
+                    codeBuilder.invokeinterface(constructorType, "apply", constructorMethodType(construct.args().size()));
                     emitStoreLocal(codeBuilder, context, construct.out());
                 }
                 default -> throw new UnsupportedOperationException("Unsupported run step: " + step);

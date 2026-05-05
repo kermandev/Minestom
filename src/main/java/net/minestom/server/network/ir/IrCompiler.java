@@ -20,12 +20,6 @@ public final class IrCompiler {
     private IrCompiler() {}
 
     public static final String PACKAGE = "net.minestom.server.network";
-    public static final String TYPE_PREFIX = "t";
-    public static final String GETTER_PREFIX = "g";
-    public static final String TRANSFORM_TO_PREFIX = "to";
-    public static final String TRANSFORM_FROM_PREFIX = "from";
-    public static final String FACTORY_PREFIX = "fac";
-    public static final String CTOR_NAME = "ctor";
     public static final String READ = "read";
     public static final String WRITE = "write";
 
@@ -52,7 +46,7 @@ public final class IrCompiler {
 
             final IrClassData irData = IrLowering.collectIrClassData(classData, write, read);
             final byte[] bytes = IrEmitter.buildClass(classDesc, irData);
-            if (DEBUG) dump(bytes, 0); // Field count could be dynamically inferred or left at 0 for dumps
+            if (DEBUG) dump(bytes); // Field count could be dynamically inferred or left at 0 for dumps
 
             final Lookup lookup = NetworkBufferTemplate.lookup().defineHiddenClassWithClassData(bytes, List.copyOf(classData), true);
             final MethodHandle constructor = lookup.findConstructor(lookup.lookupClass(), MethodType.methodType(void.class));
@@ -62,7 +56,7 @@ public final class IrCompiler {
         }
     }
 
-    private static void dump(byte[] bytes, int fieldCount) throws IOException {
+    private static void dump(byte[] bytes) throws IOException {
         final StackWalker.StackFrame caller = STACK_WALKER.walk(frames -> frames
                 .filter(frame -> {
                     final Class<?> declaringClass = frame.getDeclaringClass();
@@ -75,7 +69,7 @@ public final class IrCompiler {
                 .resolve(sanitize(caller.getMethodName()))
                 .resolve("line%s-bci%s".formatted(caller.getLineNumber(), caller.getByteCodeIndex()));
         Files.createDirectories(directory);
-        Files.write(directory.resolve("NetworkTemplate-%s-F%s.class".formatted(sanitize(caller.getDeclaringClass().getSimpleName()), fieldCount)), bytes);
+        Files.write(directory.resolve("NetworkTemplate-%s.class".formatted(caller.getDeclaringClass().getSimpleName())), bytes);
     }
 
     private static String sanitize(String value) {
@@ -87,45 +81,7 @@ public final class IrCompiler {
         return builder.toString();
     }
 
-    public static String typeName(int index) {
-        return typeName(Integer.toString(index + 1));
-    }
-
-    public static String getterName(int index) {
-        return getterName(Integer.toString(index + 1));
-    }
-
-    public static String typeName(String path) {
-        return TYPE_PREFIX + path;
-    }
-
-    public static String getterName(String path) {
-        return GETTER_PREFIX + path;
-    }
-
-    public static String transformToName(String path, int level) {
-        return TRANSFORM_TO_PREFIX + path + "_" + (level + 1);
-    }
-
-    public static String transformFromName(String path, int level) {
-        return TRANSFORM_FROM_PREFIX + path + "_" + (level + 1);
-    }
-
-    public static String factoryName(String path) {
-        return FACTORY_PREFIX + path;
-    }
-
-    public static String ctorName(String path) {
-        return path.isEmpty() ? CTOR_NAME : CTOR_NAME + path;
-    }
-
     public static ClassDesc constructorInterface(int fieldCount) {
         return ClassDesc.of("net.minestom.server.network", "NetworkBufferTemplate$F" + fieldCount);
-    }
-
-    private static int addClassData(List<Object> classData, Object value) {
-        final int index = classData.size();
-        classData.add(value);
-        return index;
     }
 }
