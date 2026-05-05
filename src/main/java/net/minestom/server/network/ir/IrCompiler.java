@@ -20,8 +20,6 @@ public final class IrCompiler {
     private IrCompiler() {}
 
     public static final String PACKAGE = "net.minestom.server.network";
-    public static final String READ = "read";
-    public static final String WRITE = "write";
 
     public static final boolean DEBUG = true;
     public static final Path DUMP_ROOT = Path.of("build", "generated", "network-templates");

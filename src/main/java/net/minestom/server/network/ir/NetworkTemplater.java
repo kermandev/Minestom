@@ -5,6 +5,7 @@ import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.UnknownNullability;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
@@ -29,21 +30,28 @@ public final class NetworkTemplater {
     }
 
     private static final class TemplateType<T extends @UnknownNullability Object> implements NetworkBuffer.Type<T> {
-        private final Object[] values;
-        private final int fieldCount;
+        private final NetworkBuffer.Type<?>[] types;
+        private final Function<?, ?>[] getters;
         private final Object constructor;
 
         TemplateType(Object[] values, int fieldCount) {
-            this.values = values;
-            this.fieldCount = fieldCount;
+            var types = new NetworkBuffer.Type<?>[fieldCount];
+            var getters = new Function<?, ?>[fieldCount];
+            for (int i = 0; i < fieldCount; i++) {
+                types[i] = (NetworkBuffer.Type<?>) values[i * 2];
+                getters[i] = (Function<?, ?>) values[i * 2 + 1];
+            }
+            this.types = types;
+            this.getters = getters;
             this.constructor = values[values.length - 1];
+            super();
         }
 
         @Override
         public void lowerWrite(IrWriteBuilder builder) {
-            for (int i = 0; i < fieldCount; i++) {
-                final NetworkBuffer.Type<?> type = (NetworkBuffer.Type<?>) values[i * 2];
-                final Function<?, ?> getter = (Function<?, ?>) values[i * 2 + 1];
+            for (int i = 0; i < types.length; i++) {
+                final NetworkBuffer.Type<?> type = types[i];
+                final Function<?, ?> getter = getters[i];
                 final Local nested = IrLowering.referenceLocal();
                 builder.push(new Op.Apply(getter, builder.source(), nested));
                 builder.pushSource(nested);
@@ -54,13 +62,10 @@ public final class NetworkTemplater {
 
         @Override
         public Value lowerRead(IrReadBuilder builder) {
-            final List<Value> args = new ArrayList<>(fieldCount);
-            for (int i = 0; i < fieldCount; i++) {
-                final NetworkBuffer.Type<?> type = (NetworkBuffer.Type<?>) values[i * 2];
-                args.add(builder.lower(type));
-            }
+            final Value[] args = new Value[types.length];
+            Arrays.setAll(args, it -> builder.lower(types[it]));
             final Local result = IrLowering.referenceLocal();
-            builder.push(new Op.Construct(constructor, args, result));
+            builder.push(new Op.Construct(constructor, List.of(args), result));
             return new Value.LocalValue(result);
         }
 

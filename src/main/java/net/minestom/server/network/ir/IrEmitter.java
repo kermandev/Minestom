@@ -15,6 +15,7 @@ import java.lang.constant.ConstantDescs;
 import java.lang.constant.MethodTypeDesc;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -66,18 +67,17 @@ final class IrEmitter {
     static final ClassDesc CD_EITHER_LEFT = CD_EITHER.nested("Left");
     static final ClassDesc CD_EITHER_RIGHT = CD_EITHER.nested("Right");
 
+    static final String READ = "read";
+    static final String WRITE = "write";
+
     static final MethodTypeDesc MT_VOID = MethodTypeDesc.of(CD_VOID);
     static final MethodTypeDesc MT_LOOKUP = MethodTypeDesc.of(CD_METHOD_HANDLES_LOOKUP);
     static final MethodTypeDesc MT_CLASS_DATA_AT = MethodTypeDesc.of(CD_OBJECT, CD_METHOD_HANDLES_LOOKUP, CD_STRING, ConstantDescs.CD_Class, CD_INT);
     static final MethodTypeDesc MT_READ_OBJECT = MethodTypeDesc.of(CD_OBJECT, CD_NETWORK_BUFFER);
-    static final MethodTypeDesc MT_LIST_COPY_OF = MethodTypeDesc.of(CD_LIST, CD_COLLECTION);
     static final MethodTypeDesc MT_TO_MAP = MethodTypeDesc.of(CD_MAP, CD_OBJECT_ARRAY, CD_OBJECT_ARRAY, CD_INT);
-    static final MethodTypeDesc MT_ARRAY_LIST_CTOR = MethodTypeDesc.of(CD_VOID, CD_INT);
-    static final MethodTypeDesc MT_COLLECTION_ADD = MethodTypeDesc.of(CD_BOOLEAN, CD_OBJECT);
     static final MethodTypeDesc MT_WRITE_OBJECT = MethodTypeDesc.of(CD_VOID, CD_NETWORK_BUFFER, CD_OBJECT);
     static final MethodTypeDesc MT_RESERVE = MethodTypeDesc.of(CD_LONG, CD_LONG);
     static final MethodTypeDesc MT_FUNCTION_APPLY = MethodTypeDesc.of(CD_OBJECT, CD_OBJECT);
-    static final MethodTypeDesc MT_STRING_GET_BYTES_CHARSET = MethodTypeDesc.of(CD_BYTE_ARRAY, CD_CHARSET);
     static final MethodTypeDesc MT_WRITE_VAR_INT_UNCHECKED = MethodTypeDesc.of(CD_LONG, CD_NETWORK_BUFFER_IMPL, CD_LONG, CD_INT);
     static final MethodTypeDesc MT_WRITE_VAR_LONG_UNCHECKED = MethodTypeDesc.of(CD_LONG, CD_NETWORK_BUFFER_IMPL, CD_LONG, CD_LONG);
     static final MethodTypeDesc MT_READ_VAR_INT = MethodTypeDesc.of(CD_INT, CD_NETWORK_BUFFER);
@@ -176,7 +176,7 @@ final class IrEmitter {
     private static void buildWrite(CodeBuilder codeBuilder, ClassDesc classDesc, IrClassData data, ProgramIr program, int objectSlot) {
         final int directSlot = codeBuilder.allocateLocal(TypeKind.REFERENCE);
         emitDirectBuffer(codeBuilder, directSlot);
-        final EmitContext context = new EmitContext(classDesc, data, directSlot, new java.util.IdentityHashMap<>());
+        final EmitContext context = new EmitContext(classDesc, data, directSlot, new IdentityHashMap<>());
         if (program.initialSource() != null) {
             context.locals().put(program.initialSource(), objectSlot);
         }
@@ -187,7 +187,7 @@ final class IrEmitter {
     private static void buildRead(CodeBuilder codeBuilder, ClassDesc classDesc, IrClassData data, ProgramIr program) {
         final int directSlot = codeBuilder.allocateLocal(TypeKind.REFERENCE);
         emitDirectBuffer(codeBuilder, directSlot);
-        final EmitContext context = new EmitContext(classDesc, data, directSlot, new java.util.IdentityHashMap<>());
+        final EmitContext context = new EmitContext(classDesc, data, directSlot, new IdentityHashMap<>());
         emitProgram(codeBuilder, context, program);
     }
 
@@ -506,7 +506,7 @@ final class IrEmitter {
                 emitValue(codeBuilder, context, ret.value());
                 codeBuilder.areturn();
             }
-            default -> throw new UnsupportedOperationException("Unsupported IR op: " + op);
+            default -> throw new IllegalStateException("Unexpected value: " + op);
         }
     }
 
@@ -1319,20 +1319,6 @@ final class IrEmitter {
                 .loadConstant(index)
                 .invokestatic(CD_METHOD_HANDLES, "classDataAt", MT_CLASS_DATA_AT)
                 .checkcast(type);
-    }
-
-    private static ClassDesc primitiveClassDesc(TypeKind kind) {
-        return switch (kind) {
-            case BOOLEAN -> CD_BOOLEAN;
-            case BYTE -> CD_BYTE;
-            case SHORT -> CD_SHORT;
-            case INT -> CD_INT;
-            case LONG -> CD_LONG;
-            case FLOAT -> CD_FLOAT;
-            case DOUBLE -> CD_DOUBLE;
-            case VOID -> CD_VOID;
-            default -> throw new IllegalArgumentException("Not a primitive: " + kind);
-        };
     }
 
     private static MethodTypeDesc constructorApplyType(int fieldCount) {

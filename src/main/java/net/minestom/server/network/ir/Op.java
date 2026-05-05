@@ -4,14 +4,7 @@ import net.minestom.server.network.NetworkBuffer;
 import java.util.List;
 import java.util.function.Function;
 
-public sealed interface Op
-        permits Op.Apply, Op.Cast, Op.Unbox, Op.Box, Op.Store, Op.Check, Op.WriteExternal, Op.ReadExternal,
-        Op.WritePrimitive, Op.ReadPrimitive, Op.WriteVarInt, Op.ReadVarInt, Op.WriteVarLong, Op.ReadVarLong,
-        Op.WriteFixedBytes, Op.ReadFixedBytes, Op.WriteRun, Op.ReadRun, Op.If, Op.ForEach,
-        Op.ForIndex, Op.ElementAt, Op.MapEntrySet, Op.MapEntryKey, Op.MapEntryValue, Op.ResultElementSet,
-        Op.ArrayCreate, Op.ArraySet, Op.ListFinish, Op.MapFinish, Op.Construct, Op.Return,
-        Op.StringToBytes, Op.BytesToString, Op.EitherLeft, Op.EitherRight,
-        Op.ReserveWrite, Op.ReserveRead, Op.AdvanceWriteIndex, Op.AdvanceReadIndex {
+public sealed interface Op {
 
     record ReserveWrite(Value size, Local addressOut) implements Op {}
 

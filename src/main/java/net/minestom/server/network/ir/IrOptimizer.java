@@ -59,42 +59,38 @@ public final class IrOptimizer {
         return op instanceof Op.ReadPrimitive || (op instanceof Op.ReadFixedBytes r && r.length() instanceof Value.Const) || op instanceof Op.ReadRun;
     }
 
-    private static boolean isPure(Op op) {
-        return switch (op) {
-            case Op.Apply _, Op.Cast _, Op.Unbox _, Op.Box _, Op.Store _, Op.Check _,
-                 Op.Construct _, Op.MapEntrySet _, Op.MapEntryKey _, Op.MapEntryValue _, Op.ElementAt _,
-                 Op.ArrayCreate _, Op.ArraySet _, Op.ListFinish _, Op.MapFinish _,
-                 Op.StringToBytes _, Op.BytesToString _, Op.EitherLeft _, Op.EitherRight _ -> true;
-            default -> false;
-        };
-    }
-
     private static List<Op> mergeWriteRunOps(List<Op> ops) {
         List<Op> result = new ArrayList<>();
         List<RunItem> items = new ArrayList<>();
         Value totalSize = new Value.Const(0L);
 
         for (Op op : ops) {
-            if (op instanceof Op.WriteRun writeRun) {
-                for (RunItem item : writeRun.run().items()) {
+            if (op instanceof Op.WriteRun(RunIr run)) {
+                for (RunItem item : run.items()) {
                     items.add(shiftItem(item, totalSize));
                 }
-                totalSize = addValues(totalSize, writeRun.run().size());
+                totalSize = addValues(totalSize, run.size());
                 continue;
             }
 
             RunItem item = null;
             Value itemSize = null;
-            if (op instanceof Op.WritePrimitive p) {
-                item = new RunItem.Put(p.kind().storeKind(), totalSize, p.value());
-                itemSize = new Value.Const((long) p.kind().storeKind().byteSize());
-            } else if (op instanceof Op.WriteVarInt v) {
-                Value size = new Value.VarIntSize(v.value());
-                item = new RunItem.PutVarInt(totalSize, v.value(), size);
-                itemSize = size;
-            } else if (op instanceof Op.WriteFixedBytes f) {
-                item = new RunItem.PutBytes(totalSize, f.value(), new Value.ArrayLength(f.value()));
-                itemSize = new Value.ArrayLength(f.value());
+            switch (op) {
+                case Op.WritePrimitive p -> {
+                    item = new RunItem.Put(p.kind().storeKind(), totalSize, p.value());
+                    itemSize = new Value.Const((long) p.kind().storeKind().byteSize());
+                }
+                case Op.WriteVarInt v -> {
+                    Value size = new Value.VarIntSize(v.value());
+                    item = new RunItem.PutVarInt(totalSize, v.value(), size);
+                    itemSize = size;
+                }
+                case Op.WriteFixedBytes f -> {
+                    item = new RunItem.PutBytes(totalSize, f.value(), new Value.ArrayLength(f.value()));
+                    itemSize = new Value.ArrayLength(f.value());
+                }
+                case null, default -> {
+                }
             }
 
             if (item != null) {
@@ -123,11 +119,11 @@ public final class IrOptimizer {
         Value totalSize = new Value.Const(0L);
 
         for (Op op : ops) {
-            if (op instanceof Op.ReadRun readRun) {
-                for (RunItem item : readRun.run().items()) {
+            if (op instanceof Op.ReadRun(RunIr run)) {
+                for (RunItem item : run.items()) {
                     items.add(shiftItem(item, totalSize));
                 }
-                totalSize = addValues(totalSize, readRun.run().size());
+                totalSize = addValues(totalSize, run.size());
                 continue;
             }
 
