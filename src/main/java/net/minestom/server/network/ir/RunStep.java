@@ -3,10 +3,7 @@ package net.minestom.server.network.ir;
 import java.util.List;
 import java.util.function.Function;
 
-public sealed interface RunStep
-        permits RunStep.ElementAt, RunStep.Apply, RunStep.Cast, RunStep.Unbox, RunStep.Box,
-        RunStep.Put, RunStep.Get, RunStep.PutVarInt, RunStep.PutVarLong, RunStep.PutBytes, RunStep.GetBytes, RunStep.ResultElementSet,
-        RunStep.ArraySet, RunStep.Construct {
+public sealed interface RunStep {
     record ElementAt(Value source, Value index, Local out) implements RunStep {
     }
 

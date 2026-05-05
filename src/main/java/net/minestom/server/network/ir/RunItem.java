@@ -2,8 +2,7 @@ package net.minestom.server.network.ir;
 
 import java.util.List;
 
-public sealed interface RunItem
-        permits RunItem.Put, RunItem.Get, RunItem.PutVarInt, RunItem.PutVarLong, RunItem.PutBytes, RunItem.GetBytes, RunItem.ForIndex {
+public sealed interface RunItem {
     record Put(StoreKind kind, Value offset, Value value) implements RunItem {
     }
 

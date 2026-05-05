@@ -2,7 +2,7 @@ package net.minestom.server.network.ir;
 
 import java.lang.classfile.TypeKind;
 
-public sealed interface LocalType permits LocalType.Kind, LocalType.Reference {
+public sealed interface LocalType {
     record Kind(TypeKind kind) implements LocalType {
     }
 
