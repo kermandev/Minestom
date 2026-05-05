@@ -1,5 +1,7 @@
 package net.minestom.server.network.ir;
 
+import net.minestom.server.network.NetworkBufferTypeImpl;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,8 +21,24 @@ public final class IrOptimizer {
     private static List<Op> optimizeOps(List<Op> ops) {
         List<Op> result = new ArrayList<>();
         for (int i = 0; i < ops.size(); i++) {
-            Op op = ops.get(i);
-            op = optimizeOp(op);
+            Op op = optimizeOp(ops.get(i));
+
+            // Folding
+            switch (op) {
+                case Op.If branch when branch.condition() instanceof Value.Const(Object val) && val instanceof Boolean b -> {
+                    result.addAll(b ? branch.thenOps() : branch.elseOps());
+                    continue;
+                }
+                case Op.Check check when check.condition() instanceof Value.Const(Object val) && Boolean.TRUE.equals(val) -> {
+                    continue;
+                }
+                case Op.ForIndex loop when loop.start() instanceof Value.Const(Object sVal) && sVal instanceof Number s &&
+                        loop.end() instanceof Value.Const(Object eVal) && eVal instanceof Number e &&
+                        s.longValue() >= e.longValue() -> {
+                    continue;
+                }
+                default -> {}
+            }
 
             // Try to merge into a write run
             if (isWriteRunCompatible(op)) {
@@ -204,14 +222,14 @@ public final class IrOptimizer {
             case Value.VarIntSize v -> {
                 Value optimized = optimizeValue(v.intValue());
                 if (optimized instanceof Value.Const(Object c) && c instanceof Number n) {
-                    yield new Value.Const(varIntSize(n.intValue()));
+                    yield new Value.Const(NetworkBufferTypeImpl.varIntSize(n.intValue()));
                 }
                 yield new Value.VarIntSize(optimized);
             }
             case Value.VarLongSize v -> {
                 Value optimized = optimizeValue(v.longValue());
                 if (optimized instanceof Value.Const(Object c) && c instanceof Number n) {
-                    yield new Value.Const(varLongSize(n.longValue()));
+                    yield new Value.Const(NetworkBufferTypeImpl.varLongSize(n.longValue()));
                 }
                 yield new Value.VarLongSize(optimized);
             }
@@ -256,6 +274,11 @@ public final class IrOptimizer {
                 case Op.WriteVarInt v -> {
                     Value size = new Value.VarIntSize(v.value());
                     item = new RunItem.PutVarInt(totalSize, v.value(), size);
+                    itemSize = size;
+                }
+                case Op.WriteVarLong v -> {
+                    Value size = new Value.VarLongSize(v.value());
+                    item = new RunItem.PutVarLong(totalSize, v.value(), size);
                     itemSize = size;
                 }
                 case Op.WriteFixedBytes f -> {
@@ -396,23 +419,5 @@ public final class IrOptimizer {
                     new RunStep.GetBytes(addValues(shift, getBytes.offset()), getBytes.byteArray(), getBytes.length());
             default -> step;
         };
-    }
-
-    public static int varIntSize(int value) {
-        int size = 1;
-        while ((value & ~0x7F) != 0) {
-            size++;
-            value >>>= 7;
-        }
-        return size;
-    }
-
-    public static int varLongSize(long value) {
-        int size = 1;
-        while ((value & ~0x7FL) != 0) {
-            size++;
-            value >>>= 7;
-        }
-        return size;
     }
 }

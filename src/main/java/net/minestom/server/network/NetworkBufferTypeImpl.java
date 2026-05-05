@@ -35,7 +35,7 @@ import java.util.function.Supplier;
 import static net.minestom.server.network.NetworkBuffer.*;
 import static net.minestom.server.network.NetworkBufferImpl.impl;
 
-interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
+public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
     Local DUMMY_ADDRESS = new Local(new LocalType.Kind(TypeKind.LONG));
 
     int SEGMENT_BITS = 0x7F;
