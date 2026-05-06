@@ -72,6 +72,15 @@ public sealed interface Value {
     record MapSize(Value map) implements Value {
     }
 
+    record MapEntryValue(Local entry, Local out) implements Value {
+    }
+
     record StringUtf8Bytes(Value string) implements Value {
+    }
+
+    record Ternary(Value condition, Value trueValue, Value falseValue) implements Value {
+    }
+
+    record Index() implements Value {
     }
 }

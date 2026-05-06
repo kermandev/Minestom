@@ -5,6 +5,7 @@ import net.minestom.server.network.NetworkBufferTemplate;
 import org.jetbrains.annotations.UnknownNullability;
 
 import java.io.IOException;
+import java.lang.classfile.TypeKind;
 import java.lang.constant.ClassDesc;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodType;
@@ -13,8 +14,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-
-import static net.minestom.server.network.ir.IrMetadata.*;
 
 public final class IrCompiler {
     private IrCompiler() {}
@@ -31,19 +30,20 @@ public final class IrCompiler {
             final ClassDesc classDesc = ClassDesc.of(PACKAGE, "NetworkTemplate");
             final List<Object> classData = new ArrayList<>();
 
-            IrLowering.WriteBuilderImpl writeBuilder = new IrLowering.WriteBuilderImpl(IrLowering.referenceLocal());
+            IrLowering.WriteBuilderImpl writeBuilder = new IrLowering.WriteBuilderImpl(new Local(new LocalType.Kind(TypeKind.REFERENCE)));
             writeBuilder.lower(type, new Value.LocalValue(writeBuilder.source()));
-            ProgramIr write = IrOptimizer.optimize(new ProgramIr(writeBuilder.result(), writeBuilder.source()));
+            List<RunIr> writeRuns = RunLowering.lower(writeBuilder.result());
+            ProgramIr write = new ProgramIr(IrOptimizer.optimize(writeRuns), writeBuilder.source());
 
             IrLowering.ReadBuilderImpl readBuilder = new IrLowering.ReadBuilderImpl();
             Value readValue = readBuilder.lower(type);
-            Local result = IrLowering.referenceLocal();
+            Local result = new Local(new LocalType.Kind(TypeKind.REFERENCE));
             readBuilder.push(new Op.Store(readValue, result));
             readBuilder.push(new Op.Return(new Value.LocalValue(result)));
-            ProgramIr read = IrOptimizer.optimize(new ProgramIr(readBuilder.result()));
+            List<RunIr> readRuns = RunLowering.lower(readBuilder.result());
+            ProgramIr read = new ProgramIr(IrOptimizer.optimize(readRuns));
 
-            final IrClassData irData = IrLowering.collectIrClassData(classData, write, read);
-            final byte[] bytes = IrEmitter.buildClass(classDesc, irData);
+            final byte[] bytes = IrEmitter.emit(classDesc, write, read, classData);
             if (DEBUG) dump(bytes); // Field count could be dynamically inferred or left at 0 for dumps
 
             final Lookup lookup = NetworkBufferTemplate.lookup().defineHiddenClassWithClassData(bytes, List.copyOf(classData), true);

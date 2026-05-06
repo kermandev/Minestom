@@ -1,18 +1,11 @@
 package net.minestom.server.network.ir;
+
 import net.minestom.server.network.NetworkBuffer;
 
 import java.util.List;
 import java.util.function.Function;
 
 public sealed interface Op {
-
-    record ReserveWrite(Value size, Local addressOut) implements Op {}
-
-    record ReserveRead(Value size, Local addressOut) implements Op {}
-
-    record AdvanceWriteIndex(Value amount) implements Op {}
-
-    record AdvanceReadIndex(Value amount) implements Op {}
 
     record Apply(Function<?, ?> function, Local in, Local out) implements Op {
     }
@@ -50,34 +43,28 @@ public sealed interface Op {
     record ReadExternal(NetworkBuffer.Type<?> type, Local out) implements Op {
     }
 
-    record WritePrimitive(PrimitiveKind kind, Value value, Local address) implements Op {
+    record WritePrimitive(PrimitiveKind kind, Value value) implements Op {
     }
 
-    record ReadPrimitive(PrimitiveKind kind, Local address, Local out) implements Op {
+    record ReadPrimitive(PrimitiveKind kind, Local out) implements Op {
     }
 
-    record WriteVarInt(Value value, Local address) implements Op {
+    record WriteVarInt(Value value) implements Op {
     }
 
-    record ReadVarInt(Local address, Local out) implements Op {
+    record ReadVarInt(Local out) implements Op {
     }
 
-    record WriteVarLong(Value value, Local address) implements Op {
+    record WriteVarLong(Value value) implements Op {
     }
 
-    record ReadVarLong(Local address, Local out) implements Op {
+    record ReadVarLong(Local out) implements Op {
     }
 
-    record WriteFixedBytes(Value value, Local address) implements Op {
+    record WriteFixedBytes(Value value) implements Op {
     }
 
-    record ReadFixedBytes(Value length, Local address, Local out) implements Op {
-    }
-
-    record WriteRun(RunIr run) implements Op {
-    }
-
-    record ReadRun(RunIr run) implements Op {
+    record ReadFixedBytes(Value length, Local out) implements Op {
     }
 
     record If(Value condition, List<Op> thenOps, List<Op> elseOps) implements Op {

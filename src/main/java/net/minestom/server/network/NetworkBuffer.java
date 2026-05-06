@@ -25,6 +25,7 @@ import org.jetbrains.annotations.UnknownNullability;
 
 import javax.crypto.Cipher;
 import java.io.IOException;
+import java.lang.classfile.TypeKind;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SocketChannel;
 import java.security.PublicKey;
@@ -194,7 +195,7 @@ public sealed interface NetworkBuffer permits NetworkBufferImpl {
         }
 
         default Value lowerRead(IrReadBuilder builder) {
-            Local out = new Local(new LocalType.Reference(Object.class)); // T.class
+            Local out = new Local(new LocalType.Kind(TypeKind.REFERENCE)); // T.class
             builder.push(new Op.ReadExternal(this, out));
             return new Value.LocalValue(out);
         }

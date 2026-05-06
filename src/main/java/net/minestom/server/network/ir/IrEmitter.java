@@ -4,28 +4,19 @@ import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.utils.Unit;
 import org.jetbrains.annotations.Nullable;
 
-import java.lang.classfile.ClassBuilder;
-import java.lang.classfile.ClassFile;
-import java.lang.classfile.CodeBuilder;
-import java.lang.classfile.Label;
-import java.lang.classfile.TypeKind;
+import java.lang.classfile.*;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.ConstantDesc;
 import java.lang.constant.ConstantDescs;
 import java.lang.constant.MethodTypeDesc;
-import java.util.Arrays;
-import java.util.IdentityHashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
 
-import static net.minestom.server.network.ir.IrMetadata.*;
-import static net.minestom.server.network.ir.IrCompiler.*;
+import static net.minestom.server.network.ir.IrCompiler.constructorInterface;
 
 final class IrEmitter {
-    private IrEmitter() {}
-
     static final ClassDesc CD_OBJECT = ConstantDescs.CD_Object;
-    static final ClassDesc CD_OBJECT_ARRAY = ClassDesc.ofDescriptor("[Ljava/lang/Object;");
+    static final ClassDesc CD_OBJECT_ARRAY = CD_OBJECT.arrayType();
     static final ClassDesc CD_STRING = ConstantDescs.CD_String;
     static final ClassDesc CD_INT = ConstantDescs.CD_int;
     static final ClassDesc CD_LONG = ConstantDescs.CD_long;
@@ -65,14 +56,10 @@ final class IrEmitter {
     static final ClassDesc CD_EITHER_LEFT = CD_EITHER.nested("Left");
     static final ClassDesc CD_EITHER_RIGHT = CD_EITHER.nested("Right");
 
-    static final String READ = "read";
-    static final String WRITE = "write";
-
     static final MethodTypeDesc MT_VOID = MethodTypeDesc.of(CD_VOID);
     static final MethodTypeDesc MT_LOOKUP = MethodTypeDesc.of(CD_METHOD_HANDLES_LOOKUP);
     static final MethodTypeDesc MT_CLASS_DATA_AT = MethodTypeDesc.of(CD_OBJECT, CD_METHOD_HANDLES_LOOKUP, CD_STRING, ConstantDescs.CD_Class, CD_INT);
     static final MethodTypeDesc MT_READ_OBJECT = MethodTypeDesc.of(CD_OBJECT, CD_NETWORK_BUFFER);
-    static final MethodTypeDesc MT_TO_MAP = MethodTypeDesc.of(CD_MAP, CD_OBJECT_ARRAY, CD_OBJECT_ARRAY, CD_INT);
     static final MethodTypeDesc MT_WRITE_OBJECT = MethodTypeDesc.of(CD_VOID, CD_NETWORK_BUFFER, CD_OBJECT);
     static final MethodTypeDesc MT_RESERVE = MethodTypeDesc.of(CD_LONG, CD_LONG);
     static final MethodTypeDesc MT_FUNCTION_APPLY = MethodTypeDesc.of(CD_OBJECT, CD_OBJECT);
@@ -110,12 +97,24 @@ final class IrEmitter {
     static final MethodTypeDesc MT_GET_DOUBLE = MethodTypeDesc.of(CD_DOUBLE, CD_LONG);
     static final MethodTypeDesc MT_PUT_BYTES = MethodTypeDesc.of(CD_VOID, CD_LONG, CD_BYTE_ARRAY, CD_INT, CD_INT);
     static final MethodTypeDesc MT_GET_BYTES = MethodTypeDesc.of(CD_VOID, CD_LONG, CD_BYTE_ARRAY, CD_INT, CD_INT);
+    static final MethodTypeDesc MT_TO_MAP = MethodTypeDesc.of(CD_MAP, CD_OBJECT_ARRAY, CD_OBJECT_ARRAY, CD_INT);
 
     static final int FIELD_FLAGS = ClassFile.ACC_PRIVATE | ClassFile.ACC_STATIC | ClassFile.ACC_FINAL | ClassFile.ACC_SYNTHETIC;
     static final int METHOD_FLAGS = ClassFile.ACC_PUBLIC | ClassFile.ACC_FINAL | ClassFile.ACC_SYNTHETIC;
     static final int CLASS_FLAGS = ClassFile.ACC_FINAL | ClassFile.ACC_SUPER | ClassFile.ACC_SYNTHETIC;
 
-    static byte[] buildClass(ClassDesc classDesc, IrClassData data) {
+    static final String READ = "read";
+    static final String WRITE = "write";
+
+    private IrEmitter() {
+    }
+
+    static byte[] emit(ClassDesc classDesc, ProgramIr write, ProgramIr read, List<Object> classData) {
+        IrClassData data = collectIrClassData(classData, write, read);
+        return buildClass(classDesc, data);
+    }
+
+    private static byte[] buildClass(ClassDesc classDesc, IrClassData data) {
         return ClassFile.of().build(classDesc, classBuilder -> {
             classBuilder.withFlags(CLASS_FLAGS)
                     .withSuperclass(CD_OBJECT)
@@ -173,8 +172,9 @@ final class IrEmitter {
 
     private static void buildWrite(CodeBuilder codeBuilder, ClassDesc classDesc, IrClassData data, ProgramIr program, int objectSlot) {
         final int directSlot = codeBuilder.allocateLocal(TypeKind.REFERENCE);
+        final int indexSlot = codeBuilder.allocateLocal(TypeKind.LONG);
         emitDirectBuffer(codeBuilder, directSlot);
-        final EmitContext context = new EmitContext(classDesc, data, directSlot, new IdentityHashMap<>());
+        final EmitContext context = new EmitContext(classDesc, data, directSlot, indexSlot, new IdentityHashMap<>(), true);
         if (program.initialSource() != null) {
             context.locals().put(program.initialSource(), objectSlot);
         }
@@ -184,219 +184,105 @@ final class IrEmitter {
 
     private static void buildRead(CodeBuilder codeBuilder, ClassDesc classDesc, IrClassData data, ProgramIr program) {
         final int directSlot = codeBuilder.allocateLocal(TypeKind.REFERENCE);
+        final int indexSlot = codeBuilder.allocateLocal(TypeKind.LONG);
         emitDirectBuffer(codeBuilder, directSlot);
-        final EmitContext context = new EmitContext(classDesc, data, directSlot, new IdentityHashMap<>());
+        final EmitContext context = new EmitContext(classDesc, data, directSlot, indexSlot, new IdentityHashMap<>(), false);
         emitProgram(codeBuilder, context, program);
     }
 
     private static void emitProgram(CodeBuilder codeBuilder, EmitContext context, ProgramIr program) {
-        for (Op programOp : program.ops()) {
-            emitOp(codeBuilder, context, programOp);
+        for (RunIr run : program.runs()) {
+            emitRun(codeBuilder, context, run);
         }
     }
 
-    private static void emitOp(CodeBuilder codeBuilder, EmitContext context, Op op) {
-        switch (op) {
-            case Op.Apply apply -> {
-                codeBuilder.getstatic(context.classDesc(), transformFunctionName(context.data(), apply.function()), CD_FUNCTION);
-                emitLoadLocal(codeBuilder, context, apply.in());
-                codeBuilder.invokeinterface(CD_FUNCTION, "apply", MT_FUNCTION_APPLY);
-                emitStoreLocal(codeBuilder, context, apply.out());
+    private static void emitRun(CodeBuilder codeBuilder, EmitContext context, RunIr run) {
+        codeBuilder.aload(context.directSlot());
+        emitLongValue(codeBuilder, context, run.size());
+        if (context.write()) {
+            codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "reserveWrite", MT_RESERVE);
+        } else {
+            codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "reserveRead", MT_RESERVE);
+        }
+        codeBuilder.lstore(context.indexSlot());
+
+        for (RunItem item : run.items()) {
+            emitItem(codeBuilder, context, item);
+        }
+    }
+
+    private static void emitItem(CodeBuilder codeBuilder, EmitContext context, RunItem item) {
+        switch (item) {
+            case RunItem.Put put -> {
+                codeBuilder.aload(context.directSlot());
+                emitLongValue(codeBuilder, context, put.offset());
+                emitValue(codeBuilder, context, put.value());
+                emitStoreKindWrite(codeBuilder, put.kind(), put.value());
             }
-            case Op.Cast cast -> {
-                emitLoadLocal(codeBuilder, context, cast.in());
-                codeBuilder.checkcast(classDesc(cast.targetClass()));
-                emitStoreLocal(codeBuilder, context, cast.out());
+            case RunItem.Get get -> {
+                codeBuilder.aload(context.directSlot());
+                emitLongValue(codeBuilder, context, get.offset());
+                emitStoreKindRead(codeBuilder, get.kind(), get.out());
+                emitStoreLocal(codeBuilder, context, get.out());
             }
-            case Op.Unbox unbox -> {
-                emitLoadLocal(codeBuilder, context, unbox.in());
-                emitUnboxedTypeIrValue(codeBuilder, unbox.kind());
-                emitStoreLocal(codeBuilder, context, unbox.out());
+            case RunItem.PutVarInt putVarInt -> {
+                codeBuilder.aload(context.directSlot());
+                emitLongValue(codeBuilder, context, putVarInt.offset());
+                emitIntValue(codeBuilder, context, putVarInt.value());
+                codeBuilder.invokestatic(CD_NETWORK_BUFFER_TYPE_IMPL, "writeVarIntUnchecked", MT_WRITE_VAR_INT_UNCHECKED, true);
+                codeBuilder.pop2();
             }
-            case Op.Box box -> {
-                emitLoadLocal(codeBuilder, context, box.in());
-                emitBoxedTypeIrValue(codeBuilder, box.kind());
-                emitStoreLocal(codeBuilder, context, box.out());
-            }
-            case Op.StringToBytes stringToBytes -> {
-                emitLoadLocal(codeBuilder, context, stringToBytes.in());
-                codeBuilder.checkcast(CD_STRING);
-                codeBuilder.getstatic(CD_STANDARD_CHARSETS, "UTF_8", CD_CHARSET);
-                codeBuilder.invokevirtual(CD_STRING, "getBytes", MethodTypeDesc.of(CD_BYTE_ARRAY, CD_CHARSET));
-                emitStoreLocal(codeBuilder, context, stringToBytes.out());
-            }
-            case Op.BytesToString bytesToString -> {
-                codeBuilder.new_(CD_STRING);
-                codeBuilder.dup();
-                emitLoadLocal(codeBuilder, context, bytesToString.in());
-                codeBuilder.checkcast(CD_BYTE_ARRAY);
-                codeBuilder.getstatic(CD_STANDARD_CHARSETS, "UTF_8", CD_CHARSET);
-                codeBuilder.invokespecial(CD_STRING, ConstantDescs.INIT_NAME, MethodTypeDesc.of(CD_VOID, CD_BYTE_ARRAY, CD_CHARSET));
-                emitStoreLocal(codeBuilder, context, bytesToString.out());
-            }
-            case Op.EitherLeft eitherLeft -> {
-                emitLoadLocal(codeBuilder, context, eitherLeft.in());
-                codeBuilder.invokestatic(CD_EITHER, "left", MethodTypeDesc.of(CD_EITHER, CD_OBJECT), true);
-                emitStoreLocal(codeBuilder, context, eitherLeft.out());
-            }
-            case Op.EitherRight eitherRight -> {
-                emitLoadLocal(codeBuilder, context, eitherRight.in());
-                codeBuilder.invokestatic(CD_EITHER, "right", MethodTypeDesc.of(CD_EITHER, CD_OBJECT), true);
-                emitStoreLocal(codeBuilder, context, eitherRight.out());
-            }
-            case Op.Store store -> {
-                emitValue(codeBuilder, context, store.value());
-                emitStoreLocal(codeBuilder, context, store.out());
-            }
-            case Op.Check check -> {
-                final Label endLabel = codeBuilder.newLabel();
-                emitValue(codeBuilder, context, check.condition());
-                codeBuilder.ifne(endLabel);
-                codeBuilder.new_(classDesc(IllegalArgumentException.class))
-                        .dup()
-                        .ldc(check.message())
-                        .invokespecial(classDesc(IllegalArgumentException.class), ConstantDescs.INIT_NAME, MethodTypeDesc.of(CD_VOID, CD_STRING))
-                        .athrow()
-                        .labelBinding(endLabel);
-            }
-            case Op.WriteExternal writeExternal -> {
-                codeBuilder.getstatic(context.classDesc(), typeFieldName(context.data(), writeExternal.type()), CD_TYPE)
-                        .aload(1);
-                emitValue(codeBuilder, context, writeExternal.value());
-                codeBuilder.invokeinterface(CD_TYPE, WRITE, MT_WRITE_OBJECT);
-            }
-            case Op.ReadExternal readExternal -> {
-                codeBuilder.getstatic(context.classDesc(), typeFieldName(context.data(), readExternal.type()), CD_TYPE)
-                        .aload(1)
-                        .invokeinterface(CD_TYPE, READ, MT_READ_OBJECT);
-                emitStoreLocal(codeBuilder, context, readExternal.out());
-            }
-            case Op.WritePrimitive writePrimitive -> {
-                final int indexSlot = codeBuilder.allocateLocal(TypeKind.LONG);
-                codeBuilder.aload(context.directSlot())
-                        .loadConstant((long) writePrimitive.kind().storeKind().byteSize())
-                        .invokevirtual(CD_NETWORK_BUFFER_IMPL, "reserveWrite", MT_RESERVE)
-                        .lstore(indexSlot);
-                codeBuilder.aload(context.directSlot())
-                        .lload(indexSlot);
-                emitValue(codeBuilder, context, writePrimitive.value());
-                emitStoreKindWrite(codeBuilder, writePrimitive.kind().storeKind(), writePrimitive.value());
-            }
-            case Op.ReadPrimitive readPrimitive -> {
-                final int indexSlot = codeBuilder.allocateLocal(TypeKind.LONG);
-                codeBuilder.aload(context.directSlot())
-                        .loadConstant((long) readPrimitive.kind().storeKind().byteSize())
-                        .invokevirtual(CD_NETWORK_BUFFER_IMPL, "reserveRead", MT_RESERVE)
-                        .lstore(indexSlot);
-                codeBuilder.aload(context.directSlot())
-                        .lload(indexSlot);
-                emitStoreKindRead(codeBuilder, readPrimitive.kind().storeKind(), readPrimitive.out());
-                emitStoreLocal(codeBuilder, context, readPrimitive.out());
-            }
-            case Op.ReadVarInt readVarInt -> {
+            case RunItem.GetVarInt getVarInt -> {
                 codeBuilder.aload(context.directSlot())
                         .invokestatic(CD_NETWORK_BUFFER_TYPE_IMPL, "readVarInt", MT_READ_VAR_INT, true);
-                emitStoreLocal(codeBuilder, context, readVarInt.out());
+                emitStoreLocal(codeBuilder, context, getVarInt.out());
             }
-            case Op.WriteVarInt writeVarInt -> {
-                final int intSlot = codeBuilder.allocateLocal(TypeKind.INT);
-                final int sizeSlot = codeBuilder.allocateLocal(TypeKind.INT);
-                final int indexSlot = codeBuilder.allocateLocal(TypeKind.LONG);
-                emitIntValue(codeBuilder, context, writeVarInt.value());
-                codeBuilder.istore(intSlot)
-                        .iload(intSlot)
-                        .invokestatic(CD_NETWORK_BUFFER_TYPE_IMPL, "varIntSize", MT_VAR_INT_SIZE, true)
-                        .istore(sizeSlot)
-                        .aload(context.directSlot())
-                        .iload(sizeSlot)
-                        .i2l()
-                        .invokevirtual(CD_NETWORK_BUFFER_IMPL, "reserveWrite", MT_RESERVE)
-                        .lstore(indexSlot)
-                        .aload(context.directSlot())
-                        .lload(indexSlot)
-                        .iload(intSlot)
-                        .invokestatic(CD_NETWORK_BUFFER_TYPE_IMPL, "writeVarIntUnchecked", MT_WRITE_VAR_INT_UNCHECKED, true);
+            case RunItem.PutVarLong putVarLong -> {
+                codeBuilder.aload(context.directSlot());
+                emitLongValue(codeBuilder, context, putVarLong.offset());
+                emitLongValue(codeBuilder, context, putVarLong.value());
+                codeBuilder.invokestatic(CD_NETWORK_BUFFER_TYPE_IMPL, "writeVarLongUnchecked", MT_WRITE_VAR_LONG_UNCHECKED, true);
+                codeBuilder.pop2();
             }
-            case Op.WriteVarLong writeVarLong -> {
-                final int longSlot = codeBuilder.allocateLocal(TypeKind.LONG);
-                final int sizeSlot = codeBuilder.allocateLocal(TypeKind.INT);
-                final int indexSlot = codeBuilder.allocateLocal(TypeKind.LONG);
-                emitValue(codeBuilder, context, writeVarLong.value());
-                codeBuilder.lstore(longSlot)
-                        .lload(longSlot)
-                        .invokestatic(CD_NETWORK_BUFFER_TYPE_IMPL, "varLongSize", MT_VAR_LONG_SIZE, true)
-                        .istore(sizeSlot)
-                        .aload(context.directSlot())
-                        .iload(sizeSlot)
-                        .i2l()
-                        .invokevirtual(CD_NETWORK_BUFFER_IMPL, "reserveWrite", MT_RESERVE)
-                        .lstore(indexSlot)
-                        .aload(context.directSlot())
-                        .lload(indexSlot)
-                        .lload(longSlot)
-                        .invokestatic(CD_NETWORK_BUFFER_TYPE_IMPL, "writeVarLongUnchecked", MT_WRITE_VAR_LONG_UNCHECKED, true);
-            }
-            case Op.ReadVarLong readVarLong -> {
+            case RunItem.GetVarLong getVarLong -> {
                 codeBuilder.aload(context.directSlot())
                         .invokestatic(CD_NETWORK_BUFFER_TYPE_IMPL, "readVarLong", MT_READ_VAR_LONG, true);
-                emitStoreLocal(codeBuilder, context, readVarLong.out());
+                emitStoreLocal(codeBuilder, context, getVarLong.out());
             }
-            case Op.WriteFixedBytes writeFixedBytes -> {
-                final int indexSlot = codeBuilder.allocateLocal(TypeKind.LONG);
-                final int arraySlot = codeBuilder.allocateLocal(TypeKind.REFERENCE);
+            case RunItem.PutBytes putBytes -> {
+                codeBuilder.aload(context.directSlot());
+                emitLongValue(codeBuilder, context, putBytes.offset());
+                emitValue(codeBuilder, context, putBytes.byteArray());
+                codeBuilder.iconst_0();
+                emitIntValue(codeBuilder, context, putBytes.length());
+                codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "_putBytesUnchecked", MT_PUT_BYTES);
+            }
+            case RunItem.GetBytes getBytes -> {
                 final int lengthSlot = codeBuilder.allocateLocal(TypeKind.INT);
-                emitValue(codeBuilder, context, writeFixedBytes.value());
-                codeBuilder.checkcast(CD_BYTE_ARRAY)
-                        .astore(arraySlot)
-                        .aload(arraySlot)
-                        .arraylength()
+                emitIntValue(codeBuilder, context, getBytes.length());
+                codeBuilder.dup()
                         .istore(lengthSlot)
-                        .aload(context.directSlot())
-                        .iload(lengthSlot)
-                        .i2l()
-                        .invokevirtual(CD_NETWORK_BUFFER_IMPL, "reserveWrite", MT_RESERVE)
-                        .lstore(indexSlot)
-                        .aload(context.directSlot())
-                        .lload(indexSlot)
-                        .aload(arraySlot)
-                        .iconst_0()
-                        .iload(lengthSlot)
-                        .invokevirtual(CD_NETWORK_BUFFER_IMPL, "_putBytesUnchecked", MT_PUT_BYTES);
-            }
-            case Op.ReadFixedBytes readFixedBytes -> {
-                final int indexSlot = codeBuilder.allocateLocal(TypeKind.LONG);
-                final int lengthSlot = codeBuilder.allocateLocal(TypeKind.INT);
-                emitIntValue(codeBuilder, context, readFixedBytes.length());
-                codeBuilder.istore(lengthSlot)
-                        .aload(context.directSlot())
-                        .iload(lengthSlot)
-                        .i2l()
-                        .invokevirtual(CD_NETWORK_BUFFER_IMPL, "reserveRead", MT_RESERVE)
-                        .lstore(indexSlot)
-                        .iload(lengthSlot)
                         .newarray(TypeKind.BYTE);
-                emitStoreLocal(codeBuilder, context, readFixedBytes.out());
-                codeBuilder.aload(context.directSlot())
-                        .lload(indexSlot);
-                emitLoadLocal(codeBuilder, context, readFixedBytes.out());
+                emitStoreLocal(codeBuilder, context, getBytes.byteArray());
+                codeBuilder.aload(context.directSlot());
+                emitLongValue(codeBuilder, context, getBytes.offset());
+                emitLoadLocal(codeBuilder, context, getBytes.byteArray());
                 codeBuilder.iconst_0()
                         .iload(lengthSlot)
                         .invokevirtual(CD_NETWORK_BUFFER_IMPL, "_getBytesUnchecked", MT_GET_BYTES);
             }
-            case Op.WriteRun writeRun -> emitWriteRun(codeBuilder, context, writeRun.run());
-            case Op.ReadRun readRun -> emitReadRun(codeBuilder, context, readRun.run());
-            case Op.If branch -> {
+            case RunItem.If branch -> {
                 final Label elseLabel = codeBuilder.newLabel();
                 final Label endLabel = codeBuilder.newLabel();
                 emitValue(codeBuilder, context, branch.condition());
                 codeBuilder.ifeq(elseLabel);
-                for (Op childOp : branch.thenOps()) emitOp(codeBuilder, context, childOp);
+                for (RunIr child : branch.thenRuns()) emitRun(codeBuilder, context, child);
                 codeBuilder.goto_(endLabel);
                 codeBuilder.labelBinding(elseLabel);
-                for (Op childOp : branch.elseOps()) emitOp(codeBuilder, context, childOp);
+                for (RunIr child : branch.elseRuns()) emitRun(codeBuilder, context, child);
                 codeBuilder.labelBinding(endLabel);
             }
-            case Op.ForEach loop -> {
+            case RunItem.ForEach loop -> {
                 final Label startLabel = codeBuilder.newLabel();
                 final Label endLabel = codeBuilder.newLabel();
 
@@ -415,12 +301,12 @@ final class IrEmitter {
                 codeBuilder.invokeinterface(CD_ITERATOR, "next", MethodTypeDesc.of(CD_OBJECT));
                 emitStoreLocal(codeBuilder, context, loop.element());
 
-                for (Op programOp : loop.body()) emitOp(codeBuilder, context, programOp);
+                for (RunIr child : loop.body()) emitRun(codeBuilder, context, child);
 
                 codeBuilder.goto_(startLabel);
                 codeBuilder.labelBinding(endLabel);
             }
-            case Op.ForIndex loop -> {
+            case RunItem.ForIndex loop -> {
                 final Label startLabel = codeBuilder.newLabel();
                 final Label endLabel = codeBuilder.newLabel();
                 final int loopIndexSlot = localSlot(codeBuilder, context, loop.index());
@@ -433,51 +319,125 @@ final class IrEmitter {
                 emitIntValue(codeBuilder, context, loop.end());
                 codeBuilder.if_icmpge(endLabel);
 
-                for (Op programOp : loop.body()) emitOp(codeBuilder, context, programOp);
+                for (RunIr child : loop.body()) emitRun(codeBuilder, context, child);
 
                 codeBuilder.iinc(loopIndexSlot, 1);
                 codeBuilder.goto_(startLabel);
                 codeBuilder.labelBinding(endLabel);
             }
-            case Op.ElementAt elementAt -> {
+            case RunItem.Apply apply -> {
+                codeBuilder.getstatic(context.classDesc(), transformFunctionName(context.data(), apply.function()), CD_FUNCTION);
+                emitLoadLocal(codeBuilder, context, apply.in());
+                codeBuilder.invokeinterface(CD_FUNCTION, "apply", MT_FUNCTION_APPLY);
+                emitStoreLocal(codeBuilder, context, apply.out());
+            }
+            case RunItem.Cast cast -> {
+                emitLoadLocal(codeBuilder, context, cast.in());
+                codeBuilder.checkcast(classDesc(cast.targetClass()));
+                emitStoreLocal(codeBuilder, context, cast.out());
+            }
+            case RunItem.Unbox unbox -> {
+                emitLoadLocal(codeBuilder, context, unbox.in());
+                emitUnboxedTypeIrValue(codeBuilder, unbox.kind());
+                emitStoreLocal(codeBuilder, context, unbox.out());
+            }
+            case RunItem.Box box -> {
+                emitLoadLocal(codeBuilder, context, box.in());
+                emitBoxedTypeIrValue(codeBuilder, box.kind());
+                emitStoreLocal(codeBuilder, context, box.out());
+            }
+            case RunItem.StringToBytes stringToBytes -> {
+                emitLoadLocal(codeBuilder, context, stringToBytes.in());
+                codeBuilder.checkcast(CD_STRING);
+                codeBuilder.getstatic(CD_STANDARD_CHARSETS, "UTF_8", CD_CHARSET);
+                codeBuilder.invokevirtual(CD_STRING, "getBytes", MethodTypeDesc.of(CD_BYTE_ARRAY, CD_CHARSET));
+                emitStoreLocal(codeBuilder, context, stringToBytes.out());
+            }
+            case RunItem.BytesToString bytesToString -> {
+                codeBuilder.new_(CD_STRING);
+                codeBuilder.dup();
+                emitLoadLocal(codeBuilder, context, bytesToString.in());
+                codeBuilder.checkcast(CD_BYTE_ARRAY);
+                codeBuilder.getstatic(CD_STANDARD_CHARSETS, "UTF_8", CD_CHARSET);
+                codeBuilder.invokespecial(CD_STRING, ConstantDescs.INIT_NAME, MethodTypeDesc.of(CD_VOID, CD_BYTE_ARRAY, CD_CHARSET));
+                emitStoreLocal(codeBuilder, context, bytesToString.out());
+            }
+            case RunItem.EitherLeft eitherLeft -> {
+                emitLoadLocal(codeBuilder, context, eitherLeft.in());
+                codeBuilder.invokestatic(CD_EITHER, "left", MethodTypeDesc.of(CD_EITHER, CD_OBJECT), true);
+                emitStoreLocal(codeBuilder, context, eitherLeft.out());
+            }
+            case RunItem.EitherRight eitherRight -> {
+                emitLoadLocal(codeBuilder, context, eitherRight.in());
+                codeBuilder.invokestatic(CD_EITHER, "right", MethodTypeDesc.of(CD_EITHER, CD_OBJECT), true);
+                emitStoreLocal(codeBuilder, context, eitherRight.out());
+            }
+            case RunItem.Store store -> {
+                emitValue(codeBuilder, context, store.value());
+                emitStoreLocal(codeBuilder, context, store.out());
+            }
+            case RunItem.Check check -> {
+                final Label endLabel = codeBuilder.newLabel();
+                emitValue(codeBuilder, context, check.condition());
+                codeBuilder.ifne(endLabel);
+                codeBuilder.new_(classDesc(IllegalArgumentException.class))
+                        .dup()
+                        .ldc(check.message())
+                        .invokespecial(classDesc(IllegalArgumentException.class), ConstantDescs.INIT_NAME, MethodTypeDesc.of(CD_VOID, CD_STRING))
+                        .athrow()
+                        .labelBinding(endLabel);
+            }
+            case RunItem.WriteExternal writeExternal -> {
+                codeBuilder.getstatic(context.classDesc(), typeFieldName(context.data(), writeExternal.type()), CD_TYPE)
+                        .aload(1);
+                emitValue(codeBuilder, context, writeExternal.value());
+                codeBuilder.invokeinterface(CD_TYPE, WRITE, MT_WRITE_OBJECT);
+            }
+            case RunItem.ReadExternal readExternal -> {
+                codeBuilder.getstatic(context.classDesc(), typeFieldName(context.data(), readExternal.type()), CD_TYPE)
+                        .aload(1)
+                        .invokeinterface(CD_TYPE, READ, MT_READ_OBJECT);
+                emitStoreLocal(codeBuilder, context, readExternal.out());
+            }
+            case RunItem.ElementAt elementAt -> {
                 emitValue(codeBuilder, context, elementAt.source());
                 codeBuilder.checkcast(CD_LIST);
                 emitIntValue(codeBuilder, context, elementAt.index());
                 codeBuilder.invokeinterface(CD_LIST, "get", MethodTypeDesc.of(CD_OBJECT, CD_INT));
                 emitStoreLocal(codeBuilder, context, elementAt.out());
             }
-            case Op.MapEntrySet mapEntrySet -> {
+            case RunItem.MapEntrySet mapEntrySet -> {
                 emitValue(codeBuilder, context, mapEntrySet.map());
                 codeBuilder.checkcast(CD_MAP);
                 codeBuilder.invokeinterface(CD_MAP, "entrySet", MethodTypeDesc.of(CD_SET));
                 emitStoreLocal(codeBuilder, context, mapEntrySet.out());
             }
-            case Op.ArrayCreate arrayCreate -> {
+            case RunItem.ArrayCreate arrayCreate -> {
                 emitIntValue(codeBuilder, context, arrayCreate.size());
                 codeBuilder.anewarray(CD_OBJECT);
                 emitStoreLocal(codeBuilder, context, arrayCreate.out());
             }
-            case Op.ArraySet arraySet -> {
+            case RunItem.ArraySet arraySet -> {
                 emitLoadLocal(codeBuilder, context, arraySet.array());
                 codeBuilder.checkcast(CD_OBJECT_ARRAY);
                 emitIntValue(codeBuilder, context, arraySet.index());
                 emitValue(codeBuilder, context, arraySet.value());
                 codeBuilder.aastore();
             }
-            case Op.ResultElementSet resultElementSet -> {
+            case RunItem.ResultElementSet resultElementSet -> {
                 emitValue(codeBuilder, context, resultElementSet.result());
                 codeBuilder.checkcast(CD_OBJECT_ARRAY);
                 emitIntValue(codeBuilder, context, resultElementSet.index());
                 emitValue(codeBuilder, context, resultElementSet.value());
                 codeBuilder.aastore();
             }
-            case Op.ListFinish listFinish -> {
+            case RunItem.ListFinish listFinish -> {
                 emitLoadLocal(codeBuilder, context, listFinish.array());
                 codeBuilder.checkcast(CD_OBJECT_ARRAY);
                 codeBuilder.invokestatic(CD_LIST, "of", MethodTypeDesc.of(CD_LIST, CD_OBJECT_ARRAY), true);
                 emitStoreLocal(codeBuilder, context, listFinish.out());
             }
-            case Op.MapFinish mapFinish -> {
+            case RunItem.MapFinish mapFinish -> {
                 emitLoadLocal(codeBuilder, context, mapFinish.keys());
                 codeBuilder.checkcast(CD_OBJECT_ARRAY);
                 emitLoadLocal(codeBuilder, context, mapFinish.values());
@@ -486,19 +446,19 @@ final class IrEmitter {
                 codeBuilder.invokestatic(CD_ARRAY_UTILS, "toMap", MT_TO_MAP);
                 emitStoreLocal(codeBuilder, context, mapFinish.out());
             }
-            case Op.MapEntryKey mapEntryKey -> {
+            case RunItem.MapEntryKey mapEntryKey -> {
                 emitLoadLocal(codeBuilder, context, mapEntryKey.entry());
                 codeBuilder.checkcast(CD_MAP_ENTRY);
                 codeBuilder.invokeinterface(CD_MAP_ENTRY, "getKey", MethodTypeDesc.of(CD_OBJECT));
                 emitStoreLocal(codeBuilder, context, mapEntryKey.out());
             }
-            case Op.MapEntryValue mapEntryValue -> {
+            case RunItem.MapEntryValue mapEntryValue -> {
                 emitLoadLocal(codeBuilder, context, mapEntryValue.entry());
                 codeBuilder.checkcast(CD_MAP_ENTRY);
                 codeBuilder.invokeinterface(CD_MAP_ENTRY, "getValue", MethodTypeDesc.of(CD_OBJECT));
                 emitStoreLocal(codeBuilder, context, mapEntryValue.out());
             }
-            case Op.Construct construct -> {
+            case RunItem.Construct construct -> {
                 final ClassDesc constructorType = constructorInterface(construct.args().size());
                 codeBuilder.getstatic(context.classDesc(), ctorFieldName(context.data(), construct.factory()), constructorType);
                 for (Value arg : construct.args()) {
@@ -507,307 +467,18 @@ final class IrEmitter {
                 codeBuilder.invokeinterface(constructorType, "apply", constructorApplyType(construct.args().size()));
                 emitStoreLocal(codeBuilder, context, construct.out());
             }
-            case Op.Return ret -> {
+            case RunItem.Return ret -> {
                 emitValue(codeBuilder, context, ret.value());
                 codeBuilder.areturn();
             }
-            case Op.ReserveWrite reserve -> {
-                codeBuilder.aload(context.directSlot());
-                emitLongValue(codeBuilder, context, reserve.size());
-                codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "reserveWrite", MT_RESERVE);
-                emitStoreLocal(codeBuilder, context, reserve.addressOut());
-            }
-            case Op.ReserveRead reserve -> {
-                codeBuilder.aload(context.directSlot());
-                emitLongValue(codeBuilder, context, reserve.size());
-                codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "reserveRead", MT_RESERVE);
-                emitStoreLocal(codeBuilder, context, reserve.addressOut());
-            }
-            case Op.AdvanceWriteIndex advance -> {
-                codeBuilder.aload(1);
-                emitLongValue(codeBuilder, context, advance.amount());
-                codeBuilder.invokeinterface(CD_NETWORK_BUFFER, "advanceWrite", MethodTypeDesc.of(CD_NETWORK_BUFFER, CD_LONG));
-                codeBuilder.pop();
-            }
-            case Op.AdvanceReadIndex advance -> {
-                codeBuilder.aload(1);
-                emitLongValue(codeBuilder, context, advance.amount());
-                codeBuilder.invokeinterface(CD_NETWORK_BUFFER, "advanceRead", MethodTypeDesc.of(CD_NETWORK_BUFFER, CD_LONG));
-                codeBuilder.pop();
-            }
         }
-    }
-
-    private static void emitWriteRun(CodeBuilder codeBuilder, EmitContext context, RunIr run) {
-        final int indexSlot = codeBuilder.allocateLocal(TypeKind.LONG);
-        codeBuilder.aload(context.directSlot());
-        emitLongValue(codeBuilder, context, run.size());
-        codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "reserveWrite", MT_RESERVE)
-                .lstore(indexSlot);
-
-        for (RunItem item : run.items()) {
-            if (item instanceof RunItem.ForIndex loop) {
-                emitLoopWrite(codeBuilder, context, indexSlot, loop);
-                continue;
-            }
-
-            codeBuilder.aload(context.directSlot());
-            emitOffsetValue(codeBuilder, context, indexSlot, itemOffset(item));
-            switch (item) {
-                case RunItem.Put put -> {
-                    emitValue(codeBuilder, context, put.value());
-                    emitStoreKindWrite(codeBuilder, put.kind(), put.value());
-                }
-                case RunItem.PutVarInt putVarInt -> {
-                    emitIntValue(codeBuilder, context, putVarInt.value());
-                    codeBuilder.invokestatic(CD_NETWORK_BUFFER_TYPE_IMPL, "writeVarIntUnchecked", MT_WRITE_VAR_INT_UNCHECKED, true);
-                    codeBuilder.pop2();
-                }
-                case RunItem.PutVarLong putVarLong -> {
-                    emitLongValue(codeBuilder, context, putVarLong.value());
-                    codeBuilder.invokestatic(CD_NETWORK_BUFFER_TYPE_IMPL, "writeVarLongUnchecked", MT_WRITE_VAR_LONG_UNCHECKED, true);
-                    codeBuilder.pop2();
-                }
-                case RunItem.PutBytes putBytes -> {
-                    emitValue(codeBuilder, context, putBytes.byteArray());
-                    codeBuilder.iconst_0();
-                    emitIntValue(codeBuilder, context, putBytes.length());
-                    codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "_putBytesUnchecked", MT_PUT_BYTES);
-                }
-                default -> throw new UnsupportedOperationException("Unsupported run item: " + item);
-            }
-        }
-    }
-
-    private static void emitReadRun(CodeBuilder codeBuilder, EmitContext context, RunIr run) {
-        final int indexSlot = codeBuilder.allocateLocal(TypeKind.LONG);
-        codeBuilder.aload(context.directSlot());
-        emitLongValue(codeBuilder, context, run.size());
-        codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "reserveRead", MT_RESERVE)
-                .lstore(indexSlot);
-
-        for (RunItem item : run.items()) {
-            if (item instanceof RunItem.ForIndex loop) {
-                emitLoopRead(codeBuilder, context, indexSlot, loop);
-                continue;
-            }
-
-            codeBuilder.aload(context.directSlot());
-            emitOffsetValue(codeBuilder, context, indexSlot, itemOffset(item));
-            switch (item) {
-                case RunItem.Get get -> {
-                    emitStoreKindRead(codeBuilder, get.kind(), get.out());
-                    emitStoreLocal(codeBuilder, context, get.out());
-                }
-                case RunItem.GetBytes getBytes -> {
-                    final int lengthSlot = codeBuilder.allocateLocal(TypeKind.INT);
-                    emitIntValue(codeBuilder, context, getBytes.length());
-                    codeBuilder.dup()
-                            .istore(lengthSlot)
-                            .newarray(TypeKind.BYTE);
-                    emitStoreLocal(codeBuilder, context, getBytes.byteArray());
-                    emitLoadLocal(codeBuilder, context, getBytes.byteArray());
-                    codeBuilder.iconst_0()
-                            .iload(lengthSlot)
-                            .invokevirtual(CD_NETWORK_BUFFER_IMPL, "_getBytesUnchecked", MT_GET_BYTES);
-                }
-                default -> throw new UnsupportedOperationException("Unsupported run item: " + item);
-            }
-        }
-    }
-
-    private static void emitLoopWrite(CodeBuilder codeBuilder, EmitContext context, int indexSlot, RunItem.ForIndex loop) {
-        final Label startLabel = codeBuilder.newLabel();
-        final Label endLabel = codeBuilder.newLabel();
-        final int loopIndexSlot = localSlot(codeBuilder, context, loop.index());
-
-        emitIntValue(codeBuilder, context, loop.start());
-        codeBuilder.istore(loopIndexSlot);
-
-        codeBuilder.labelBinding(startLabel);
-        codeBuilder.iload(loopIndexSlot);
-        emitIntValue(codeBuilder, context, loop.end());
-        codeBuilder.if_icmpge(endLabel);
-
-        for (RunStep step : loop.body()) {
-            switch (step) {
-                case RunStep.ElementAt elementAt -> {
-                    emitValue(codeBuilder, context, elementAt.source());
-                    codeBuilder.checkcast(CD_LIST);
-                    emitIntValue(codeBuilder, context, elementAt.index());
-                    codeBuilder.invokeinterface(CD_LIST, "get", MethodTypeDesc.of(CD_OBJECT, CD_INT));
-                    emitStoreLocal(codeBuilder, context, elementAt.out());
-                }
-                case RunStep.Apply apply -> {
-                    codeBuilder.getstatic(context.classDesc(), transformFunctionName(context.data(), apply.function()), CD_FUNCTION);
-                    emitLoadLocal(codeBuilder, context, apply.in());
-                    codeBuilder.invokeinterface(CD_FUNCTION, "apply", MT_FUNCTION_APPLY);
-                    emitStoreLocal(codeBuilder, context, apply.out());
-                }
-                case RunStep.Cast cast -> {
-                    emitLoadLocal(codeBuilder, context, cast.in());
-                    codeBuilder.checkcast(classDesc(cast.targetClass()));
-                    emitStoreLocal(codeBuilder, context, cast.out());
-                }
-                case RunStep.Unbox unbox -> {
-                    emitLoadLocal(codeBuilder, context, unbox.in());
-                    final ClassDesc wrapper = unbox.kind().wrapperClass().describeConstable().orElseThrow();
-                    codeBuilder.checkcast(wrapper);
-                    emitUnboxedTypeIrValue(codeBuilder, unbox.kind());
-                    emitStoreLocal(codeBuilder, context, unbox.out());
-                }
-                case RunStep.Box box -> {
-                    emitLoadLocal(codeBuilder, context, box.in());
-                    emitBoxedTypeIrValue(codeBuilder, box.kind());
-                    emitStoreLocal(codeBuilder, context, box.out());
-                }
-                case RunStep.Put put -> {
-                    codeBuilder.aload(context.directSlot());
-                    emitOffsetValue(codeBuilder, context, indexSlot, put.offset());
-                    emitValue(codeBuilder, context, put.value());
-                    emitStoreKindWrite(codeBuilder, put.kind(), put.value());
-                }
-                case RunStep.PutVarInt putVarInt -> {
-                    codeBuilder.aload(context.directSlot());
-                    emitOffsetValue(codeBuilder, context, indexSlot, putVarInt.offset());
-                    emitIntValue(codeBuilder, context, putVarInt.value());
-                    codeBuilder.invokestatic(CD_NETWORK_BUFFER_TYPE_IMPL, "writeVarIntUnchecked", MT_WRITE_VAR_INT_UNCHECKED, true);
-                    codeBuilder.pop2();
-                }
-                case RunStep.PutVarLong putVarLong -> {
-                    codeBuilder.aload(context.directSlot());
-                    emitOffsetValue(codeBuilder, context, indexSlot, putVarLong.offset());
-                    emitLongValue(codeBuilder, context, putVarLong.value());
-                    codeBuilder.invokestatic(CD_NETWORK_BUFFER_TYPE_IMPL, "writeVarLongUnchecked", MT_WRITE_VAR_LONG_UNCHECKED, true);
-                    codeBuilder.pop2();
-                }
-                case RunStep.PutBytes putBytes -> {
-                    codeBuilder.aload(context.directSlot());
-                    emitOffsetValue(codeBuilder, context, indexSlot, putBytes.offset());
-                    emitValue(codeBuilder, context, putBytes.byteArray());
-                    codeBuilder.iconst_0();
-                    emitIntValue(codeBuilder, context, putBytes.length());
-                    codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "_putBytesUnchecked", MT_PUT_BYTES);
-                }
-                case RunStep.ResultElementSet resultElementSet -> {
-                    emitValue(codeBuilder, context, resultElementSet.result());
-                    codeBuilder.checkcast(CD_OBJECT_ARRAY);
-                    emitIntValue(codeBuilder, context, resultElementSet.index());
-                    emitValue(codeBuilder, context, resultElementSet.value());
-                    codeBuilder.aastore();
-                }
-                case RunStep.ArraySet arraySet -> {
-                    emitLoadLocal(codeBuilder, context, arraySet.array());
-                    codeBuilder.checkcast(CD_OBJECT_ARRAY);
-                    emitIntValue(codeBuilder, context, arraySet.index());
-                    emitValue(codeBuilder, context, arraySet.value());
-                    codeBuilder.aastore();
-                }
-                case RunStep.Construct construct -> {
-                    final ClassDesc constructorType = constructorInterface(construct.args().size());
-                    codeBuilder.getstatic(context.classDesc(), ctorFieldName(context.data(), construct.factory()), constructorType);
-                    for (Value arg : construct.args()) {
-                        emitValue(codeBuilder, context, arg);
-                    }
-                    codeBuilder.invokeinterface(constructorType, "apply", constructorApplyType(construct.args().size()));
-                    emitStoreLocal(codeBuilder, context, construct.out());
-                }
-                default -> throw new UnsupportedOperationException("Unsupported run step: " + step);
-            }
-        }
-
-        codeBuilder.iinc(loopIndexSlot, 1);
-        codeBuilder.goto_(startLabel);
-        codeBuilder.labelBinding(endLabel);
-    }
-
-    private static void emitLoopRead(CodeBuilder codeBuilder, EmitContext context, int indexSlot, RunItem.ForIndex loop) {
-        final Label startLabel = codeBuilder.newLabel();
-        final Label endLabel = codeBuilder.newLabel();
-        final int loopIndexSlot = localSlot(codeBuilder, context, loop.index());
-
-        emitIntValue(codeBuilder, context, loop.start());
-        codeBuilder.istore(loopIndexSlot);
-
-        codeBuilder.labelBinding(startLabel);
-        codeBuilder.iload(loopIndexSlot);
-        emitIntValue(codeBuilder, context, loop.end());
-        codeBuilder.if_icmpge(endLabel);
-
-        for (RunStep step : loop.body()) {
-            switch (step) {
-                case RunStep.Get get -> {
-                    codeBuilder.aload(context.directSlot());
-                    emitOffsetValue(codeBuilder, context, indexSlot, get.offset());
-                    emitStoreKindRead(codeBuilder, get.kind(), get.out());
-                    emitStoreLocal(codeBuilder, context, get.out());
-                }
-                case RunStep.GetBytes getBytes -> {
-                    final int lengthSlot = codeBuilder.allocateLocal(TypeKind.INT);
-                    emitIntValue(codeBuilder, context, getBytes.length());
-                    codeBuilder.dup()
-                            .istore(lengthSlot)
-                            .newarray(TypeKind.BYTE);
-                    emitStoreLocal(codeBuilder, context, getBytes.byteArray());
-                    codeBuilder.aload(context.directSlot());
-                    emitOffsetValue(codeBuilder, context, indexSlot, getBytes.offset());
-                    emitLoadLocal(codeBuilder, context, getBytes.byteArray());
-                    codeBuilder.iconst_0()
-                            .iload(lengthSlot)
-                            .invokevirtual(CD_NETWORK_BUFFER_IMPL, "_getBytesUnchecked", MT_GET_BYTES);
-                }
-                case RunStep.Apply apply -> {
-                    codeBuilder.getstatic(context.classDesc(), transformFunctionName(context.data(), apply.function()), CD_FUNCTION);
-                    emitLoadLocal(codeBuilder, context, apply.in());
-                    codeBuilder.invokeinterface(CD_FUNCTION, "apply", MT_FUNCTION_APPLY);
-                    emitStoreLocal(codeBuilder, context, apply.out());
-                }
-                case RunStep.Cast cast -> {
-                    emitLoadLocal(codeBuilder, context, cast.in());
-                    codeBuilder.checkcast(classDesc(cast.targetClass()));
-                    emitStoreLocal(codeBuilder, context, cast.out());
-                }
-                case RunStep.Unbox unbox -> {
-                    emitLoadLocal(codeBuilder, context, unbox.in());
-                    final ClassDesc wrapper = unbox.kind().wrapperClass().describeConstable().orElseThrow();
-                    codeBuilder.checkcast(wrapper);
-                    emitUnboxedTypeIrValue(codeBuilder, unbox.kind());
-                    emitStoreLocal(codeBuilder, context, unbox.out());
-                }
-                case RunStep.Box box -> {
-                    emitLoadLocal(codeBuilder, context, box.in());
-                    emitBoxedTypeIrValue(codeBuilder, box.kind());
-                    emitStoreLocal(codeBuilder, context, box.out());
-                }
-                case RunStep.ArraySet arraySet -> {
-                    emitLoadLocal(codeBuilder, context, arraySet.array());
-                    codeBuilder.checkcast(CD_OBJECT_ARRAY);
-                    emitIntValue(codeBuilder, context, arraySet.index());
-                    emitValue(codeBuilder, context, arraySet.value());
-                    codeBuilder.aastore();
-                }
-                case RunStep.Construct construct -> {
-                    final ClassDesc constructorType = constructorInterface(construct.args().size());
-                    codeBuilder.getstatic(context.classDesc(), ctorFieldName(context.data(), construct.factory()), constructorType);
-                    for (Value arg : construct.args()) {
-                        emitValue(codeBuilder, context, arg);
-                    }
-                    codeBuilder.invokeinterface(constructorType, "apply", constructorApplyType(construct.args().size()));
-                    emitStoreLocal(codeBuilder, context, construct.out());
-                }
-                default -> throw new UnsupportedOperationException("Unsupported run step: " + step);
-            }
-        }
-
-        codeBuilder.iinc(loopIndexSlot, 1);
-        codeBuilder.goto_(startLabel);
-        codeBuilder.labelBinding(endLabel);
     }
 
     private static void emitValue(CodeBuilder codeBuilder, EmitContext context, Value value) {
         switch (value) {
             case Value.LocalValue localValue -> emitLoadLocal(codeBuilder, context, localValue.local());
             case Value.Const constant -> emitConstant(codeBuilder, constant.value());
+            case Value.Index index -> codeBuilder.lload(context.indexSlot());
             case Value.IsNull isNull -> {
                 emitValue(codeBuilder, context, isNull.value());
                 final Label isNullLabel = codeBuilder.newLabel();
@@ -989,12 +660,6 @@ final class IrEmitter {
         }
     }
 
-    private static void emitOffsetValue(CodeBuilder codeBuilder, EmitContext context, int indexSlot, Value offset) {
-        codeBuilder.lload(indexSlot);
-        emitLongValue(codeBuilder, context, offset);
-        codeBuilder.ladd();
-    }
-
     private static void emitConstant(CodeBuilder codeBuilder, @Nullable Object value) {
         if (value == null) {
             codeBuilder.aconst_null();
@@ -1034,7 +699,8 @@ final class IrEmitter {
         return switch (value) {
             case Value.LocalValue localValue -> localTypeKind(localValue.local().type()) == TypeKind.LONG;
             case Value.Const constant -> constant.value() instanceof Long;
-            case Value.Add _, Value.Mul _, Value.ShiftLeft _, Value.ShiftRightUnsigned _, Value.And _, Value.Or _ -> true;
+            case Value.Index _, Value.Add _, Value.Mul _, Value.ShiftLeft _, Value.ShiftRightUnsigned _, Value.And _, Value.Or _ ->
+                    true;
             default -> false;
         };
     }
@@ -1188,18 +854,109 @@ final class IrEmitter {
         return MethodTypeDesc.of(CD_OBJECT, params);
     }
 
-    record EmitContext(ClassDesc classDesc, IrClassData data, int directSlot, Map<Local, Integer> locals) {
+    static IrEmitter.IrClassData collectIrClassData(List<Object> classData, ProgramIr write, ProgramIr read) {
+        final List<IrEmitter.TransformFieldData> transforms = new ArrayList<>();
+        final List<IrEmitter.ExternalTypeFieldData> externalTypes = new ArrayList<>();
+        final Map<String, Integer> constructors = new LinkedHashMap<>();
+        final Map<String, IrEmitter.IrCtorData> constructorIrs = new HashMap<>();
+
+        final Usage usage = new Usage();
+        collectUsage(write, usage);
+        collectUsage(read, usage);
+
+        int ctorIndex = 0;
+        for (Map.Entry<Object, Integer> entry : usage.constructors.entrySet()) {
+            final String name = "ctor" + ctorIndex++;
+            final Object factory = entry.getKey();
+            final int fieldCount = entry.getValue();
+            final int dataIndex = addClassData(classData, factory);
+            constructors.put(name, dataIndex);
+            constructorIrs.put(name, new IrEmitter.IrCtorData(factory, name, fieldCount, dataIndex));
+        }
+
+        int transformIndex = 0;
+        for (Function<?, ?> function : usage.functions) {
+            transforms.add(new IrEmitter.TransformFieldData("fn" + transformIndex++, function, addClassData(classData, function)));
+        }
+
+        int extIndex = 0;
+        for (NetworkBuffer.Type<?> type : usage.externalTypes) {
+            externalTypes.add(new IrEmitter.ExternalTypeFieldData("ext" + extIndex++, type, addClassData(classData, type)));
+        }
+
+        return new IrEmitter.IrClassData(write, read, transforms, constructors, constructorIrs, externalTypes);
     }
 
-    private static Value itemOffset(RunItem item) {
-        return switch (item) {
-            case RunItem.Put put -> put.offset();
-            case RunItem.Get get -> get.offset();
-            case RunItem.PutVarInt putVarInt -> putVarInt.offset();
-            case RunItem.PutVarLong putVarLong -> putVarLong.offset();
-            case RunItem.PutBytes putBytes -> putBytes.offset();
-            case RunItem.GetBytes getBytes -> getBytes.offset();
-            case RunItem.ForIndex _ -> new Value.Const(0L);
-        };
+    private static void collectUsage(ProgramIr program, Usage usage) {
+        for (RunIr run : program.runs()) {
+            collectUsage(run, usage);
+        }
+    }
+
+    private static void collectUsage(RunIr run, Usage usage) {
+        for (RunItem item : run.items()) {
+            collectUsage(item, usage);
+        }
+    }
+
+    private static void collectUsage(RunItem item, Usage usage) {
+        switch (item) {
+            case RunItem.Apply apply -> usage.functions.add(apply.function());
+            case RunItem.WriteExternal write -> usage.externalTypes.add(write.type());
+            case RunItem.ReadExternal read -> usage.externalTypes.add(read.type());
+            case RunItem.Construct construct -> usage.constructors.put(construct.factory(), construct.args().size());
+            case RunItem.If ifOp -> {
+                for (RunIr run : ifOp.thenRuns()) collectUsage(run, usage);
+                for (RunIr run : ifOp.elseRuns()) collectUsage(run, usage);
+            }
+            case RunItem.ForEach forEach -> {
+                for (RunIr run : forEach.body()) collectUsage(run, usage);
+            }
+            case RunItem.ForIndex forIndex -> {
+                for (RunIr run : forIndex.body()) collectUsage(run, usage);
+            }
+            default -> {
+            }
+        }
+    }
+
+    private static int addClassData(List<Object> classData, Object value) {
+        final int index = classData.size();
+        classData.add(value);
+        return index;
+    }
+
+    record IrClassData(ProgramIr write, ProgramIr read, List<TransformFieldData> transforms,
+                       Map<String, Integer> constructors, Map<String, IrCtorData> constructorIrs,
+                       List<ExternalTypeFieldData> externalTypes) {
+        public IrClassData {
+            transforms = List.copyOf(transforms);
+            constructors = Map.copyOf(constructors);
+            constructorIrs = Map.copyOf(constructorIrs);
+            externalTypes = List.copyOf(externalTypes);
+        }
+
+        IrCtorData constructorIr(String name) {
+            return constructorIrs.get(name);
+        }
+    }
+
+    record IrCtorData(Object factory, String name, int fieldCount, int dataIndex) {
+    }
+
+    record TransformFieldData(String name, Function<?, ?> function, int dataIndex) {
+    }
+
+    record ExternalTypeFieldData(String name, NetworkBuffer.Type<?> type, int dataIndex) {
+    }
+
+    record EmitContext(ClassDesc classDesc, IrClassData data, int directSlot, int indexSlot, Map<Local, Integer> locals,
+                       boolean write) {
+    }
+
+    private static class Usage {
+        final Set<Function<?, ?>> functions = Collections.newSetFromMap(new IdentityHashMap<>());
+        final Set<NetworkBuffer.Type<?>> externalTypes = Collections.newSetFromMap(new IdentityHashMap<>());
+        final Map<Object, Integer> constructors = new IdentityHashMap<>();
     }
 }

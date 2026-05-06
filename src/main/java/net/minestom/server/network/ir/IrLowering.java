@@ -2,110 +2,12 @@ package net.minestom.server.network.ir;
 
 import net.minestom.server.network.NetworkBuffer;
 
+import java.lang.classfile.TypeKind;
 import java.util.*;
 import java.util.function.Function;
 
-import static net.minestom.server.network.ir.IrMetadata.*;
-
 final class IrLowering {
     private IrLowering() {
-    }
-
-    static IrClassData collectIrClassData(List<Object> classData, ProgramIr write, ProgramIr read) {
-        final List<TransformFieldData> transforms = new ArrayList<>();
-        final List<ExternalTypeFieldData> externalTypes = new ArrayList<>();
-        final Map<String, Integer> constructors = new LinkedHashMap<>();
-        final Map<String, IrCtorData> constructorIrs = new HashMap<>();
-
-        final Usage usage = new Usage();
-        collectUsage(write, usage);
-        collectUsage(read, usage);
-
-        int ctorIndex = 0;
-        for (Map.Entry<Object, Integer> entry : usage.constructors.entrySet()) {
-            final String name = "ctor" + ctorIndex++;
-            final Object factory = entry.getKey();
-            final int fieldCount = entry.getValue();
-            final int dataIndex = addClassData(classData, factory);
-            constructors.put(name, dataIndex);
-            constructorIrs.put(name, new IrCtorData(factory, name, fieldCount, dataIndex));
-        }
-
-        int transformIndex = 0;
-        for (Function<?, ?> function : usage.functions) {
-            transforms.add(new TransformFieldData("fn" + transformIndex++, function, addClassData(classData, function)));
-        }
-
-        int extIndex = 0;
-        for (NetworkBuffer.Type<?> type : usage.externalTypes) {
-            externalTypes.add(new ExternalTypeFieldData("ext" + extIndex++, type, addClassData(classData, type)));
-        }
-
-        return new IrClassData(write, read, "", transforms, constructors, constructorIrs, externalTypes);
-    }
-
-    private static void collectUsage(ProgramIr program, Usage usage) {
-        for (Op op : program.ops()) {
-            collectUsage(op, usage);
-        }
-    }
-
-    private static void collectUsage(Op op, Usage usage) {
-        switch (op) {
-            case Op.Apply apply -> usage.functions.add(apply.function());
-            case Op.WriteExternal write -> usage.externalTypes.add(write.type());
-            case Op.ReadExternal read -> usage.externalTypes.add(read.type());
-            case Op.Construct construct -> usage.constructors.put(construct.factory(), construct.args().size());
-            case Op.If ifOp -> {
-                collectUsage(new ProgramIr(ifOp.thenOps()), usage);
-                collectUsage(new ProgramIr(ifOp.elseOps()), usage);
-            }
-            case Op.ForEach forEach -> {
-                collectUsage(new ProgramIr(forEach.body()), usage);
-            }
-            case Op.ForIndex forIndex -> {
-                collectUsage(new ProgramIr(forIndex.body()), usage);
-            }
-            case Op.WriteRun writeRun -> collectUsage(writeRun.run(), usage);
-            case Op.ReadRun readRun -> collectUsage(readRun.run(), usage);
-            default -> {
-            }
-        }
-    }
-
-    private static void collectUsage(RunIr run, Usage usage) {
-        for (RunItem item : run.items()) {
-            if (item instanceof RunItem.ForIndex loop) {
-                for (RunStep step : loop.body()) {
-                    collectUsage(step, usage);
-                }
-            }
-        }
-    }
-
-    private static void collectUsage(RunStep step, Usage usage) {
-        switch (step) {
-            case RunStep.Apply apply -> usage.functions.add(apply.function());
-            case RunStep.Construct construct -> usage.constructors.put(construct.factory(), construct.args().size());
-            default -> {
-            }
-        }
-    }
-
-    static Local referenceLocal() {
-        return new Local(new LocalType.Reference(Object.class));
-    }
-
-    private static int addClassData(List<Object> classData, Object value) {
-        final int index = classData.size();
-        classData.add(value);
-        return index;
-    }
-
-    private static class Usage {
-        final Set<Function<?, ?>> functions = Collections.newSetFromMap(new IdentityHashMap<>());
-        final Set<NetworkBuffer.Type<?>> externalTypes = Collections.newSetFromMap(new IdentityHashMap<>());
-        final Map<Object, Integer> constructors = new IdentityHashMap<>();
     }
 
     static final class WriteBuilderImpl implements IrWriteBuilder {
@@ -142,7 +44,7 @@ final class IrLowering {
             if (value instanceof Value.LocalValue(Local local)) {
                 pushSource(local);
             } else {
-                Local temp = referenceLocal();
+                Local temp = new Local(new LocalType.Kind(TypeKind.REFERENCE));
                 push(new Op.Store(value, temp));
                 pushSource(temp);
             }

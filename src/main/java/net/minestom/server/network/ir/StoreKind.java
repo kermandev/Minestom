@@ -15,7 +15,7 @@ public enum StoreKind {
         this.byteSize = byteSize;
     }
 
-    public int byteSize() {
+    public long byteSize() {
         return byteSize;
     }
 }
