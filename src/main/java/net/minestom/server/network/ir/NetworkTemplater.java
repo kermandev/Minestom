@@ -4,7 +4,6 @@ import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.UnknownNullability;
 
-import java.lang.classfile.TypeKind;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -52,7 +51,7 @@ public final class NetworkTemplater {
             for (int i = 0; i < types.length; i++) {
                 final NetworkBuffer.Type<?> type = types[i];
                 final Function<?, ?> getter = getters[i];
-                final Local nested = new Local(new LocalType.Kind(TypeKind.REFERENCE));
+                final Local nested = new Local(new LocalType.Reference(Object.class));
                 builder.push(new Op.Apply(getter, builder.source(), nested));
                 builder.pushSource(nested);
                 builder.lower(type, new Value.LocalValue(nested));
@@ -64,7 +63,7 @@ public final class NetworkTemplater {
         public Value lowerRead(IrReadBuilder builder) {
             final Value[] args = new Value[types.length];
             Arrays.setAll(args, it -> builder.lower(types[it]));
-            final Local result = new Local(new LocalType.Kind(TypeKind.REFERENCE));
+            final Local result = new Local(new LocalType.Reference(Object.class));
             builder.push(new Op.Construct(constructor, List.of(args), result));
             return new Value.LocalValue(result);
         }

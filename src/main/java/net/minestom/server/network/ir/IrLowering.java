@@ -2,7 +2,6 @@ package net.minestom.server.network.ir;
 
 import net.minestom.server.network.NetworkBuffer;
 
-import java.lang.classfile.TypeKind;
 import java.util.*;
 import java.util.function.Function;
 
@@ -44,7 +43,7 @@ final class IrLowering {
             if (value instanceof Value.LocalValue(Local local)) {
                 pushSource(local);
             } else {
-                Local temp = new Local(new LocalType.Kind(TypeKind.REFERENCE));
+                Local temp = new Local(new LocalType.Reference(Object.class));
                 push(new Op.Store(value, temp));
                 pushSource(temp);
             }

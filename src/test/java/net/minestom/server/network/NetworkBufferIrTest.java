@@ -2,10 +2,17 @@ package net.minestom.server.network;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+import java.util.Map;
+
 import static net.minestom.server.network.NetworkBuffer.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class NetworkBufferIrTest {
+    private record Box<T>(T value) {}
+
     private record TemplateSingle(int value) {}
     private record TemplateNested(TemplateSingle single, int extra) {}
 
@@ -203,5 +210,94 @@ public class NetworkBufferIrTest {
         
         var readValue = NetworkBuffer.wrap(array, 0, array.length).read(type);
         assertEquals(value, readValue);
+    }
+
+    @Test
+    public void compiledTemplateMatchesDirectForEmptyVariableContainers() {
+        assertRoundTripMatchesDirect(INT.list(4), List.of());
+        assertRoundTripMatchesDirect(STRING.mapValue(INT, 4), Map.of());
+        assertByteArrayRoundTripMatchesDirect(BYTE_ARRAY, new byte[0]);
+    }
+
+    @Test
+    public void compiledTemplateMatchesDirectForInvalidContainerReads() {
+        byte[] negativeLength = NetworkBuffer.makeArray(buffer -> buffer.write(VAR_INT, -1));
+        assertReadFailureMatchesDirect(BYTE_ARRAY, negativeLength);
+        assertReadFailureMatchesDirect(INT.list(), negativeLength);
+        assertReadFailureMatchesDirect(STRING.mapValue(INT), negativeLength);
+
+        byte[] tooLargeLength = NetworkBuffer.makeArray(buffer -> buffer.write(VAR_INT, 2));
+        assertReadFailureMatchesDirect(INT.list(1), tooLargeLength);
+        assertReadFailureMatchesDirect(STRING.mapValue(INT, 1), tooLargeLength);
+    }
+
+    @Test
+    public void compiledTemplateMatchesDirectForInvalidFixedByteWrites() {
+        assertWriteFailureMatchesDirect(NetworkBuffer.FixedRawBytes(2), new byte[]{1});
+        assertWriteFailureMatchesDirect(NetworkBuffer.FixedRawBytes(2), new byte[]{1, 2, 3});
+    }
+
+    private static <T> void assertRoundTripMatchesDirect(NetworkBuffer.Type<T> fieldType, T value) {
+        NetworkBuffer.Type<Box<T>> direct = directBox(fieldType);
+        NetworkBuffer.Type<Box<T>> compiled = compiledBox(fieldType);
+        Box<T> boxed = new Box<>(value);
+
+        byte[] directBytes = NetworkBuffer.makeArray(direct, boxed);
+        byte[] compiledBytes = NetworkBuffer.makeArray(compiled, boxed);
+        assertArrayEquals(directBytes, compiledBytes);
+        assertEquals(NetworkBuffer.wrap(directBytes, 0, directBytes.length).read(direct),
+                NetworkBuffer.wrap(compiledBytes, 0, compiledBytes.length).read(compiled));
+    }
+
+    private static void assertByteArrayRoundTripMatchesDirect(NetworkBuffer.Type<byte[]> fieldType, byte[] value) {
+        NetworkBuffer.Type<Box<byte[]>> direct = directBox(fieldType);
+        NetworkBuffer.Type<Box<byte[]>> compiled = compiledBox(fieldType);
+        Box<byte[]> boxed = new Box<>(value);
+
+        byte[] directBytes = NetworkBuffer.makeArray(direct, boxed);
+        byte[] compiledBytes = NetworkBuffer.makeArray(compiled, boxed);
+        assertArrayEquals(directBytes, compiledBytes);
+        assertArrayEquals(NetworkBuffer.wrap(directBytes, 0, directBytes.length).read(direct).value(),
+                NetworkBuffer.wrap(compiledBytes, 0, compiledBytes.length).read(compiled).value());
+    }
+
+    private static <T> void assertReadFailureMatchesDirect(NetworkBuffer.Type<T> fieldType, byte[] bytes) {
+        NetworkBuffer.Type<Box<T>> direct = directBox(fieldType);
+        NetworkBuffer.Type<Box<T>> compiled = compiledBox(fieldType);
+
+        Throwable directFailure = assertThrows(Throwable.class, () -> NetworkBuffer.wrap(bytes, 0, bytes.length).read(direct));
+        Throwable compiledFailure = assertThrows(Throwable.class, () -> NetworkBuffer.wrap(bytes, 0, bytes.length).read(compiled));
+        assertEquals(directFailure.getClass(), compiledFailure.getClass());
+    }
+
+    private static <T> void assertWriteFailureMatchesDirect(NetworkBuffer.Type<T> fieldType, T value) {
+        NetworkBuffer.Type<Box<T>> direct = directBox(fieldType);
+        NetworkBuffer.Type<Box<T>> compiled = compiledBox(fieldType);
+        Box<T> boxed = new Box<>(value);
+
+        Throwable directFailure = assertThrows(Throwable.class, () -> NetworkBuffer.makeArray(direct, boxed));
+        Throwable compiledFailure = assertThrows(Throwable.class, () -> NetworkBuffer.makeArray(compiled, boxed));
+        assertEquals(directFailure.getClass(), compiledFailure.getClass());
+    }
+
+    private static <T> NetworkBuffer.Type<Box<T>> compiledBox(NetworkBuffer.Type<T> fieldType) {
+        return NetworkBufferTemplate.template(
+                fieldType, Box<T>::value,
+                Box<T>::new
+        );
+    }
+
+    private static <T> NetworkBuffer.Type<Box<T>> directBox(NetworkBuffer.Type<T> fieldType) {
+        return new NetworkBuffer.Type<>() {
+            @Override
+            public void write(NetworkBuffer buffer, Box<T> value) {
+                buffer.write(fieldType, value.value());
+            }
+
+            @Override
+            public Box<T> read(NetworkBuffer buffer) {
+                return new Box<>(buffer.read(fieldType));
+            }
+        };
     }
 }

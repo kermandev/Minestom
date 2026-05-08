@@ -606,6 +606,9 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
             Local bytes = new Local(new LocalType.Reference(byte[].class));
             builder.push(new Op.Cast(builder.source(), byte[].class, bytes));
             if (length != -1) {
+                final Value actualLength = new Value.ArrayLength(new Value.LocalValue(bytes));
+                builder.push(new Op.Check(new Value.LessThanOrEqual(actualLength, new Value.Const(length)), "Invalid fixed byte array length"));
+                builder.push(new Op.Check(new Value.GreaterThan(actualLength, new Value.Const(length - 1)), "Invalid fixed byte array length"));
                 builder.push(new Op.WriteFixedBytes(new Value.LocalValue(bytes)));
             } else {
                 builder.push(new Op.WriteExternal(this, new Value.LocalValue(bytes)));
@@ -821,6 +824,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         public Value lowerRead(IrReadBuilder builder) {
             final Local length = new Local(new LocalType.Kind(TypeKind.INT));
             builder.push(new Op.ReadVarInt(length));
+            builder.push(new Op.Check(new Value.GreaterThan(new Value.LocalValue(length), new Value.Const(-1)), "Array length cannot be negative"));
 
             final Local bytes = new Local(new LocalType.Reference(byte[].class));
             builder.push(new Op.ReadFixedBytes(new Value.LocalValue(length), bytes));
@@ -1359,6 +1363,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         public Value lowerRead(IrReadBuilder builder) {
             final Local size = new Local(new LocalType.Kind(TypeKind.INT));
             builder.push(new Op.ReadVarInt(size));
+            builder.push(new Op.Check(new Value.GreaterThan(new Value.LocalValue(size), new Value.Const(-1)), "Map size cannot be negative"));
             if (maxSize != Integer.MAX_VALUE) {
                 builder.push(new Op.Check(new Value.LessThanOrEqual(new Value.LocalValue(size), new Value.Const(maxSize)), "Map too large"));
             }
@@ -1437,6 +1442,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         public Value lowerRead(IrReadBuilder builder) {
             final Local size = new Local(new LocalType.Kind(TypeKind.INT));
             builder.push(new Op.ReadVarInt(size));
+            builder.push(new Op.Check(new Value.GreaterThan(new Value.LocalValue(size), new Value.Const(-1)), "Collection size cannot be negative"));
             if (maxSize != Integer.MAX_VALUE) {
                 builder.push(new Op.Check(new Value.LessThanOrEqual(new Value.LocalValue(size), new Value.Const(maxSize)), "Collection too large"));
             }
