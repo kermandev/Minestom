@@ -44,7 +44,8 @@ public final class IrCompiler {
             ProgramIr read = new ProgramIr(IrOptimizer.optimize(readRuns));
             IrVerifier.verify(read);
 
-            final byte[] bytes = IrEmitter.emit(classDesc, write, read, classData);
+            IrClassData irClassData = IrClassData.collect(classData, write, read);
+            final byte[] bytes = IrEmitter.emit(classDesc, irClassData);
             if (DEBUG) dump(bytes); // Field count could be dynamically inferred or left at 0 for dumps
 
             final Lookup lookup = NetworkBufferTemplate.lookup().defineHiddenClassWithClassData(bytes, List.copyOf(classData), true);

@@ -109,8 +109,7 @@ final class IrEmitter {
     private IrEmitter() {
     }
 
-    static byte[] emit(ClassDesc classDesc, ProgramIr write, ProgramIr read, List<Object> classData) {
-        IrClassData data = collectIrClassData(classData, write, read);
+    static byte[] emit(ClassDesc classDesc, IrClassData data) {
         return buildClass(classDesc, data);
     }
 
@@ -134,10 +133,10 @@ final class IrEmitter {
     }
 
     private static void declareIrFields(ClassBuilder classBuilder, IrClassData data) {
-        for (ExternalTypeFieldData external : data.externalTypes()) {
+        for (IrClassData.ExternalTypeFieldData external : data.externalTypes()) {
             classBuilder.withField(external.name(), CD_TYPE, FIELD_FLAGS);
         }
-        for (TransformFieldData transform : data.transforms()) {
+        for (IrClassData.TransformFieldData transform : data.transforms()) {
             classBuilder.withField(transform.name(), CD_FUNCTION, FIELD_FLAGS);
         }
         for (Map.Entry<String, Integer> entry : data.constructors().entrySet()) {
@@ -154,11 +153,11 @@ final class IrEmitter {
     }
 
     private static void initIrFields(CodeBuilder codeBuilder, ClassDesc classDesc, IrClassData data) {
-        for (ExternalTypeFieldData external : data.externalTypes()) {
+        for (IrClassData.ExternalTypeFieldData external : data.externalTypes()) {
             loadClassDataAt(codeBuilder, CD_TYPE, external.dataIndex())
                     .putstatic(classDesc, external.name(), CD_TYPE);
         }
-        for (TransformFieldData transform : data.transforms()) {
+        for (IrClassData.TransformFieldData transform : data.transforms()) {
             loadClassDataAt(codeBuilder, CD_FUNCTION, transform.dataIndex())
                     .putstatic(classDesc, transform.name(), CD_FUNCTION);
         }
@@ -768,21 +767,21 @@ final class IrEmitter {
     }
 
     private static String typeFieldName(IrClassData data, NetworkBuffer.Type<?> type) {
-        for (ExternalTypeFieldData external : data.externalTypes()) {
+        for (IrClassData.ExternalTypeFieldData external : data.externalTypes()) {
             if (external.type() == type) return external.name();
         }
         throw new IllegalStateException("Missing type field for " + type);
     }
 
     private static String transformFunctionName(IrClassData data, Function<?, ?> function) {
-        for (TransformFieldData transform : data.transforms()) {
+        for (IrClassData.TransformFieldData transform : data.transforms()) {
             if (transform.function() == function) return transform.name();
         }
         throw new IllegalStateException("Missing transform function field");
     }
 
     private static String ctorFieldName(IrClassData data, Object factory) {
-        for (Map.Entry<String, IrCtorData> entry : data.constructorIrs().entrySet()) {
+        for (Map.Entry<String, IrClassData.IrCtorData> entry : data.constructorIrs().entrySet()) {
             if (entry.getValue().factory() == factory) return entry.getKey();
         }
         throw new IllegalStateException("Missing constructor field");
@@ -854,109 +853,7 @@ final class IrEmitter {
         return MethodTypeDesc.of(CD_OBJECT, params);
     }
 
-    static IrEmitter.IrClassData collectIrClassData(List<Object> classData, ProgramIr write, ProgramIr read) {
-        final List<IrEmitter.TransformFieldData> transforms = new ArrayList<>();
-        final List<IrEmitter.ExternalTypeFieldData> externalTypes = new ArrayList<>();
-        final Map<String, Integer> constructors = new LinkedHashMap<>();
-        final Map<String, IrEmitter.IrCtorData> constructorIrs = new HashMap<>();
-
-        final Usage usage = new Usage();
-        collectUsage(write, usage);
-        collectUsage(read, usage);
-
-        int ctorIndex = 0;
-        for (Map.Entry<Object, Integer> entry : usage.constructors.entrySet()) {
-            final String name = "ctor" + ctorIndex++;
-            final Object factory = entry.getKey();
-            final int fieldCount = entry.getValue();
-            final int dataIndex = addClassData(classData, factory);
-            constructors.put(name, dataIndex);
-            constructorIrs.put(name, new IrEmitter.IrCtorData(factory, name, fieldCount, dataIndex));
-        }
-
-        int transformIndex = 0;
-        for (Function<?, ?> function : usage.functions) {
-            transforms.add(new IrEmitter.TransformFieldData("fn" + transformIndex++, function, addClassData(classData, function)));
-        }
-
-        int extIndex = 0;
-        for (NetworkBuffer.Type<?> type : usage.externalTypes) {
-            externalTypes.add(new IrEmitter.ExternalTypeFieldData("ext" + extIndex++, type, addClassData(classData, type)));
-        }
-
-        return new IrEmitter.IrClassData(write, read, transforms, constructors, constructorIrs, externalTypes);
-    }
-
-    private static void collectUsage(ProgramIr program, Usage usage) {
-        for (RunIr run : program.runs()) {
-            collectUsage(run, usage);
-        }
-    }
-
-    private static void collectUsage(RunIr run, Usage usage) {
-        for (RunItem item : run.items()) {
-            collectUsage(item, usage);
-        }
-    }
-
-    private static void collectUsage(RunItem item, Usage usage) {
-        switch (item) {
-            case RunItem.Apply apply -> usage.functions.add(apply.function());
-            case RunItem.WriteExternal write -> usage.externalTypes.add(write.type());
-            case RunItem.ReadExternal read -> usage.externalTypes.add(read.type());
-            case RunItem.Construct construct -> usage.constructors.put(construct.factory(), construct.args().size());
-            case RunItem.If ifOp -> {
-                for (RunIr run : ifOp.thenRuns()) collectUsage(run, usage);
-                for (RunIr run : ifOp.elseRuns()) collectUsage(run, usage);
-            }
-            case RunItem.ForEach forEach -> {
-                for (RunIr run : forEach.body()) collectUsage(run, usage);
-            }
-            case RunItem.ForIndex forIndex -> {
-                for (RunIr run : forIndex.body()) collectUsage(run, usage);
-            }
-            default -> {
-            }
-        }
-    }
-
-    private static int addClassData(List<Object> classData, Object value) {
-        final int index = classData.size();
-        classData.add(value);
-        return index;
-    }
-
-    record IrClassData(ProgramIr write, ProgramIr read, List<TransformFieldData> transforms,
-                       Map<String, Integer> constructors, Map<String, IrCtorData> constructorIrs,
-                       List<ExternalTypeFieldData> externalTypes) {
-        public IrClassData {
-            transforms = List.copyOf(transforms);
-            constructors = Map.copyOf(constructors);
-            constructorIrs = Map.copyOf(constructorIrs);
-            externalTypes = List.copyOf(externalTypes);
-        }
-
-        IrCtorData constructorIr(String name) {
-            return constructorIrs.get(name);
-        }
-    }
-
-    record IrCtorData(Object factory, String name, int fieldCount, int dataIndex) {
-    }
-
-    record TransformFieldData(String name, Function<?, ?> function, int dataIndex) {
-    }
-
-    record ExternalTypeFieldData(String name, NetworkBuffer.Type<?> type, int dataIndex) {
-    }
-
     record EmitContext(ClassDesc classDesc, IrClassData data, int directSlot, int indexSlot, Map<Local, Integer> locals,
                        boolean write) {
-    }
-
-    private static class Usage {
-        final Set<Function<?, ?>> functions = Collections.newSetFromMap(new IdentityHashMap<>());
-        final Set<NetworkBuffer.Type<?>> externalTypes = Collections.newSetFromMap(new IdentityHashMap<>());
-        final Map<Object, Integer> constructors = new IdentityHashMap<>();
     }
 }
