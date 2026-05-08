@@ -17,7 +17,8 @@ record IrClassData(ProgramIr write, ProgramIr read, List<TransformFieldData> tra
                    Map<Object, IrCtorData> constructorIrsByFactory,
                    List<ExternalTypeFieldData> externalTypes,
                    Map<Function<?, ?>, TransformFieldData> transformsByFunction,
-                   Map<NetworkBuffer.Type<?>, ExternalTypeFieldData> externalTypesByType) {
+                   Map<NetworkBuffer.Type<?>, ExternalTypeFieldData> externalTypesByType,
+                   int dataIndex) {
     public IrClassData {
         transforms = List.copyOf(transforms);
         constructors = Map.copyOf(constructors);
@@ -28,7 +29,7 @@ record IrClassData(ProgramIr write, ProgramIr read, List<TransformFieldData> tra
         externalTypesByType = identityCopy(externalTypesByType);
     }
 
-    static IrClassData collect(List<Object> classData, ProgramIr write, ProgramIr read) {
+    static IrClassData collect(List<Object> classData, NetworkBuffer.Type<?> type, ProgramIr write, ProgramIr read) {
         final List<TransformFieldData> transforms = new ArrayList<>();
         final List<ExternalTypeFieldData> externalTypes = new ArrayList<>();
         final Map<String, Integer> constructors = new LinkedHashMap<>();
@@ -61,14 +62,15 @@ record IrClassData(ProgramIr write, ProgramIr read, List<TransformFieldData> tra
         }
 
         int extIndex = 0;
-        for (NetworkBuffer.Type<?> type : usage.externalTypes) {
-            final ExternalTypeFieldData data = new ExternalTypeFieldData("ext" + extIndex++, type, addClassData(classData, type));
+        for (NetworkBuffer.Type<?> extType : usage.externalTypes) {
+            final ExternalTypeFieldData data = new ExternalTypeFieldData("ext" + extIndex++, extType, addClassData(classData, extType));
             externalTypes.add(data);
-            externalTypesByType.put(type, data);
+            externalTypesByType.put(extType, data);
         }
 
+        final int dataIndex = addClassData(classData, type);
         return new IrClassData(write, read, transforms, constructors, constructorIrs, constructorIrsByFactory,
-                externalTypes, transformsByFunction, externalTypesByType);
+                externalTypes, transformsByFunction, externalTypesByType, dataIndex);
     }
 
     IrCtorData constructorIr(String name) {

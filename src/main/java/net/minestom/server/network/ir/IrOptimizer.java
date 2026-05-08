@@ -674,11 +674,22 @@ public final class IrOptimizer {
     private static List<RunIr> simplifyRuns(List<RunIr> runs) {
         List<RunIr> result = new ArrayList<>();
         for (RunIr run : runs) {
-            boolean isZero = run.size() instanceof Value.Const(
-                    Object value
-            ) && value instanceof Number n && n.longValue() == 0;
+            boolean isZero = run.size() instanceof Value.Const(Object value) && value instanceof Number n && n.longValue() == 0;
             if (isZero && run.reserve() && !usesIndex(run)) {
                 run = new RunIr(run.size(), run.items(), false);
+            }
+            // Recurse into items
+            List<RunItem> newItems = new ArrayList<>();
+            for (RunItem item : run.items()) {
+                newItems.add(switch (item) {
+                    case RunItem.If i -> new RunItem.If(i.condition(), optimize(i.thenRuns()), optimize(i.elseRuns()));
+                    case RunItem.ForEach f -> new RunItem.ForEach(f.source(), f.element(), optimize(f.body()));
+                    case RunItem.ForIndex f -> new RunItem.ForIndex(f.index(), f.start(), f.end(), optimize(f.body()));
+                    default -> item;
+                });
+            }
+            if (!newItems.equals(run.items())) {
+                run = new RunIr(run.size(), newItems, run.reserve());
             }
             result.add(run);
         }

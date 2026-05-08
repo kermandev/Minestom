@@ -63,4 +63,32 @@ public class IrCompilerTest {
         assertEquals(1 + 3 * 4, array.length);
         assertEquals(value, NetworkBuffer.wrap(array, 0, array.length).read(compiled));
     }
+
+    record Inner(int value) {}
+    record Outer(Inner inner) {}
+
+    @Test
+    public void testCompileNestedTemplate() {
+        NetworkBuffer.Type<Inner> innerType = net.minestom.server.network.NetworkBufferTemplate.template(
+                NetworkBuffer.INT, Inner::value,
+                Inner::new
+        );
+        // Compile inner template
+        NetworkBuffer.Type<Inner> innerCompiled = IrCompiler.compile(innerType);
+
+        NetworkBuffer.Type<Outer> outerType = net.minestom.server.network.NetworkBufferTemplate.template(
+                innerCompiled, Outer::inner,
+                Outer::new
+        );
+        // Compile outer template (this should inline innerCompiled)
+        NetworkBuffer.Type<Outer> outerCompiled = IrCompiler.compile(outerType);
+        assertNotNull(outerCompiled);
+
+        var value = new Outer(new Inner(123456));
+        var array = NetworkBuffer.makeArray(outerCompiled, value);
+        assertEquals(4, array.length); // 4 bytes for INT, no overhead
+
+        var readValue = NetworkBuffer.wrap(array, 0, array.length).read(outerCompiled);
+        assertEquals(value, readValue);
+    }
 }

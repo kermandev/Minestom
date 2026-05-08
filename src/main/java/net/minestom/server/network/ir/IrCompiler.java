@@ -45,7 +45,7 @@ public final class IrCompiler {
             ProgramIr read = new ProgramIr(IrOptimizer.optimize(readRuns));
             IrVerifier.verifyRead(read);
 
-            IrClassData irClassData = IrClassData.collect(classData, write, read);
+            IrClassData irClassData = IrClassData.collect(classData, type, write, read);
             final byte[] bytes = IrEmitter.emit(classDesc, irClassData);
             if (DEBUG) dump(bytes);
 

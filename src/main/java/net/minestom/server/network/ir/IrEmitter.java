@@ -53,12 +53,17 @@ final class IrEmitter {
     static final ClassDesc CD_EITHER = ClassDesc.of("net.minestom.server.utils", "Either");
     static final ClassDesc CD_EITHER_LEFT = CD_EITHER.nested("Left");
     static final ClassDesc CD_EITHER_RIGHT = CD_EITHER.nested("Right");
+    static final ClassDesc CD_WRITE_BUILDER = ClassDesc.of("net.minestom.server.network.ir", "IrWriteBuilder");
+    static final ClassDesc CD_READ_BUILDER = ClassDesc.of("net.minestom.server.network.ir", "IrReadBuilder");
+    static final ClassDesc CD_VALUE = ClassDesc.of("net.minestom.server.network.ir", "Value");
 
     static final MethodTypeDesc MT_VOID = MethodTypeDesc.of(CD_VOID);
     static final MethodTypeDesc MT_LOOKUP = MethodTypeDesc.of(CD_METHOD_HANDLES_LOOKUP);
     static final MethodTypeDesc MT_CLASS_DATA_AT = MethodTypeDesc.of(CD_OBJECT, CD_METHOD_HANDLES_LOOKUP, CD_STRING, ConstantDescs.CD_Class, CD_INT);
     static final MethodTypeDesc MT_READ_OBJECT = MethodTypeDesc.of(CD_OBJECT, CD_NETWORK_BUFFER);
     static final MethodTypeDesc MT_WRITE_OBJECT = MethodTypeDesc.of(CD_VOID, CD_NETWORK_BUFFER, CD_OBJECT);
+    static final MethodTypeDesc MT_LOWER_WRITE = MethodTypeDesc.of(CD_VOID, CD_WRITE_BUILDER);
+    static final MethodTypeDesc MT_LOWER_READ = MethodTypeDesc.of(CD_VALUE, CD_READ_BUILDER);
     static final MethodTypeDesc MT_RESERVE = MethodTypeDesc.of(CD_LONG, CD_LONG);
     static final MethodTypeDesc MT_FUNCTION_APPLY = MethodTypeDesc.of(CD_OBJECT, CD_OBJECT);
     static final MethodTypeDesc MT_WRITE_VAR_INT_UNCHECKED = MethodTypeDesc.of(CD_LONG, CD_NETWORK_BUFFER_IMPL, CD_LONG, CD_INT);
@@ -103,6 +108,9 @@ final class IrEmitter {
 
     static final String READ = "read";
     static final String WRITE = "write";
+    static final String LOWER_WRITE = "lowerWrite";
+    static final String LOWER_READ = "lowerRead";
+    static final String ORIGINAL_TYPE = "ORIGINAL_TYPE";
 
     private IrEmitter() {
     }
@@ -127,10 +135,15 @@ final class IrEmitter {
                     codeBuilder -> buildWrite(codeBuilder, classDesc, data, data.write(), 2));
             classBuilder.withMethodBody(READ, MT_READ_OBJECT, METHOD_FLAGS,
                     codeBuilder -> buildRead(codeBuilder, classDesc, data, data.read()));
+            classBuilder.withMethodBody(LOWER_WRITE, MT_LOWER_WRITE, METHOD_FLAGS,
+                    codeBuilder -> buildLowerWrite(codeBuilder, classDesc));
+            classBuilder.withMethodBody(LOWER_READ, MT_LOWER_READ, METHOD_FLAGS,
+                    codeBuilder -> buildLowerRead(codeBuilder, classDesc));
         });
     }
 
     private static void declareIrFields(ClassBuilder classBuilder, IrClassData data) {
+        classBuilder.withField(ORIGINAL_TYPE, CD_TYPE, FIELD_FLAGS);
         for (IrClassData.ExternalTypeFieldData external : data.externalTypes()) {
             classBuilder.withField(external.name(), CD_TYPE, FIELD_FLAGS);
         }
@@ -146,6 +159,8 @@ final class IrEmitter {
     private static void buildClassInitializer(CodeBuilder codeBuilder, ClassDesc classDesc, IrClassData data) {
         codeBuilder.invokestatic(CD_METHOD_HANDLES, "lookup", MT_LOOKUP)
                 .astore(0);
+        loadClassDataAt(codeBuilder, CD_TYPE, data.dataIndex())
+                .putstatic(classDesc, ORIGINAL_TYPE, CD_TYPE);
         initIrFields(codeBuilder, classDesc, data);
         codeBuilder.return_();
     }
@@ -185,6 +200,20 @@ final class IrEmitter {
         emitDirectBuffer(codeBuilder, directSlot);
         final EmitContext context = new EmitContext(classDesc, data, directSlot, indexSlot, new IdentityHashMap<>(), false);
         IrRunEmitter.emitProgram(codeBuilder, context, program);
+    }
+
+    private static void buildLowerWrite(CodeBuilder codeBuilder, ClassDesc classDesc) {
+        codeBuilder.getstatic(classDesc, ORIGINAL_TYPE, CD_TYPE)
+                .aload(1)
+                .invokeinterface(CD_TYPE, LOWER_WRITE, MT_LOWER_WRITE)
+                .return_();
+    }
+
+    private static void buildLowerRead(CodeBuilder codeBuilder, ClassDesc classDesc) {
+        codeBuilder.getstatic(classDesc, ORIGINAL_TYPE, CD_TYPE)
+                .aload(1)
+                .invokeinterface(CD_TYPE, LOWER_READ, MT_LOWER_READ)
+                .areturn();
     }
 
     static ClassDesc classDesc(Class<?> type) {
