@@ -1,5 +1,6 @@
 package net.minestom.server.network;
 
+import net.minestom.server.utils.Either;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -235,6 +236,18 @@ public class NetworkBufferIrTest {
     public void compiledTemplateMatchesDirectForInvalidFixedByteWrites() {
         assertWriteFailureMatchesDirect(NetworkBuffer.FixedRawBytes(2), new byte[]{1});
         assertWriteFailureMatchesDirect(NetworkBuffer.FixedRawBytes(2), new byte[]{1, 2, 3});
+    }
+
+    @Test
+    public void compiledTemplateMatchesDirectForNestedContainersAndEither() {
+        NetworkBuffer.Type<List<Map<String, List<Either<Integer, String>>>>> type =
+                STRING.mapValue(NetworkBuffer.Either(INT, STRING).list(4), 4).list(4);
+
+        List<Map<String, List<Either<Integer, String>>>> value = List.of(
+                Map.of("mixed", List.of(Either.left(12), Either.right("hello"))),
+                Map.of()
+        );
+        assertRoundTripMatchesDirect(type, value);
     }
 
     private static <T> void assertRoundTripMatchesDirect(NetworkBuffer.Type<T> fieldType, T value) {

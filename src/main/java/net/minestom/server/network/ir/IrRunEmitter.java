@@ -152,7 +152,7 @@ final class IrRunEmitter {
                 codeBuilder.labelBinding(endLabel);
             }
             case RunItem.Apply apply -> {
-                codeBuilder.getstatic(context.classDesc(), transformFunctionName(context.data(), apply.function()), CD_FUNCTION);
+                codeBuilder.getstatic(context.classDesc(), context.data().transformFunctionName(apply.function()), CD_FUNCTION);
                 emitLoadLocal(codeBuilder, context, apply.in());
                 codeBuilder.invokeinterface(CD_FUNCTION, "apply", MT_FUNCTION_APPLY);
                 emitStoreLocal(codeBuilder, context, apply.out());
@@ -214,13 +214,13 @@ final class IrRunEmitter {
                         .labelBinding(endLabel);
             }
             case RunItem.WriteExternal writeExternal -> {
-                codeBuilder.getstatic(context.classDesc(), typeFieldName(context.data(), writeExternal.type()), CD_TYPE)
+                codeBuilder.getstatic(context.classDesc(), context.data().typeFieldName(writeExternal.type()), CD_TYPE)
                         .aload(1);
                 emitValue(codeBuilder, context, writeExternal.value());
                 codeBuilder.invokeinterface(CD_TYPE, WRITE, MT_WRITE_OBJECT);
             }
             case RunItem.ReadExternal readExternal -> {
-                codeBuilder.getstatic(context.classDesc(), typeFieldName(context.data(), readExternal.type()), CD_TYPE)
+                codeBuilder.getstatic(context.classDesc(), context.data().typeFieldName(readExternal.type()), CD_TYPE)
                         .aload(1)
                         .invokeinterface(CD_TYPE, READ, MT_READ_OBJECT);
                 emitStoreLocal(codeBuilder, context, readExternal.out());
@@ -286,7 +286,7 @@ final class IrRunEmitter {
             }
             case RunItem.Construct construct -> {
                 final ClassDesc constructorType = constructorInterface(construct.args().size());
-                codeBuilder.getstatic(context.classDesc(), ctorFieldName(context.data(), construct.factory()), constructorType);
+                codeBuilder.getstatic(context.classDesc(), context.data().ctorFieldName(construct.factory()), constructorType);
                 for (Value arg : construct.args()) {
                     emitValue(codeBuilder, context, arg);
                 }
@@ -303,17 +303,17 @@ final class IrRunEmitter {
     private static void emitStoreKindWrite(CodeBuilder codeBuilder, StoreKind kind, Value value) {
         switch (kind) {
             case BOOLEAN, BYTE -> {
-                if (longValue(value)) codeBuilder.l2i();
+                if (emitsLong(value)) codeBuilder.l2i();
                 codeBuilder.i2b()
                         .invokevirtual(CD_NETWORK_BUFFER_IMPL, "_putByteUnchecked", MT_PUT_BYTE);
             }
             case SHORT -> {
-                if (longValue(value)) codeBuilder.l2i();
+                if (emitsLong(value)) codeBuilder.l2i();
                 codeBuilder.i2s()
                         .invokevirtual(CD_NETWORK_BUFFER_IMPL, "_putShortUnchecked", MT_PUT_SHORT);
             }
             case INT -> {
-                if (longValue(value)) codeBuilder.l2i();
+                if (emitsLong(value)) codeBuilder.l2i();
                 codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "_putIntUnchecked", MT_PUT_INT);
             }
             case LONG -> codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "_putLongUnchecked", MT_PUT_LONG);

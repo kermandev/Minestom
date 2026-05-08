@@ -5,13 +5,11 @@ import org.jetbrains.annotations.Nullable;
 
 import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.Label;
-import java.lang.classfile.TypeKind;
 import java.lang.constant.ConstantDesc;
 import java.lang.constant.MethodTypeDesc;
 
 import static net.minestom.server.network.ir.IrEmitter.*;
 import static net.minestom.server.network.ir.IrLocalAccess.emitLoadLocal;
-import static net.minestom.server.network.ir.IrLocalAccess.localTypeKind;
 
 final class IrValueEmitter {
     private IrValueEmitter() {
@@ -167,11 +165,17 @@ final class IrValueEmitter {
         switch (value) {
             case Value.LocalValue localValue -> {
                 emitLoadLocal(codeBuilder, context, localValue.local());
-                if (localTypeKind(localValue.local().type()) == TypeKind.LONG) {
-                    codeBuilder.l2i();
+                switch (IrStackType.ofLocal(localValue.local())) {
+                    case INT -> {
+                    }
+                    case LONG -> codeBuilder.l2i();
+                    default -> throw new IllegalArgumentException("Expected int-compatible local, got " + localValue.local());
                 }
             }
-            case Value.Const constant -> codeBuilder.loadConstant(((Number) constant.value()).intValue());
+            case Value.Const constant -> {
+                expectLongLike(value);
+                codeBuilder.loadConstant(((Number) constant.value()).intValue());
+            }
             case Value.ArrayLength arrayLength -> {
                 emitValue(codeBuilder, context, arrayLength.array());
                 codeBuilder.arraylength();
@@ -182,7 +186,12 @@ final class IrValueEmitter {
             }
             default -> {
                 emitValue(codeBuilder, context, value);
-                if (longValue(value)) codeBuilder.l2i();
+                switch (IrStackType.ofValue(value)) {
+                    case INT -> {
+                    }
+                    case LONG -> codeBuilder.l2i();
+                    default -> throw new IllegalArgumentException("Expected int-compatible value, got " + value);
+                }
             }
         }
     }
@@ -191,38 +200,49 @@ final class IrValueEmitter {
         switch (value) {
             case Value.LocalValue localValue -> {
                 emitLoadLocal(codeBuilder, context, localValue.local());
-                if (localTypeKind(localValue.local().type()) != TypeKind.LONG) {
-                    codeBuilder.i2l();
+                switch (IrStackType.ofLocal(localValue.local())) {
+                    case INT -> codeBuilder.i2l();
+                    case LONG -> {
+                    }
+                    default -> throw new IllegalArgumentException("Expected long-compatible local, got " + localValue.local());
                 }
             }
-            case Value.Const constant -> codeBuilder.loadConstant(((Number) constant.value()).longValue());
+            case Value.Const constant -> {
+                expectLongLike(value);
+                codeBuilder.loadConstant(((Number) constant.value()).longValue());
+            }
             default -> {
                 emitValue(codeBuilder, context, value);
-                if (!longValue(value)) codeBuilder.i2l();
+                switch (IrStackType.ofValue(value)) {
+                    case INT -> codeBuilder.i2l();
+                    case LONG -> {
+                    }
+                    default -> throw new IllegalArgumentException("Expected long-compatible value, got " + value);
+                }
             }
         }
     }
 
-    static boolean longValue(Value value) {
-        return switch (value) {
-            case Value.LocalValue localValue -> localTypeKind(localValue.local().type()) == TypeKind.LONG;
-            case Value.Const constant -> constant.value() instanceof Long;
-            case Value.Index _, Value.Add _, Value.Mul _, Value.ShiftLeft _, Value.ShiftRightUnsigned _, Value.And _, Value.Or _ ->
-                    true;
-            default -> false;
-        };
+    static boolean emitsLong(Value value) {
+        return IrStackType.ofValue(value) == IrStackType.LONG;
+    }
+
+    private static void expectLongLike(Value value) {
+        if (!IrStackType.ofValue(value).isLongLike()) {
+            throw new IllegalArgumentException("Expected integer-compatible value, got " + value);
+        }
     }
 
     private static void emitConstant(CodeBuilder codeBuilder, @Nullable Object value) {
         if (value == null) {
             codeBuilder.aconst_null();
-        } else if (value instanceof ConstantDesc constantDesc) {
-            codeBuilder.loadConstant(constantDesc);
         } else if (value instanceof Boolean booleanValue) {
             if (booleanValue) codeBuilder.iconst_1();
             else codeBuilder.iconst_0();
         } else if (value == Unit.INSTANCE) {
             codeBuilder.getstatic(CD_UNIT, "INSTANCE", CD_UNIT);
+        } else if (value instanceof ConstantDesc constantDesc) {
+            codeBuilder.loadConstant(constantDesc);
         }
     }
 

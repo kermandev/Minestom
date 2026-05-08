@@ -33,7 +33,7 @@ public final class IrCompiler {
             writeBuilder.lower(type, new Value.LocalValue(writeBuilder.source()));
             List<RunIr> writeRuns = RunLowering.lower(writeBuilder.result());
             ProgramIr write = new ProgramIr(IrOptimizer.optimize(writeRuns), writeBuilder.source());
-            IrVerifier.verify(write);
+            IrVerifier.verifyWrite(write);
 
             IrLowering.ReadBuilderImpl readBuilder = new IrLowering.ReadBuilderImpl();
             Value readValue = readBuilder.lower(type);
@@ -42,11 +42,11 @@ public final class IrCompiler {
             readBuilder.push(new Op.Return(new Value.LocalValue(result)));
             List<RunIr> readRuns = RunLowering.lower(readBuilder.result());
             ProgramIr read = new ProgramIr(IrOptimizer.optimize(readRuns));
-            IrVerifier.verify(read);
+            IrVerifier.verifyRead(read);
 
             IrClassData irClassData = IrClassData.collect(classData, write, read);
             final byte[] bytes = IrEmitter.emit(classDesc, irClassData);
-            if (DEBUG) dump(bytes); // Field count could be dynamically inferred or left at 0 for dumps
+            if (DEBUG) dump(bytes);
 
             final Lookup lookup = NetworkBufferTemplate.lookup().defineHiddenClassWithClassData(bytes, List.copyOf(classData), true);
             final MethodHandle constructor = lookup.findConstructor(lookup.lookupClass(), MethodType.methodType(void.class));

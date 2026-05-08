@@ -23,7 +23,7 @@ final class IrEmitter {
     static final ClassDesc CD_SHORT = ConstantDescs.CD_short;
     static final ClassDesc CD_BYTE = ConstantDescs.CD_byte;
     static final ClassDesc CD_BOOLEAN = ConstantDescs.CD_boolean;
-    static final ClassDesc CD_BYTE_ARRAY = ClassDesc.ofDescriptor("[B");
+    static final ClassDesc CD_BYTE_ARRAY = CD_BYTE.arrayType();
     static final ClassDesc CD_VOID = ConstantDescs.CD_void;
     static final ClassDesc CD_BOOLEAN_WRAPPER = ConstantDescs.CD_Boolean;
     static final ClassDesc CD_BYTE_WRAPPER = ConstantDescs.CD_Byte;
@@ -34,10 +34,10 @@ final class IrEmitter {
     static final ClassDesc CD_DOUBLE_WRAPPER = ConstantDescs.CD_Double;
     static final ClassDesc CD_METHOD_HANDLES = ConstantDescs.CD_MethodHandles;
     static final ClassDesc CD_METHOD_HANDLES_LOOKUP = ConstantDescs.CD_MethodHandles_Lookup;
-    static final ClassDesc CD_NETWORK_BUFFER = ClassDesc.of("net.minestom.server.network", "NetworkBuffer");
+    static final ClassDesc CD_NETWORK_BUFFER = NetworkBuffer.class.describeConstable().orElseThrow();
     static final ClassDesc CD_NETWORK_BUFFER_IMPL = ClassDesc.of("net.minestom.server.network", "NetworkBufferImpl");
     static final ClassDesc CD_NETWORK_BUFFER_TYPE_IMPL = ClassDesc.of("net.minestom.server.network", "NetworkBufferTypeImpl");
-    static final ClassDesc CD_TYPE = NetworkBuffer.Type.class.describeConstable().orElseThrow();
+    static final ClassDesc CD_TYPE = CD_NETWORK_BUFFER.nested("Type");
     static final ClassDesc CD_FUNCTION = Function.class.describeConstable().orElseThrow();
     static final ClassDesc CD_UNIT = Unit.class.describeConstable().orElseThrow();
     static final ClassDesc CD_STANDARD_CHARSETS = ClassDesc.of("java.nio.charset", "StandardCharsets");
@@ -185,27 +185,6 @@ final class IrEmitter {
         emitDirectBuffer(codeBuilder, directSlot);
         final EmitContext context = new EmitContext(classDesc, data, directSlot, indexSlot, new IdentityHashMap<>(), false);
         IrRunEmitter.emitProgram(codeBuilder, context, program);
-    }
-
-    static String typeFieldName(IrClassData data, NetworkBuffer.Type<?> type) {
-        for (IrClassData.ExternalTypeFieldData external : data.externalTypes()) {
-            if (external.type() == type) return external.name();
-        }
-        throw new IllegalStateException("Missing type field for " + type);
-    }
-
-    static String transformFunctionName(IrClassData data, Function<?, ?> function) {
-        for (IrClassData.TransformFieldData transform : data.transforms()) {
-            if (transform.function() == function) return transform.name();
-        }
-        throw new IllegalStateException("Missing transform function field");
-    }
-
-    static String ctorFieldName(IrClassData data, Object factory) {
-        for (Map.Entry<String, IrClassData.IrCtorData> entry : data.constructorIrs().entrySet()) {
-            if (entry.getValue().factory() == factory) return entry.getKey();
-        }
-        throw new IllegalStateException("Missing constructor field");
     }
 
     static ClassDesc classDesc(Class<?> type) {

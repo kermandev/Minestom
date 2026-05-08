@@ -14,12 +14,18 @@ import java.util.function.Function;
 
 record IrClassData(ProgramIr write, ProgramIr read, List<TransformFieldData> transforms,
                    Map<String, Integer> constructors, Map<String, IrCtorData> constructorIrs,
-                   List<ExternalTypeFieldData> externalTypes) {
+                   Map<Object, IrCtorData> constructorIrsByFactory,
+                   List<ExternalTypeFieldData> externalTypes,
+                   Map<Function<?, ?>, TransformFieldData> transformsByFunction,
+                   Map<NetworkBuffer.Type<?>, ExternalTypeFieldData> externalTypesByType) {
     public IrClassData {
         transforms = List.copyOf(transforms);
         constructors = Map.copyOf(constructors);
         constructorIrs = Map.copyOf(constructorIrs);
+        constructorIrsByFactory = identityCopy(constructorIrsByFactory);
         externalTypes = List.copyOf(externalTypes);
+        transformsByFunction = identityCopy(transformsByFunction);
+        externalTypesByType = identityCopy(externalTypesByType);
     }
 
     static IrClassData collect(List<Object> classData, ProgramIr write, ProgramIr read) {
@@ -27,6 +33,9 @@ record IrClassData(ProgramIr write, ProgramIr read, List<TransformFieldData> tra
         final List<ExternalTypeFieldData> externalTypes = new ArrayList<>();
         final Map<String, Integer> constructors = new LinkedHashMap<>();
         final Map<String, IrCtorData> constructorIrs = new HashMap<>();
+        final Map<Object, IrCtorData> constructorIrsByFactory = new IdentityHashMap<>();
+        final Map<Function<?, ?>, TransformFieldData> transformsByFunction = new IdentityHashMap<>();
+        final Map<NetworkBuffer.Type<?>, ExternalTypeFieldData> externalTypesByType = new IdentityHashMap<>();
 
         final Usage usage = new Usage();
         collectUsage(write, usage);
@@ -38,25 +47,50 @@ record IrClassData(ProgramIr write, ProgramIr read, List<TransformFieldData> tra
             final Object factory = entry.getKey();
             final int fieldCount = entry.getValue();
             final int dataIndex = addClassData(classData, factory);
+            final IrCtorData data = new IrCtorData(factory, name, fieldCount, dataIndex);
             constructors.put(name, dataIndex);
-            constructorIrs.put(name, new IrCtorData(factory, name, fieldCount, dataIndex));
+            constructorIrs.put(name, data);
+            constructorIrsByFactory.put(factory, data);
         }
 
         int transformIndex = 0;
         for (Function<?, ?> function : usage.functions) {
-            transforms.add(new TransformFieldData("fn" + transformIndex++, function, addClassData(classData, function)));
+            final TransformFieldData data = new TransformFieldData("fn" + transformIndex++, function, addClassData(classData, function));
+            transforms.add(data);
+            transformsByFunction.put(function, data);
         }
 
         int extIndex = 0;
         for (NetworkBuffer.Type<?> type : usage.externalTypes) {
-            externalTypes.add(new ExternalTypeFieldData("ext" + extIndex++, type, addClassData(classData, type)));
+            final ExternalTypeFieldData data = new ExternalTypeFieldData("ext" + extIndex++, type, addClassData(classData, type));
+            externalTypes.add(data);
+            externalTypesByType.put(type, data);
         }
 
-        return new IrClassData(write, read, transforms, constructors, constructorIrs, externalTypes);
+        return new IrClassData(write, read, transforms, constructors, constructorIrs, constructorIrsByFactory,
+                externalTypes, transformsByFunction, externalTypesByType);
     }
 
     IrCtorData constructorIr(String name) {
         return constructorIrs.get(name);
+    }
+
+    String typeFieldName(NetworkBuffer.Type<?> type) {
+        final ExternalTypeFieldData field = externalTypesByType.get(type);
+        if (field != null) return field.name();
+        throw new IllegalStateException("Missing type field for " + type);
+    }
+
+    String transformFunctionName(Function<?, ?> function) {
+        final TransformFieldData field = transformsByFunction.get(function);
+        if (field != null) return field.name();
+        throw new IllegalStateException("Missing transform function field");
+    }
+
+    String ctorFieldName(Object factory) {
+        final IrCtorData field = constructorIrsByFactory.get(factory);
+        if (field != null) return field.name();
+        throw new IllegalStateException("Missing constructor field");
     }
 
     private static void collectUsage(ProgramIr program, Usage usage) {
@@ -96,6 +130,11 @@ record IrClassData(ProgramIr write, ProgramIr read, List<TransformFieldData> tra
         final int index = classData.size();
         classData.add(value);
         return index;
+    }
+
+    private static <K, V> Map<K, V> identityCopy(Map<K, V> values) {
+        final IdentityHashMap<K, V> copy = new IdentityHashMap<>(values);
+        return Collections.unmodifiableMap(copy);
     }
 
     private static class Usage {
