@@ -9,7 +9,7 @@ import java.util.Map;
 import static net.minestom.server.network.NetworkBuffer.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class NetworkBufferIrTest {
+public class NetworkBufferTemplateTest {
     private static <T> void assertRoundTripMatchesDirect(NetworkBuffer.Type<T> fieldType, T value) {
         NetworkBuffer.Type<Box<T>> direct = directBox(fieldType);
         NetworkBuffer.Type<Box<T>> compiled = compiledBox(fieldType);
@@ -171,7 +171,7 @@ public class NetworkBufferIrTest {
 
         var value = new TemplateMap(Map.of("a", 1, "b", 2));
         var array = NetworkBuffer.makeArray(type, value);
-        // Size: 1 (len) + ("a": 1 + 1 + 4) + ("b": 1 + 1 + 4) = 1 + 6 + 6 = 13
+
         assertEquals(13, array.length);
 
         var readValue = NetworkBuffer.wrap(array, 0, array.length).read(type);
@@ -180,7 +180,6 @@ public class NetworkBufferIrTest {
 
     @Test
     public void templateTransformed() {
-        // This mirrors the user's example where they saw multiple reserveWrite(1L)
         NetworkBuffer.Type<TemplateTransformed> type = NetworkBufferTemplate.template(
                 BYTE.transform(v -> v, v -> v), TemplateTransformed::v1,
                 BOOLEAN, TemplateTransformed::v2,
@@ -190,7 +189,7 @@ public class NetworkBufferIrTest {
 
         var value = new TemplateTransformed((byte) 1, true, false);
         var array = NetworkBuffer.makeArray(type, value);
-        assertEquals(3, array.length); // 1 + 1 + 1
+        assertEquals(3, array.length);
 
         var readValue = NetworkBuffer.wrap(array, 0, array.length).read(type);
         assertEquals(value, readValue);
