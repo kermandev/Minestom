@@ -43,8 +43,8 @@ final class IrVerifier {
     private static void verifyRuns(List<RunIr> runs, Set<Local> defined) {
         for (RunIr run : runs) {
             expectLongLike(run.size(), defined);
-            if (run.reserve() && run.size() instanceof Value.Const(Object value) && value instanceof Number n && n.longValue() < 0) {
-                throw new IllegalStateException("Run size must be non-negative for barriers, got " + n.longValue());
+            if (run.size() instanceof Value.Const(Object value) && value instanceof Number n && n.longValue() < 0) {
+                throw new IllegalStateException("Run size must be non-negative, got " + n.longValue());
             }
             for (RunItem item : run.items()) {
                 verifyItem(item, defined);

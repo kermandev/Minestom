@@ -63,16 +63,9 @@ public class IrVerifierTest {
     @Test
     public void testVerifyNegativeSizeFails() {
         ProgramIr program = new ProgramIr(List.of(
-                new RunIr(new Value.Const(-1L), List.of(), true)
+                new RunIr(new Value.Const(-1L), List.of())
         ));
         assertThrows(IllegalStateException.class, () -> IrVerifier.verifyWrite(program));
-    }
-
-    @Test
-    public void testVerifyNegativeSizeNonBarrierPasses() {
-        ProgramIr program = new ProgramIr(List.of(
-                new RunIr(new Value.Const(-1L), List.of(), false)
-        ));
-        assertDoesNotThrow(() -> IrVerifier.verifyWrite(program));
+        assertThrows(IllegalStateException.class, () -> IrVerifier.verifyRead(program));
     }
 }
