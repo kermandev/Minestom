@@ -11,7 +11,8 @@ import java.util.Set;
 public final class IrOptimizer {
     private static final List<Pass> PASSES = List.of(
             IrOptimizer::foldRuns,
-            IrOptimizer::mergeRuns
+            IrOptimizer::mergeRuns,
+            IrOptimizer::simplifyRuns
     );
 
     private IrOptimizer() {
@@ -29,11 +30,6 @@ public final class IrOptimizer {
             }
         } while (modified);
         return current;
-    }
-
-    @FunctionalInterface
-    private interface Pass {
-        List<RunIr> apply(List<RunIr> runs);
     }
 
     private static List<RunIr> foldRuns(List<RunIr> runs) {
@@ -195,7 +191,8 @@ public final class IrOptimizer {
             case RunItem.ListFinish l -> out.add(l.out());
             case RunItem.MapFinish m -> out.add(m.out());
             case RunItem.Construct c -> out.add(c.out());
-            default -> {}
+            default -> {
+            }
         }
     }
 
@@ -442,7 +439,9 @@ public final class IrOptimizer {
                 if (l instanceof Value.Const(Object value1) && value1 instanceof Number nL && nL.longValue() == 0) {
                     return r;
                 }
-                if (l instanceof Value.Add(Value left, Value right) && right instanceof Value.Const(Object value4) && r instanceof Value.Const(
+                if (l instanceof Value.Add(Value left, Value right) && right instanceof Value.Const(
+                        Object value4
+                ) && r instanceof Value.Const(
                         Object value3
                 )) {
                     if (value4 instanceof Number nA && value3 instanceof Number nB) {
@@ -671,4 +670,58 @@ public final class IrOptimizer {
             }
         }
     }
+
+    private static List<RunIr> simplifyRuns(List<RunIr> runs) {
+        List<RunIr> result = new ArrayList<>();
+        for (RunIr run : runs) {
+            boolean isZero = run.size() instanceof Value.Const(
+                    Object value
+            ) && value instanceof Number n && n.longValue() == 0;
+            if (isZero && run.reserve() && !usesIndex(run)) {
+                run = new RunIr(run.size(), run.items(), false);
+            }
+            result.add(run);
+        }
+        return result;
+    }
+
+    private static boolean usesIndex(RunIr run) {
+        for (RunItem item : run.items()) {
+            if (usesIndex(item)) return true;
+        }
+        return false;
+    }
+
+    private static boolean usesIndex(RunItem item) {
+        switch (item) {
+            case RunItem.Put _:
+            case RunItem.Get _:
+            case RunItem.PutVarInt _:
+            case RunItem.PutVarLong _:
+            case RunItem.PutBytes _:
+            case RunItem.GetBytes _:
+                return true;
+            case RunItem.If i:
+                for (RunIr r : i.thenRuns()) if (usesIndex(r)) return true;
+                for (RunIr r : i.elseRuns()) if (usesIndex(r)) return true;
+                return false;
+            case RunItem.ForEach f:
+                for (RunIr r : f.body()) if (usesIndex(r)) return true;
+                return false;
+            case RunItem.ForIndex f:
+                for (RunIr r : f.body()) if (usesIndex(r)) return true;
+                return false;
+            default:
+                return false;
+        }
+    }
+
+    @FunctionalInterface
+    private interface Pass {
+        List<RunIr> apply(List<RunIr> runs);
+    }
+
+
+
+
 }

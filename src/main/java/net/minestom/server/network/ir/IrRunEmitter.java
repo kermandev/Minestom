@@ -23,14 +23,16 @@ final class IrRunEmitter {
     }
 
     private static void emitRun(CodeBuilder codeBuilder, IrEmitter.EmitContext context, RunIr run) {
-        codeBuilder.aload(context.directSlot());
-        emitLongValue(codeBuilder, context, run.size());
-        if (context.write()) {
-            codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "reserveWrite", MT_RESERVE);
-        } else {
-            codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "reserveRead", MT_RESERVE);
+        if (run.reserve()) {
+            codeBuilder.aload(context.directSlot());
+            emitLongValue(codeBuilder, context, run.size());
+            if (context.write()) {
+                codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "reserveWrite", MT_RESERVE);
+            } else {
+                codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "reserveRead", MT_RESERVE);
+            }
+            codeBuilder.lstore(context.indexSlot());
         }
-        codeBuilder.lstore(context.indexSlot());
 
         for (RunItem item : run.items()) {
             emitItem(codeBuilder, context, item);

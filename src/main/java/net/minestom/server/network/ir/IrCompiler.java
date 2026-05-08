@@ -18,15 +18,16 @@ public final class IrCompiler {
     private IrCompiler() {}
 
     public static final String PACKAGE = "net.minestom.server.network";
+    public static final String TEMPLATE_CLASS_NAME = "NetworkTemplate";
 
-    public static final boolean DEBUG = Boolean.getBoolean("minestom.network.ir.dump");
+    public static final boolean DEBUG = true;/*Boolean.getBoolean("minestom.network.ir.dump");*/
     public static final Path DUMP_ROOT = Path.of("build", "generated", "network-templates");
     public static final StackWalker STACK_WALKER = StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);
 
     @SuppressWarnings("unchecked")
     public static <T extends @UnknownNullability Object> NetworkBuffer.Type<T> compile(NetworkBuffer.Type<T> type) {
         try {
-            final ClassDesc classDesc = ClassDesc.of(PACKAGE, "NetworkTemplate");
+            final ClassDesc classDesc = ClassDesc.of(PACKAGE, TEMPLATE_CLASS_NAME);
             final List<Object> classData = new ArrayList<>();
 
             IrLowering.WriteBuilderImpl writeBuilder = new IrLowering.WriteBuilderImpl(new Local(new LocalType.Reference(Object.class)));

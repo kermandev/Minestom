@@ -50,13 +50,29 @@ public class IrVerifierTest {
     @Test
     public void testVerifyReadWithMultipleReturnsFails() {
         ProgramIr program = new ProgramIr(List.of(
-                new RunIr(new Value.Const(0L), List.of(
+                new RunIr(new Value.Const("hello"), List.of(
                         new RunItem.Return(new Value.Const("hello"))
                 )),
-                new RunIr(new Value.Const(0L), List.of(
+                new RunIr(new Value.Const("world"), List.of(
                         new RunItem.Return(new Value.Const("world"))
                 ))
         ));
         assertThrows(IllegalStateException.class, () -> IrVerifier.verifyRead(program));
+    }
+
+    @Test
+    public void testVerifyNegativeSizeFails() {
+        ProgramIr program = new ProgramIr(List.of(
+                new RunIr(new Value.Const(-1L), List.of(), true)
+        ));
+        assertThrows(IllegalStateException.class, () -> IrVerifier.verifyWrite(program));
+    }
+
+    @Test
+    public void testVerifyNegativeSizeNonBarrierPasses() {
+        ProgramIr program = new ProgramIr(List.of(
+                new RunIr(new Value.Const(-1L), List.of(), false)
+        ));
+        assertDoesNotThrow(() -> IrVerifier.verifyWrite(program));
     }
 }

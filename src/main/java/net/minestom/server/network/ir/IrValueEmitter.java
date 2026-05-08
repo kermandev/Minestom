@@ -74,26 +74,38 @@ final class IrValueEmitter {
                         .iand();
             }
             case Value.LessThanOrEqual cmp -> {
-                emitLongValue(codeBuilder, context, cmp.left());
-                emitLongValue(codeBuilder, context, cmp.right());
                 final Label trueLabel = codeBuilder.newLabel();
                 final Label endLabel = codeBuilder.newLabel();
-                codeBuilder.lcmp()
-                        .ifgt(trueLabel)
-                        .iconst_1()
+                if (isLong(cmp.left(), cmp.right())) {
+                    emitLongValue(codeBuilder, context, cmp.left());
+                    emitLongValue(codeBuilder, context, cmp.right());
+                    codeBuilder.lcmp()
+                            .ifgt(trueLabel);
+                } else {
+                    emitIntValue(codeBuilder, context, cmp.left());
+                    emitIntValue(codeBuilder, context, cmp.right());
+                    codeBuilder.if_icmpgt(trueLabel);
+                }
+                codeBuilder.iconst_1()
                         .goto_(endLabel)
                         .labelBinding(trueLabel)
                         .iconst_0()
                         .labelBinding(endLabel);
             }
             case Value.GreaterThan cmp -> {
-                emitLongValue(codeBuilder, context, cmp.left());
-                emitLongValue(codeBuilder, context, cmp.right());
                 final Label trueLabel = codeBuilder.newLabel();
                 final Label endLabel = codeBuilder.newLabel();
-                codeBuilder.lcmp()
-                        .ifle(trueLabel)
-                        .iconst_1()
+                if (isLong(cmp.left(), cmp.right())) {
+                    emitLongValue(codeBuilder, context, cmp.left());
+                    emitLongValue(codeBuilder, context, cmp.right());
+                    codeBuilder.lcmp()
+                            .ifle(trueLabel);
+                } else {
+                    emitIntValue(codeBuilder, context, cmp.left());
+                    emitIntValue(codeBuilder, context, cmp.right());
+                    codeBuilder.if_icmple(trueLabel);
+                }
+                codeBuilder.iconst_1()
                         .goto_(endLabel)
                         .labelBinding(trueLabel)
                         .iconst_0()
@@ -225,6 +237,10 @@ final class IrValueEmitter {
 
     static boolean emitsLong(Value value) {
         return IrStackType.ofValue(value) == IrStackType.LONG;
+    }
+
+    private static boolean isLong(Value left, Value right) {
+        return emitsLong(left) || emitsLong(right);
     }
 
     private static void expectLongLike(Value value) {

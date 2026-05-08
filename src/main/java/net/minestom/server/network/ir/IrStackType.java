@@ -1,10 +1,8 @@
 package net.minestom.server.network.ir;
 
-import net.minestom.server.utils.Unit;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.classfile.TypeKind;
-import java.lang.constant.ConstantDesc;
 
 enum IrStackType {
     INT,
@@ -32,17 +30,13 @@ enum IrStackType {
         };
     }
 
-    static IrStackType ofStoreKind(StoreKind kind) {
+    static IrStackType ofPrimitiveKind(PrimitiveKind kind) {
         return switch (kind) {
-            case BOOLEAN, BYTE, SHORT, INT -> INT;
-            case LONG -> LONG;
+            case BOOLEAN, BYTE, SHORT, INT, UNSIGNED_BYTE, UNSIGNED_SHORT -> INT;
+            case UNSIGNED_INT, LONG -> LONG;
             case FLOAT -> FLOAT;
             case DOUBLE -> DOUBLE;
         };
-    }
-
-    static IrStackType ofPrimitiveKind(PrimitiveKind kind) {
-        return ofStoreKind(kind.storeKind());
     }
 
     static IrStackType ofValue(Value value) {
