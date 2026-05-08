@@ -61,7 +61,7 @@ public final class IrCompiler {
         final StackWalker.StackFrame caller = STACK_WALKER.walk(frames -> frames
                 .filter(frame -> {
                     final Class<?> declaringClass = frame.getDeclaringClass();
-                    return declaringClass != IrCompiler.class && declaringClass != NetworkBufferTemplate.class;
+                    return declaringClass != IrCompiler.class && declaringClass != NetworkBufferTemplate.class && declaringClass != NetworkTemplater.class;
                 })
                 .findFirst()
                 .orElseThrow());
