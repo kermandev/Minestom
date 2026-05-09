@@ -66,6 +66,7 @@ final class IrEmitter {
     static final MethodTypeDesc MT_LOWER_READ = MethodTypeDesc.of(CD_VALUE, CD_READ_BUILDER);
     static final MethodTypeDesc MT_RESERVE = MethodTypeDesc.of(CD_LONG, CD_LONG);
     static final MethodTypeDesc MT_FUNCTION_APPLY = MethodTypeDesc.of(CD_OBJECT, CD_OBJECT);
+    static final MethodTypeDesc MT_IS_DUMMY = MethodTypeDesc.of(CD_BOOLEAN);
     static final MethodTypeDesc MT_WRITE_VAR_INT_UNCHECKED = MethodTypeDesc.of(CD_LONG, CD_NETWORK_BUFFER_IMPL, CD_LONG, CD_INT);
     static final MethodTypeDesc MT_WRITE_VAR_LONG_UNCHECKED = MethodTypeDesc.of(CD_LONG, CD_NETWORK_BUFFER_IMPL, CD_LONG, CD_LONG);
     static final MethodTypeDesc MT_READ_VAR_INT = MethodTypeDesc.of(CD_INT, CD_NETWORK_BUFFER);
@@ -186,7 +187,23 @@ final class IrEmitter {
         final int directSlot = codeBuilder.allocateLocal(TypeKind.REFERENCE);
         final int indexSlot = codeBuilder.allocateLocal(TypeKind.LONG);
         emitDirectBuffer(codeBuilder, directSlot);
-        final EmitContext context = new EmitContext(classDesc, data, directSlot, indexSlot, new IdentityHashMap<>(), true);
+
+        if (IrRunEmitter.hasMemoryWrites(program)) {
+            final Label writeLabel = codeBuilder.newLabel();
+            codeBuilder.aload(directSlot)
+                    .invokevirtual(CD_NETWORK_BUFFER_IMPL, "isDummy", MT_IS_DUMMY)
+                    .ifeq(writeLabel);
+
+            final EmitContext dummyContext = new EmitContext(classDesc, data, directSlot, indexSlot, new IdentityHashMap<>(), true, false);
+            if (program.initialSource() != null) {
+                dummyContext.locals().put(program.initialSource(), objectSlot);
+            }
+            IrRunEmitter.emitProgram(codeBuilder, dummyContext, program);
+            codeBuilder.return_();
+            codeBuilder.labelBinding(writeLabel);
+        }
+
+        final EmitContext context = new EmitContext(classDesc, data, directSlot, indexSlot, new IdentityHashMap<>(), true, true);
         if (program.initialSource() != null) {
             context.locals().put(program.initialSource(), objectSlot);
         }
@@ -198,7 +215,7 @@ final class IrEmitter {
         final int directSlot = codeBuilder.allocateLocal(TypeKind.REFERENCE);
         final int indexSlot = codeBuilder.allocateLocal(TypeKind.LONG);
         emitDirectBuffer(codeBuilder, directSlot);
-        final EmitContext context = new EmitContext(classDesc, data, directSlot, indexSlot, new IdentityHashMap<>(), false);
+        final EmitContext context = new EmitContext(classDesc, data, directSlot, indexSlot, new IdentityHashMap<>(), false, true);
         IrRunEmitter.emitProgram(codeBuilder, context, program);
     }
 
@@ -241,7 +258,7 @@ final class IrEmitter {
         return MethodTypeDesc.of(CD_OBJECT, params);
     }
 
-    record EmitContext(ClassDesc classDesc, IrClassData data, int directSlot, int indexSlot, Map<Local, Integer> locals,
-                       boolean write) {
+    record EmitContext(ClassDesc classDesc, IrClassData data, int directSlot, int indexSlot,
+                       Map<Local, Integer> locals, boolean write, boolean emitMemoryWrites) {
     }
 }

@@ -282,12 +282,25 @@ public class NetworkBufferTest {
 
     @Test
     public void sizeOfPrimitives() {
+        assertEquals(1, BOOLEAN.sizeOf(true));
         assertEquals(1, BYTE.sizeOf((byte) 1));
+        assertEquals(1, UNSIGNED_BYTE.sizeOf((short) 1));
         assertEquals(2, SHORT.sizeOf((short) 1));
+        assertEquals(2, UNSIGNED_SHORT.sizeOf(1));
         assertEquals(4, INT.sizeOf(1));
+        assertEquals(4, UNSIGNED_INT.sizeOf(1L));
         assertEquals(8, LONG.sizeOf(1L));
         assertEquals(4, FLOAT.sizeOf(1f));
         assertEquals(8, DOUBLE.sizeOf(1d));
+        assertEquals(3, VAR_INT_3.sizeOf(123456));
+    }
+
+    @Test
+    public void sizeOfArraysAndStrings() {
+        assertEquals(3, NetworkBuffer.FixedRawBytes(3).sizeOf(new byte[]{1, 2, 3}));
+        assertEquals(4, BYTE_ARRAY.sizeOf(new byte[]{1, 2, 3}));
+        assertEquals(17, LONG_ARRAY.sizeOf(new long[]{1L, 2L}));
+        assertEquals(7, STRING_IO_UTF8.sizeOf("Hello"));
     }
 
     @Test

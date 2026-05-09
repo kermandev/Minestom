@@ -391,7 +391,7 @@ final class NetworkBufferImpl implements NetworkBuffer {
 
     private static final boolean ENDIAN_CONVERSION = ByteOrder.nativeOrder() != ByteOrder.BIG_ENDIAN;
 
-    private boolean isDummy() {
+    boolean isDummy() {
         return address == DUMMY_ADDRESS;
     }
 
@@ -410,7 +410,6 @@ final class NetworkBufferImpl implements NetworkBuffer {
     }
 
     void _putBytesUnchecked(long index, byte[] value, int offset, int length) {
-        if (isDummy()) return;
         UNSAFE.copyMemory(value, BYTE_ARRAY_OFFSET + offset, null, address + index, length);
     }
 
@@ -433,7 +432,6 @@ final class NetworkBufferImpl implements NetworkBuffer {
     }
 
     void _putByteUnchecked(long index, byte value) {
-        if (isDummy()) return;
         UNSAFE.putByte(address + index, value);
     }
 
@@ -458,7 +456,6 @@ final class NetworkBufferImpl implements NetworkBuffer {
     }
 
     void _putShortUnchecked(long index, short value) {
-        if (isDummy()) return;
         if (ENDIAN_CONVERSION) value = Short.reverseBytes(value);
         UNSAFE.putShort(address + index, value);
     }
@@ -485,7 +482,6 @@ final class NetworkBufferImpl implements NetworkBuffer {
     }
 
     void _putIntUnchecked(long index, int value) {
-        if (isDummy()) return;
         if (ENDIAN_CONVERSION) value = Integer.reverseBytes(value);
         UNSAFE.putInt(address + index, value);
     }
@@ -512,7 +508,6 @@ final class NetworkBufferImpl implements NetworkBuffer {
     }
 
     void _putLongUnchecked(long index, long value) {
-        if (isDummy()) return;
         if (ENDIAN_CONVERSION) value = Long.reverseBytes(value);
         UNSAFE.putLong(address + index, value);
     }
@@ -541,7 +536,6 @@ final class NetworkBufferImpl implements NetworkBuffer {
     }
 
     void _putFloatUnchecked(long index, float value) {
-        if (isDummy()) return;
         int intValue = Float.floatToIntBits(value);
         if (ENDIAN_CONVERSION) intValue = Integer.reverseBytes(intValue);
         UNSAFE.putInt(address + index, intValue);
@@ -572,7 +566,6 @@ final class NetworkBufferImpl implements NetworkBuffer {
     }
 
     void _putDoubleUnchecked(long index, double value) {
-        if (isDummy()) return;
         long longValue = Double.doubleToLongBits(value);
         if (ENDIAN_CONVERSION) longValue = Long.reverseBytes(longValue);
         UNSAFE.putLong(address + index, longValue);

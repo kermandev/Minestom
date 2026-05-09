@@ -6,6 +6,7 @@ import java.lang.classfile.TypeKind;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.ConstantDescs;
 import java.lang.constant.MethodTypeDesc;
+import java.util.List;
 
 import static net.minestom.server.network.ir.IrCompiler.constructorInterface;
 import static net.minestom.server.network.ir.IrEmitter.*;
@@ -20,6 +21,37 @@ final class IrRunEmitter {
         for (RunIr run : program.runs()) {
             emitRun(codeBuilder, context, run);
         }
+    }
+
+    static boolean hasMemoryWrites(ProgramIr program) {
+        for (RunIr run : program.runs()) {
+            if (hasMemoryWrites(run)) return true;
+        }
+        return false;
+    }
+
+    private static boolean hasMemoryWrites(RunIr run) {
+        for (RunItem item : run.items()) {
+            if (hasMemoryWrite(item)) return true;
+        }
+        return false;
+    }
+
+    private static boolean hasMemoryWrite(RunItem item) {
+        return switch (item) {
+            case RunItem.Put _, RunItem.PutVarInt _, RunItem.PutVarLong _, RunItem.PutBytes _ -> true;
+            case RunItem.If branch -> hasMemoryWrites(branch.thenRuns()) || hasMemoryWrites(branch.elseRuns());
+            case RunItem.ForEach loop -> hasMemoryWrites(loop.body());
+            case RunItem.ForIndex loop -> hasMemoryWrites(loop.body());
+            default -> false;
+        };
+    }
+
+    private static boolean hasMemoryWrites(List<RunIr> runs) {
+        for (RunIr run : runs) {
+            if (hasMemoryWrites(run)) return true;
+        }
+        return false;
     }
 
     private static void emitRun(CodeBuilder codeBuilder, IrEmitter.EmitContext context, RunIr run) {
@@ -42,10 +74,12 @@ final class IrRunEmitter {
     private static void emitItem(CodeBuilder codeBuilder, IrEmitter.EmitContext context, RunItem item) {
         switch (item) {
             case RunItem.Put put -> {
-                codeBuilder.aload(context.directSlot());
-                emitLongValue(codeBuilder, context, put.offset());
-                emitValue(codeBuilder, context, put.value());
-                emitStoreKindWrite(codeBuilder, put.kind(), put.value());
+                if (context.emitMemoryWrites()) {
+                    codeBuilder.aload(context.directSlot());
+                    emitLongValue(codeBuilder, context, put.offset());
+                    emitValue(codeBuilder, context, put.value());
+                    emitStoreKindWrite(codeBuilder, put.kind(), put.value());
+                }
             }
             case RunItem.Get get -> {
                 codeBuilder.aload(context.directSlot());
@@ -54,11 +88,13 @@ final class IrRunEmitter {
                 emitStoreLocal(codeBuilder, context, get.out());
             }
             case RunItem.PutVarInt putVarInt -> {
-                codeBuilder.aload(context.directSlot());
-                emitLongValue(codeBuilder, context, putVarInt.offset());
-                emitIntValue(codeBuilder, context, putVarInt.value());
-                codeBuilder.invokestatic(CD_NETWORK_BUFFER_TYPE_IMPL, "writeVarIntUnchecked", MT_WRITE_VAR_INT_UNCHECKED, true);
-                codeBuilder.pop2();
+                if (context.emitMemoryWrites()) {
+                    codeBuilder.aload(context.directSlot());
+                    emitLongValue(codeBuilder, context, putVarInt.offset());
+                    emitIntValue(codeBuilder, context, putVarInt.value());
+                    codeBuilder.invokestatic(CD_NETWORK_BUFFER_TYPE_IMPL, "writeVarIntUnchecked", MT_WRITE_VAR_INT_UNCHECKED, true);
+                    codeBuilder.pop2();
+                }
             }
             case RunItem.GetVarInt getVarInt -> {
                 codeBuilder.aload(context.directSlot())
@@ -66,11 +102,13 @@ final class IrRunEmitter {
                 emitStoreLocal(codeBuilder, context, getVarInt.out());
             }
             case RunItem.PutVarLong putVarLong -> {
-                codeBuilder.aload(context.directSlot());
-                emitLongValue(codeBuilder, context, putVarLong.offset());
-                emitLongValue(codeBuilder, context, putVarLong.value());
-                codeBuilder.invokestatic(CD_NETWORK_BUFFER_TYPE_IMPL, "writeVarLongUnchecked", MT_WRITE_VAR_LONG_UNCHECKED, true);
-                codeBuilder.pop2();
+                if (context.emitMemoryWrites()) {
+                    codeBuilder.aload(context.directSlot());
+                    emitLongValue(codeBuilder, context, putVarLong.offset());
+                    emitLongValue(codeBuilder, context, putVarLong.value());
+                    codeBuilder.invokestatic(CD_NETWORK_BUFFER_TYPE_IMPL, "writeVarLongUnchecked", MT_WRITE_VAR_LONG_UNCHECKED, true);
+                    codeBuilder.pop2();
+                }
             }
             case RunItem.GetVarLong getVarLong -> {
                 codeBuilder.aload(context.directSlot())
@@ -78,12 +116,14 @@ final class IrRunEmitter {
                 emitStoreLocal(codeBuilder, context, getVarLong.out());
             }
             case RunItem.PutBytes putBytes -> {
-                codeBuilder.aload(context.directSlot());
-                emitLongValue(codeBuilder, context, putBytes.offset());
-                emitValue(codeBuilder, context, putBytes.byteArray());
-                codeBuilder.iconst_0();
-                emitIntValue(codeBuilder, context, putBytes.length());
-                codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "_putBytesUnchecked", MT_PUT_BYTES);
+                if (context.emitMemoryWrites()) {
+                    codeBuilder.aload(context.directSlot());
+                    emitLongValue(codeBuilder, context, putBytes.offset());
+                    emitValue(codeBuilder, context, putBytes.byteArray());
+                    codeBuilder.iconst_0();
+                    emitIntValue(codeBuilder, context, putBytes.length());
+                    codeBuilder.invokevirtual(CD_NETWORK_BUFFER_IMPL, "_putBytesUnchecked", MT_PUT_BYTES);
+                }
             }
             case RunItem.GetBytes getBytes -> {
                 final int lengthSlot = codeBuilder.allocateLocal(TypeKind.INT);

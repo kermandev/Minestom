@@ -113,7 +113,9 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         checkFixedBytesLength(value, expectedLength);
         if (expectedLength == 0) return;
         final NetworkBufferImpl impl = impl(buffer);
-        impl._putBytesUnchecked(impl.reserveWrite(expectedLength), value, 0, expectedLength);
+        final long index = impl.reserveWrite(expectedLength);
+        if (impl.isDummy()) return;
+        impl._putBytesUnchecked(index, value, 0, expectedLength);
     }
 
     static byte[] checkFixedBytesLength(byte[] value, int expectedLength) {
@@ -138,6 +140,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         final long totalSize = Math.addExact(prefixSize, length);
         final NetworkBufferImpl impl = impl(buffer);
         final long base = impl.reserveWrite(totalSize);
+        if (impl.isDummy()) return;
         writeVarIntUnchecked(impl, base, length);
         if (length > 0) impl._putBytesUnchecked(base + prefixSize, value, 0, length);
     }
@@ -201,7 +204,9 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         @Override
         public void write(NetworkBuffer buffer, Boolean value) {
             final NetworkBufferImpl impl = impl(buffer);
-            impl._putByteUnchecked(impl.reserveWrite(1), value ? (byte) 1 : (byte) 0);
+            final long index = impl.reserveWrite(1);
+            if (impl.isDummy()) return;
+            impl._putByteUnchecked(index, value ? (byte) 1 : (byte) 0);
         }
 
         @Override
@@ -234,7 +239,9 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         @Override
         public void write(NetworkBuffer buffer, Byte value) {
             final NetworkBufferImpl impl = impl(buffer);
-            impl._putByteUnchecked(impl.reserveWrite(1), value);
+            final long index = impl.reserveWrite(1);
+            if (impl.isDummy()) return;
+            impl._putByteUnchecked(index, value);
         }
 
         @Override
@@ -266,7 +273,9 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         @Override
         public void write(NetworkBuffer buffer, Short value) {
             final NetworkBufferImpl impl = impl(buffer);
-            impl._putByteUnchecked(impl.reserveWrite(1), (byte) (value & 0xFF));
+            final long index = impl.reserveWrite(1);
+            if (impl.isDummy()) return;
+            impl._putByteUnchecked(index, (byte) (value & 0xFF));
         }
 
         @Override
@@ -299,7 +308,9 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         @Override
         public void write(NetworkBuffer buffer, Short value) {
             final NetworkBufferImpl impl = impl(buffer);
-            impl._putShortUnchecked(impl.reserveWrite(2), value);
+            final long index = impl.reserveWrite(2);
+            if (impl.isDummy()) return;
+            impl._putShortUnchecked(index, value);
         }
 
         @Override
@@ -331,7 +342,9 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         @Override
         public void write(NetworkBuffer buffer, Integer value) {
             final NetworkBufferImpl impl = impl(buffer);
-            impl._putShortUnchecked(impl.reserveWrite(2), (short) (value & 0xFFFF));
+            final long index = impl.reserveWrite(2);
+            if (impl.isDummy()) return;
+            impl._putShortUnchecked(index, (short) (value & 0xFFFF));
         }
 
         @Override
@@ -364,7 +377,9 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         @Override
         public void write(NetworkBuffer buffer, Integer value) {
             final NetworkBufferImpl impl = impl(buffer);
-            impl._putIntUnchecked(impl.reserveWrite(4), value);
+            final long index = impl.reserveWrite(4);
+            if (impl.isDummy()) return;
+            impl._putIntUnchecked(index, value);
         }
 
         @Override
@@ -396,7 +411,9 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         @Override
         public void write(NetworkBuffer buffer, Long value) {
             final NetworkBufferImpl impl = impl(buffer);
-            impl._putIntUnchecked(impl.reserveWrite(4), (int) (value & 0xFFFFFFFFL));
+            final long index = impl.reserveWrite(4);
+            if (impl.isDummy()) return;
+            impl._putIntUnchecked(index, (int) (value & 0xFFFFFFFFL));
         }
 
         @Override
@@ -429,7 +446,9 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         @Override
         public void write(NetworkBuffer buffer, Long value) {
             final NetworkBufferImpl impl = impl(buffer);
-            impl._putLongUnchecked(impl.reserveWrite(8), value);
+            final long index = impl.reserveWrite(8);
+            if (impl.isDummy()) return;
+            impl._putLongUnchecked(index, value);
         }
 
         @Override
@@ -461,7 +480,9 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         @Override
         public void write(NetworkBuffer buffer, Float value) {
             final NetworkBufferImpl impl = impl(buffer);
-            impl._putFloatUnchecked(impl.reserveWrite(4), value);
+            final long index = impl.reserveWrite(4);
+            if (impl.isDummy()) return;
+            impl._putFloatUnchecked(index, value);
         }
 
         @Override
@@ -493,7 +514,9 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         @Override
         public void write(NetworkBuffer buffer, Double value) {
             final NetworkBufferImpl impl = impl(buffer);
-            impl._putDoubleUnchecked(impl.reserveWrite(8), value);
+            final long index = impl.reserveWrite(8);
+            if (impl.isDummy()) return;
+            impl._putDoubleUnchecked(index, value);
         }
 
         @Override
@@ -526,7 +549,9 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         public void write(NetworkBuffer buffer, Integer boxed) {
             int value = boxed;
             var nio = impl(buffer);
-            writeVarIntUnchecked(nio, nio.reserveWrite(varIntSize(value)), value);
+            final long index = nio.reserveWrite(varIntSize(value));
+            if (nio.isDummy()) return;
+            writeVarIntUnchecked(nio, index, value);
         }
 
         @Override
@@ -556,6 +581,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
             Check.argCondition(value < 0 || value >= (1 << 21), "VarInt3 out of bounds: {0}", value);
             var impl = impl(buffer);
             final long startIndex = impl.reserveWrite(3);
+            if (impl.isDummy()) return;
             impl._putByteUnchecked(startIndex, (byte) (value & 0x7F | 0x80));
             impl._putByteUnchecked(startIndex + 1, (byte) ((value >>> 7) & 0x7F | 0x80));
             impl._putByteUnchecked(startIndex + 2, (byte) (value >>> 14));
@@ -591,7 +617,9 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         @Override
         public void write(NetworkBuffer buffer, Long value) {
             final NetworkBufferImpl impl = impl(buffer);
-            writeVarLongUnchecked(impl, impl.reserveWrite(varLongSize(value)), value);
+            final long index = impl.reserveWrite(varLongSize(value));
+            if (impl.isDummy()) return;
+            writeVarLongUnchecked(impl, index, value);
         }
 
         @Override
@@ -635,7 +663,9 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
             final int length = value.length;
             if (length == 0) return;
             final NetworkBufferImpl impl = impl(buffer);
-            impl._putBytesUnchecked(impl.reserveWrite(length), value, 0, length);
+            final long index = impl.reserveWrite(length);
+            if (impl.isDummy()) return;
+            impl._putBytesUnchecked(index, value, 0, length);
         }
 
         @Override
@@ -850,6 +880,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
             final long bodySize = Math.multiplyExact((long) length, Long.BYTES);
             final NetworkBufferImpl impl = impl(buffer);
             final long base = impl.reserveWrite(Math.addExact(prefixSize, bodySize));
+            if (impl.isDummy()) return;
             writeVarIntUnchecked(impl, base, length);
             for (int i = 0; i < length; i++) {
                 impl._putLongUnchecked(base + prefixSize + (long) i * Long.BYTES, value[i]);
@@ -1559,6 +1590,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
             buffer.write(SHORT, (short) utflen);
             var impl = (NetworkBufferImpl) buffer;
             long index = impl.reserveWrite(utflen);
+            if (impl.isDummy()) return;
             int i;
             for (i = 0; i < strlen; i++) { // optimized for initial run of ASCII
                 int c = value.charAt(i);
