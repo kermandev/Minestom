@@ -287,12 +287,13 @@ final class IrRunEmitter {
                 emitStoreLocal(codeBuilder, context, mapEntryValue.out());
             }
             case RunItem.Construct construct -> {
-                final ClassDesc constructorType = constructorInterface(construct.args().size());
+                final int argSize = construct.args().size();
+                final ClassDesc constructorType = constructorInterface(argSize);
                 codeBuilder.getstatic(context.classDesc(), context.data().ctorFieldName(construct.factory()), constructorType);
                 for (Value arg : construct.args()) {
                     emitValue(codeBuilder, context, arg);
                 }
-                codeBuilder.invokeinterface(constructorType, "apply", constructorApplyType(construct.args().size()));
+                codeBuilder.invokeinterface(constructorType, "apply", constructorApplyType(argSize));
                 emitStoreLocal(codeBuilder, context, construct.out());
             }
             case RunItem.Return ret -> {
