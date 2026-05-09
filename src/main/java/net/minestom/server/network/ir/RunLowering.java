@@ -28,9 +28,11 @@ final class RunLowering {
                 context.size = new Value.Add(context.size, new Value.Const(read.kind().byteSize()));
             }
             case Op.WriteVarInt write -> {
+                context.flush();
                 ensureDependencies(context, write.value());
                 context.items.add(new RunItem.PutVarInt(context.offset(), write.value(), new Value.VarIntSize(write.value())));
                 context.size = new Value.Add(context.size, new Value.VarIntSize(write.value()));
+                context.flush();
             }
             case Op.ReadVarInt read -> {
                 context.flush();
@@ -39,9 +41,11 @@ final class RunLowering {
                 context.flush();
             }
             case Op.WriteVarLong write -> {
+                context.flush();
                 ensureDependencies(context, write.value());
                 context.items.add(new RunItem.PutVarLong(context.offset(), write.value(), new Value.VarLongSize(write.value())));
                 context.size = new Value.Add(context.size, new Value.VarLongSize(write.value()));
+                context.flush();
             }
             case Op.ReadVarLong read -> {
                 context.flush();
@@ -61,7 +65,7 @@ final class RunLowering {
                 context.flush();
             }
             case Op.WriteFixedBytes write -> {
-                Value length = new Value.ArrayLength(write.value());
+                Value length = write.length();
                 ensureDependencies(context, length);
                 context.items.add(new RunItem.PutBytes(context.offset(), write.value(), length));
                 context.size = new Value.Add(context.size, length);

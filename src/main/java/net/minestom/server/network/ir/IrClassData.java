@@ -3,10 +3,9 @@ package net.minestom.server.network.ir;
 import net.minestom.server.network.NetworkBuffer;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -14,19 +13,13 @@ import java.util.function.Function;
 
 record IrClassData(ProgramIr write, ProgramIr read, List<TransformFieldData> transforms,
                    Map<String, Integer> constructors, Map<String, IrCtorData> constructorIrs,
-                   Map<Object, IrCtorData> constructorIrsByFactory,
                    List<ExternalTypeFieldData> externalTypes,
-                   Map<Function<?, ?>, TransformFieldData> transformsByFunction,
-                   Map<NetworkBuffer.Type<?>, ExternalTypeFieldData> externalTypesByType,
                    int dataIndex) {
     public IrClassData {
         transforms = List.copyOf(transforms);
         constructors = Map.copyOf(constructors);
         constructorIrs = Map.copyOf(constructorIrs);
-        constructorIrsByFactory = identityCopy(constructorIrsByFactory);
         externalTypes = List.copyOf(externalTypes);
-        transformsByFunction = identityCopy(transformsByFunction);
-        externalTypesByType = identityCopy(externalTypesByType);
     }
 
     static IrClassData collect(List<Object> classData, NetworkBuffer.Type<?> type, ProgramIr write, ProgramIr read) {
@@ -34,9 +27,6 @@ record IrClassData(ProgramIr write, ProgramIr read, List<TransformFieldData> tra
         final List<ExternalTypeFieldData> externalTypes = new ArrayList<>();
         final Map<String, Integer> constructors = new LinkedHashMap<>();
         final Map<String, IrCtorData> constructorIrs = new HashMap<>();
-        final Map<Object, IrCtorData> constructorIrsByFactory = new IdentityHashMap<>();
-        final Map<Function<?, ?>, TransformFieldData> transformsByFunction = new IdentityHashMap<>();
-        final Map<NetworkBuffer.Type<?>, ExternalTypeFieldData> externalTypesByType = new IdentityHashMap<>();
 
         final Usage usage = new Usage();
         collectUsage(write, usage);
@@ -51,26 +41,22 @@ record IrClassData(ProgramIr write, ProgramIr read, List<TransformFieldData> tra
             final IrCtorData data = new IrCtorData(factory, name, fieldCount, dataIndex);
             constructors.put(name, dataIndex);
             constructorIrs.put(name, data);
-            constructorIrsByFactory.put(factory, data);
         }
 
         int transformIndex = 0;
         for (Function<?, ?> function : usage.functions) {
             final TransformFieldData data = new TransformFieldData("fn" + transformIndex++, function, addClassData(classData, function));
             transforms.add(data);
-            transformsByFunction.put(function, data);
         }
 
         int extIndex = 0;
         for (NetworkBuffer.Type<?> extType : usage.externalTypes) {
             final ExternalTypeFieldData data = new ExternalTypeFieldData("ext" + extIndex++, extType, addClassData(classData, extType));
             externalTypes.add(data);
-            externalTypesByType.put(extType, data);
         }
 
         final int dataIndex = addClassData(classData, type);
-        return new IrClassData(write, read, transforms, constructors, constructorIrs, constructorIrsByFactory,
-                externalTypes, transformsByFunction, externalTypesByType, dataIndex);
+        return new IrClassData(write, read, transforms, constructors, constructorIrs, externalTypes, dataIndex);
     }
 
     IrCtorData constructorIr(String name) {
@@ -78,20 +64,23 @@ record IrClassData(ProgramIr write, ProgramIr read, List<TransformFieldData> tra
     }
 
     String typeFieldName(NetworkBuffer.Type<?> type) {
-        final ExternalTypeFieldData field = externalTypesByType.get(type);
-        if (field != null) return field.name();
+        for (ExternalTypeFieldData externalType : externalTypes) {
+            if (externalType.type().equals(type)) return externalType.name();
+        }
         throw new IllegalStateException("Missing type field for " + type);
     }
 
     String transformFunctionName(Function<?, ?> function) {
-        final TransformFieldData field = transformsByFunction.get(function);
-        if (field != null) return field.name();
+        for (TransformFieldData transform : transforms) {
+            if (transform.function().equals(function)) return transform.name();
+        }
         throw new IllegalStateException("Missing transform function field");
     }
 
     String ctorFieldName(Object factory) {
-        final IrCtorData field = constructorIrsByFactory.get(factory);
-        if (field != null) return field.name();
+        for (IrCtorData constructor : constructorIrs.values()) {
+            if (constructor.factory().equals(factory)) return constructor.name();
+        }
         throw new IllegalStateException("Missing constructor field");
     }
 
@@ -134,15 +123,10 @@ record IrClassData(ProgramIr write, ProgramIr read, List<TransformFieldData> tra
         return index;
     }
 
-    private static <K, V> Map<K, V> identityCopy(Map<K, V> values) {
-        final IdentityHashMap<K, V> copy = new IdentityHashMap<>(values);
-        return Collections.unmodifiableMap(copy);
-    }
-
     private static class Usage {
-        final Set<Function<?, ?>> functions = Collections.newSetFromMap(new IdentityHashMap<>());
-        final Set<NetworkBuffer.Type<?>> externalTypes = Collections.newSetFromMap(new IdentityHashMap<>());
-        final Map<Object, Integer> constructors = new IdentityHashMap<>();
+        final Set<Function<?, ?>> functions = new LinkedHashSet<>();
+        final Set<NetworkBuffer.Type<?>> externalTypes = new LinkedHashSet<>();
+        final Map<Object, Integer> constructors = new LinkedHashMap<>();
     }
 
 

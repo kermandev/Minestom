@@ -9,14 +9,12 @@ import java.util.List;
 import java.util.Set;
 
 public final class IrOptimizer {
-    private static final List<Pass> PASSES = List.of(
+    private IrOptimizer() {
+    }    private static final List<Pass> PASSES = List.of(
             IrOptimizer::foldRuns,
             IrOptimizer::mergeRuns,
             IrOptimizer::simplifyRuns
     );
-
-    private IrOptimizer() {
-    }
 
     public static List<RunIr> optimize(List<RunIr> runs) {
         List<RunIr> current = runs;
@@ -131,7 +129,8 @@ public final class IrOptimizer {
 
     private static boolean isMergeable(RunIr block) {
         for (RunItem item : block.items()) {
-            if (item instanceof RunItem.GetVarInt || item instanceof RunItem.GetVarLong || item instanceof RunItem.WriteExternal
+            if (item instanceof RunItem.PutVarInt || item instanceof RunItem.GetVarInt
+                    || item instanceof RunItem.PutVarLong || item instanceof RunItem.GetVarLong || item instanceof RunItem.WriteExternal
                     || item instanceof RunItem.ReadExternal || item instanceof RunItem.If || item instanceof RunItem.ForEach || item instanceof RunItem.ForIndex
                     || item instanceof RunItem.Return) {
                 return false;
@@ -674,7 +673,9 @@ public final class IrOptimizer {
     private static List<RunIr> simplifyRuns(List<RunIr> runs) {
         List<RunIr> result = new ArrayList<>();
         for (RunIr run : runs) {
-            boolean isZero = run.size() instanceof Value.Const(Object value) && value instanceof Number n && n.longValue() == 0;
+            boolean isZero = run.size() instanceof Value.Const(
+                    Object value
+            ) && value instanceof Number n && n.longValue() == 0;
             if (isZero && run.reserve() && !usesIndex(run)) {
                 run = new RunIr(run.size(), run.items(), false);
             }
@@ -704,27 +705,11 @@ public final class IrOptimizer {
     }
 
     private static boolean usesIndex(RunItem item) {
-        switch (item) {
-            case RunItem.Put _:
-            case RunItem.Get _:
-            case RunItem.PutVarInt _:
-            case RunItem.PutVarLong _:
-            case RunItem.PutBytes _:
-            case RunItem.GetBytes _:
-                return true;
-            case RunItem.If i:
-                for (RunIr r : i.thenRuns()) if (usesIndex(r)) return true;
-                for (RunIr r : i.elseRuns()) if (usesIndex(r)) return true;
-                return false;
-            case RunItem.ForEach f:
-                for (RunIr r : f.body()) if (usesIndex(r)) return true;
-                return false;
-            case RunItem.ForIndex f:
-                for (RunIr r : f.body()) if (usesIndex(r)) return true;
-                return false;
-            default:
-                return false;
-        }
+        return switch (item) {
+            case RunItem.Put _, RunItem.Get _, RunItem.PutVarInt _, RunItem.PutVarLong _, RunItem.PutBytes _,
+                 RunItem.GetBytes _ -> true;
+            default -> false;
+        };
     }
 
     @FunctionalInterface

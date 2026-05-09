@@ -61,7 +61,7 @@ public sealed interface Op {
     record ReadVarLong(Local out) implements Op {
     }
 
-    record WriteFixedBytes(Value value) implements Op {
+    record WriteFixedBytes(Value value, Value length) implements Op {
     }
 
     record ReadFixedBytes(Value length, Local out) implements Op {

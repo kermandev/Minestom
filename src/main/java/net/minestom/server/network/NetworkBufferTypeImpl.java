@@ -609,7 +609,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
                 final Value actualLength = new Value.ArrayLength(new Value.LocalValue(bytes));
                 builder.push(new Op.Check(new Value.LessThanOrEqual(actualLength, new Value.Const(length)), "Invalid fixed byte array length"));
                 builder.push(new Op.Check(new Value.GreaterThan(actualLength, new Value.Const(length - 1)), "Invalid fixed byte array length"));
-                builder.push(new Op.WriteFixedBytes(new Value.LocalValue(bytes)));
+                builder.push(new Op.WriteFixedBytes(new Value.LocalValue(bytes), new Value.Const(length)));
             } else {
                 builder.push(new Op.WriteExternal(this, new Value.LocalValue(bytes)));
             }
@@ -817,7 +817,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
             final Value lengthVal = new Value.LocalValue(lengthLocal);
 
             builder.push(new Op.WriteVarInt(lengthVal));
-            builder.push(new Op.WriteFixedBytes(new Value.LocalValue(bytes)));
+            builder.push(new Op.WriteFixedBytes(new Value.LocalValue(bytes), lengthVal));
         }
 
         @Override
