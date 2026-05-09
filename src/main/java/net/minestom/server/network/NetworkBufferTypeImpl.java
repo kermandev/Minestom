@@ -61,7 +61,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         while (true) {
             if ((value & ~SEGMENT_BITS) == 0) {
                 impl._putByteUnchecked(index, (byte) value);
-                return index + 1;
+                return index + 1L;
             }
             impl._putByteUnchecked(index++, (byte) ((value & SEGMENT_BITS) | CONTINUE_BIT));
             value >>>= 7;
@@ -72,7 +72,7 @@ public interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         while (true) {
             if ((value & ~((long) SEGMENT_BITS)) == 0) {
                 impl._putByteUnchecked(index, (byte) value);
-                return index + 1;
+                return index + 1L;
             }
             impl._putByteUnchecked(index++, (byte) (value & SEGMENT_BITS | CONTINUE_BIT));
             value >>>= 7;
