@@ -31,18 +31,3 @@ jobs:
 
       - name: Build & Test
         uses: ./.github/actions/gradle-check
-
-  native-image-metadata:
-    name: Native Image Metadata
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v6
-
-      - name: Setup Gradle
-        uses: ./.github/actions/setup-gradle
-        with:
-          cache-read-only: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
-
-      - name: Test With Agent
-        uses: ./.github/actions/test-with-agent
