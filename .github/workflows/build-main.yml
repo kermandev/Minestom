@@ -1,7 +1,16 @@
-name: Build PR
+name: Build & Test Main
+
 on:
   push:
     branches: [ master ]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-main-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: Build & Test Main
@@ -14,12 +23,89 @@ jobs:
         with:
           distribution: graalvm
           java-version: 25
-
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
         with:
-          # Allow caching for all branches in our repo;
-          # this is so we don't get evicted, see Cache Optimization in action docs for more info
           cache-read-only: false
       - name: Build
         run: ./gradlew test javadoc
+
+  native-test:
+    name: Native Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: graalvm
+          java-version: 25
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: false
+      - name: Run Tests in Native Image
+        run: ./gradlew -Pagent=standard test metadataCopy nativeTest --no-configuration-cache
+
+  binary-compatibility:
+    name: Binary Compatibility
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: graalvm
+          java-version: 25
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: false
+      - name: Check Binary Compatibility
+        run: ./gradlew checkBinaryCompatibility
+
+  publish-snapshot:
+    name: Publish Snapshot
+    needs: [build, native-test, binary-compatibility]
+    if: github.repository == 'Minestom/Minestom'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: graalvm
+          java-version: 25
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: false
+
+      - name: Generate GraalVM Reachability Metadata
+        run: ./gradlew -Pagent=standard test metadataCopy --no-configuration-cache
+
+      - name: Commit and Push Updated Metadata
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/main/resources/META-INF/native-image
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: update GraalVM reachability metadata [skip ci]"
+            git push
+          else
+            echo "Metadata is already up-to-date."
+          fi
+
+      - name: Publish Snapshot
+        env:
+          MINESTOM_VERSION: master-SNAPSHOT
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSWORD }}
+        run: |
+          ./gradlew nmcpPublishAggregationToCentralPortalSnapshots
+          echo "Version: ${MINESTOM_VERSION}" >> $GITHUB_STEP_SUMMARY

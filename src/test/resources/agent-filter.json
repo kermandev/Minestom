@@ -1,0 +1,13 @@
+{
+  "rules": [
+    {"excludeClasses": "org.junit.**"},
+    {"excludeClasses": "org.opentest4j.**"},
+    {"excludeClasses": "org.gradle.**"},
+    {"excludeClasses": "org.graalvm.**"},
+    {"excludeClasses": "net.minestom.testing.**"},
+    {"excludeClasses": "net.minestom.server.network.NetworkBufferTemplateImpl"}
+  ],
+  "regexRules": [
+     {"excludeClasses": "net\\.minestom\\.server\\..*Test(\\$.*)?"}
+  ]
+}

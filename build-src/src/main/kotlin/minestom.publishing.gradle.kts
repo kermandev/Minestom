@@ -66,3 +66,27 @@ signing {
 
     sign(publishing.publications)
 }
+
+val baselineJar by configurations.creating
+
+dependencies {
+    baselineJar("${project.group}:${project.name}:latest.release") {
+        isTransitive = false
+    }
+}
+
+tasks.register<CheckAbiTask>("checkBinaryCompatibility") {
+    group = "verification"
+    description = "Checks binary compatibility against the latest released version on Maven Central."
+
+    oldJar.set(layout.file(provider {
+        try {
+            baselineJar.files.singleOrNull()
+        } catch (_: Exception) {
+            null
+        }
+    }))
+
+    newJar.set(tasks.named<Jar>("jar").flatMap { it.archiveFile })
+}
+
