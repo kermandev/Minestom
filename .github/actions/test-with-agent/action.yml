@@ -30,6 +30,23 @@ runs:
           echo "::error::Native-image metadata is out of date. Run ./gradlew testWithAgent and commit the generated changes."
           echo "Changed files:"
           cat "$RUNNER_TEMP/native-image-metadata-status.txt"
+
+          echo
+          echo "Diff for tracked metadata files:"
           git diff -- "$metadata_path"
+
+          mapfile -t untracked_files < <(git ls-files --others --exclude-standard -- "$metadata_path")
+          if [ "${#untracked_files[@]}" -gt 0 ]; then
+            echo
+            echo "New generated metadata files:"
+            printf '  %s\n' "${untracked_files[@]}"
+
+            for file in "${untracked_files[@]}"; do
+              echo
+              echo "Diff for new file: $file"
+              git diff --no-index -- /dev/null "$file" || true
+            done
+          fi
+
           exit 1
         fi
