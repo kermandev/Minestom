@@ -1,0 +1,18 @@
+name: Publish Snapshot
+description: Publish a snapshot version to Maven Central snapshots.
+
+inputs:
+  version:
+    description: Snapshot version to publish.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Publish Snapshot
+      shell: bash
+      env:
+        MINESTOM_VERSION: ${{ inputs.version }}
+      run: |
+        ./gradlew nmcpPublishAggregationToCentralPortalSnapshots
+        echo "Version: ${MINESTOM_VERSION}" >> "$GITHUB_STEP_SUMMARY"

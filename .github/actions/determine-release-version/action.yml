@@ -1,0 +1,40 @@
+name: Determine Release Version
+description: Determine the Minestom release version from the date, Minecraft version, and existing tags.
+
+outputs:
+  version:
+    description: Release version.
+    value: ${{ steps.version.outputs.version }}
+
+runs:
+  using: composite
+  steps:
+    - name: Gradle pre-run
+      shell: bash
+      run: ./gradlew determineMinecraftVersion --no-configuration-cache
+
+    - id: version
+      name: Determine Version
+      shell: bash
+      run: |
+        DATE=$(date +'%Y.%m.%d')
+        MC_VERSION=$(./gradlew determineMinecraftVersion --quiet --console=plain --no-configuration-cache)
+
+        TAGS=$(git tag --list "${DATE}*")
+        echo "Existing tags: $TAGS"
+
+        if [ -z "$TAGS" ]; then
+          VERSION="$DATE-$MC_VERSION"
+        else
+          SUFFIXES=$(echo "$TAGS" | sed -n "s/^$DATE\([a-z]\)\-.*$/\1/p")
+          NEXT_SUFFIX="b"
+          if [ -n "$SUFFIXES" ]; then
+            LAST_SUFFIX=$(echo "$SUFFIXES" | sort | tail -n1)
+            LAST_CODE=$(printf '%d' "'$LAST_SUFFIX")
+            NEXT_SUFFIX=$(printf "\\$(printf '%03o' $((LAST_CODE + 1)))")
+          fi
+          VERSION="${DATE}${NEXT_SUFFIX}-$MC_VERSION"
+        fi
+
+        echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+        echo "Version: ${VERSION}" >> "$GITHUB_STEP_SUMMARY"

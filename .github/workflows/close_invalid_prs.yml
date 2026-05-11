@@ -5,6 +5,11 @@ on:
   pull_request_target:
     types: [ opened ]
 
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
 jobs:
   run:
     name: Close invalid PRs

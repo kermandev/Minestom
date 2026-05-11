@@ -1,0 +1,40 @@
+name: Publish PR Snapshot
+
+on:
+  pull_request:
+    branches: [ master ]
+    types: [ opened, reopened, synchronize, labeled ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-pr-snapshot-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    name: Publish PR Snapshot
+    if: >
+      github.repository == 'Minestom/Minestom' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      contains(github.event.pull_request.labels.*.name, 'Publish Pull Request')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Setup Gradle
+        uses: ./.github/actions/setup-gradle
+        with:
+          cache-read-only: false
+
+      - name: Publish Snapshot
+        uses: ./.github/actions/publish-snapshot
+        with:
+          version: ${{ github.head_ref }}-SNAPSHOT
+        env:
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSWORD }}

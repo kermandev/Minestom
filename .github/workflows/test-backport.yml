@@ -1,0 +1,52 @@
+name: Test Backport
+
+on:
+  pull_request:
+    branches: [ master ]
+    types: [ opened, reopened, synchronize, labeled ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-backport-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  test-backport:
+    name: Test Backport
+    if: contains(github.event.pull_request.labels.*.name, 'Test Backport')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Base Branch
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          fetch-depth: 0
+
+      - name: Setup Gradle
+        uses: ./.github/actions/setup-gradle
+        with:
+          cache-read-only: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
+
+      - name: Test Backport
+        uses: ./.github/actions/test-backport
+        with:
+          pr-number: ${{ github.event.pull_request.number }}
+
+      - id: gradle-check
+        name: Gradle Check
+        uses: ./.github/actions/gradle-check
+        continue-on-error: true
+        with:
+          tasks: test
+
+      - name: Require Test Failure
+        if: steps.gradle-check.outcome != 'failure'
+        run: |
+          echo "::error::Backported tests passed on the base branch. Expected them to fail without the pull request fix."
+          exit 1
+
+      - name: Report Expected Failure
+        if: steps.gradle-check.outcome == 'failure'
+        run: echo "Backported tests failed on the base branch as expected."

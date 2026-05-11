@@ -1,8 +1,11 @@
 name: Release
+
 on:
   workflow_dispatch: { }
+
 permissions:
   contents: write # Required to create tags
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -11,47 +14,25 @@ jobs:
         uses: actions/checkout@v6
         with: # We have to fetch full history because we need old tags
           fetch-depth: 0
-      - name: Setup Java
-        uses: actions/setup-java@v5
-        with:
-          distribution: graalvm
-          java-version: 25
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6
 
-      - name: Gradle pre-run
-        run: ./gradlew determineMinecraftVersion --no-configuration-cache
+      - name: Setup Gradle
+        uses: ./.github/actions/setup-gradle
+        with:
+          cache-read-only: false
+
       - id: version
         name: Determine Version
-        run: |
-          DATE=$(date +'%Y.%m.%d')
-          MC_VERSION=$(./gradlew determineMinecraftVersion --quiet --console=plain --no-configuration-cache)
-
-          TAGS=$(git tag --list "${DATE}*")
-          echo "Existing tags: $TAGS"
-          
-          if [ -z "$TAGS" ]; then
-            VERSION="$DATE-$MC_VERSION"
-          else
-            SUFFIXES=$(echo "$TAGS" | sed -n "s/^$DATE\([a-z]\)\-.*$/\1/p")
-            NEXT_SUFFIX="b"
-            if [ -n "$SUFFIXES" ]; then
-              LAST_SUFFIX=$(echo "$SUFFIXES" | sort | tail -n1)
-              NEXT_SUFFIX=$(printf "\\$(printf '%03o' $(( $(printf '%d' "'$LAST_SUFFIX") + 1 )) )")
-            fi
-            VERSION="${DATE}${NEXT_SUFFIX}-$MC_VERSION"
-          fi
-
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "Version: ${VERSION}" >> $GITHUB_STEP_SUMMARY
+        uses: ./.github/actions/determine-release-version
 
       - name: Build javadoc
-        run: ./gradlew javadoc
+        uses: ./.github/actions/gradle-check
+        with:
+          tasks: javadoc
         env:
           MINESTOM_VERSION: ${{ steps.version.outputs.version }}
 
       - name: Publish to Maven Central
-        if: github.repository_owner == 'Minestom'
+        if: github.repository == 'Minestom/Minestom'
         run: ./gradlew publishAggregationToCentralPortal
         env:
           MINESTOM_VERSION: ${{ steps.version.outputs.version }}

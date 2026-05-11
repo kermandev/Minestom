@@ -1,0 +1,27 @@
+name: Setup Gradle
+description: Set up Java and Gradle for Minestom workflows.
+
+inputs:
+  java-version:
+    description: Java version to install.
+    default: "25"
+    required: false
+  cache-read-only:
+    description: Whether the Gradle cache should be read-only.
+    default: "true"
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Java
+      uses: actions/setup-java@v5
+      with:
+        distribution: graalvm
+        java-version: ${{ inputs.java-version }}
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v6
+      with:
+        # Allow cache writes only on trusted refs/jobs. Like our master branch.
+        cache-read-only: ${{ inputs.cache-read-only }}

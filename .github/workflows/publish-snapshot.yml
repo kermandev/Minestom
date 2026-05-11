@@ -1,0 +1,36 @@
+name: Publish Snapshot
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch: { }
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-master-snapshot
+
+jobs:
+  publish:
+    name: Publish Master Snapshot
+    if: github.repository == 'Minestom/Minestom' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Setup Gradle
+        uses: ./.github/actions/setup-gradle
+        with:
+          cache-read-only: false
+
+      - name: Publish Snapshot
+        uses: ./.github/actions/publish-snapshot
+        with:
+          version: master-SNAPSHOT
+        env:
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSWORD }}

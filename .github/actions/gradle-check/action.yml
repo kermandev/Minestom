@@ -1,0 +1,19 @@
+name: Gradle Check
+description: Run Gradle verification tasks.
+
+inputs:
+  tasks:
+    description: Gradle tasks to run.
+    default: test javadoc
+    required: false
+  arguments:
+    description: Extra Gradle arguments.
+    default: ""
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - name: Run Gradle
+      shell: bash
+      run: ./gradlew ${{ inputs.tasks }} ${{ inputs.arguments }}

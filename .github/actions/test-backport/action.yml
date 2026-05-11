@@ -1,0 +1,32 @@
+name: Test Backport
+description: Apply PR test changes to the checked out base branch.
+
+inputs:
+  pr-number:
+    description: Pull request number.
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Apply PR Tests
+      shell: bash
+      run: |
+        pr_number="${{ inputs.pr-number }}"
+        head_ref="refs/remotes/pull/${pr_number}/head"
+
+        git fetch --no-tags origin "+refs/pull/${pr_number}/head:${head_ref}"
+
+        mapfile -t test_files < <(
+          git diff --name-only --diff-filter=ACMRT "HEAD...${head_ref}" -- \
+            "src/test/**" \
+            ":(glob)*/src/test/**"
+        )
+
+        if [ "${#test_files[@]}" -eq 0 ]; then
+          echo "::error::No test files were changed by this pull request."
+          exit 1
+        fi
+
+        echo "Applying test files from pull request:"
+        printf '  %s\n' "${test_files[@]}"
+        git checkout "${head_ref}" -- "${test_files[@]}"
