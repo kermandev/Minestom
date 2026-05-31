@@ -17,7 +17,7 @@ import org.jetbrains.annotations.Contract;
 import java.util.HashMap;
 import java.util.Map;
 
-public sealed interface TrimMaterial extends Holder.Direct<TrimMaterial>, TrimMaterials permits TrimMaterialImpl {
+public sealed interface TrimMaterial extends TrimMaterials permits TrimMaterialImpl {
     NetworkBuffer.Type<TrimMaterial> REGISTRY_NETWORK_TYPE = NetworkBufferTemplate.template(
             NetworkBuffer.STRING, TrimMaterial::assetName,
             NetworkBuffer.STRING.mapValue(NetworkBuffer.STRING), TrimMaterial::overrideArmorMaterials,

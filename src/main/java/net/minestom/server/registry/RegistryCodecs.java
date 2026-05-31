@@ -66,7 +66,7 @@ final class RegistryCodecs {
                 return referenceResult.cast();
             final RegistryKey<T> key = registry.getKey(Key.key(reference));
             if (key == null) return new Result.Error<>("Unknown key " + reference + " for registry " + registry.key());
-            return new Result.Ok<>(key);
+            return new Result.Ok<>(Holder.reference(key));
         }
 
         @Override
@@ -173,7 +173,7 @@ final class RegistryCodecs {
         }
     }
 
-    record HolderSetImpl<T extends Holder<T>>(
+    record HolderSetImpl<T>(
             Codec<RegistryTag<T>> tagCodec,
             Codec<T> directCodec
     ) implements Codec<HolderSet<T>> {

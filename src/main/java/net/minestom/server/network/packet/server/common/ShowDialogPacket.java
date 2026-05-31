@@ -16,7 +16,7 @@ public record ShowDialogPacket(
             ShowDialogPacket::new);
 
     public static final NetworkBuffer.Type<ShowDialogPacket> INLINE_SERIALIZER = NetworkBufferTemplate.template(
-            Dialog.REGISTRY_NETWORK_TYPE, (dialog) -> Objects.requireNonNull(dialog.dialog().asValue(), "Dialog holder must be direct during inline serialization"),
-            ShowDialogPacket::new
+            Dialog.REGISTRY_NETWORK_TYPE, (packet) -> Objects.requireNonNull(packet.dialog().asValue(), "Dialog holder must be direct during inline serialization"),
+            it -> new ShowDialogPacket(Holder.direct(it))
     );
 }

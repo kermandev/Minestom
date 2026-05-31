@@ -12,7 +12,7 @@ import org.jetbrains.annotations.ApiStatus;
  * @param <T> the type of the registry entry
  */
 @ApiStatus.NonExtendable
-public non-sealed interface RegistryKey<T> extends Holder<T>, Keyed {
+public sealed interface RegistryKey<T> extends Keyed permits RegistryKeyImpl {
 
     static <T> NetworkBuffer.Type<RegistryKey<T>> networkType(Registries.Selector<T> selector) {
         return new RegistryNetworkTypes.RegistryKeyImpl<>(selector);

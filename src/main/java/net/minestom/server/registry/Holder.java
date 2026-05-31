@@ -3,8 +3,9 @@ package net.minestom.server.registry;
 import net.minestom.server.codec.Codec;
 import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.utils.Either;
-import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Objects;
 
 /**
  * <p>Represents either a reference to a registry entry {@link RegistryKey} or a direct registry value.</p>
@@ -13,56 +14,66 @@ import org.jetbrains.annotations.Nullable;
  *
  * @param <T> the type of the registry entry
  */
-public sealed interface Holder<T> permits RegistryKey, Holder.Direct {
+public sealed interface Holder<T> {
 
-    @ApiStatus.NonExtendable
-    non-sealed interface Direct<T> extends Holder<T> {
-    }
-
-    static <T extends Holder<T>> NetworkBuffer.Type<Holder<T>> networkType(
+    static <T> NetworkBuffer.Type<Holder<T>> networkType(
             Registries.Selector<T> selector,
             NetworkBuffer.Type<T> registryNetworkType
     ) {
         return new RegistryNetworkTypes.HolderNetworkTypeImpl<>(selector, registryNetworkType);
     }
 
-    static <T extends Holder<T>> Codec<Holder<T>> codec(
+    static <T> Codec<Holder<T>> codec(
             Registries.Selector<T> selector,
             Codec<T> registryCodec
     ) {
         return new RegistryCodecs.HolderCodec<>(selector, registryCodec);
     }
 
+    static <T> Direct<T> direct(T value) {
+        return new Direct<>(value);
+    }
+
+    static <T> Reference<T> reference(RegistryKey<T> value) {
+        return new Reference<>(value);
+    }
+
+    record Direct<T>(T value) implements Holder<T> {
+        public Direct {
+            Objects.requireNonNull(value, "value");
+        }
+    }
+
+    record Reference<T>(RegistryKey<T> key) implements Holder<T> {
+        public Reference {
+            Objects.requireNonNull(key, "key");
+        }
+    }
+
     default boolean isDirect() {
-        return !(this instanceof RegistryKey<T>);
+        return !(this instanceof Direct<T>);
     }
 
     default @Nullable RegistryKey<T> asKey() {
-        return this instanceof RegistryKey<T> ? (RegistryKey<T>) this : null;
+        return this instanceof Reference<T>(RegistryKey<T> key) ? key : null;
     }
 
     default @Nullable T asValue() {
-        //noinspection unchecked
-        return this instanceof RegistryKey<T> ? null : (T) this;
+        return this instanceof Direct<T>(T value) ? value : null;
     }
 
     default Either<RegistryKey<T>, T> unwrap() {
-        if (this instanceof RegistryKey<T> key) {
-            return Either.left(key);
-        } else {
-            //noinspection unchecked
-            return Either.right((T) this);
-        }
+        return switch (this) {
+            case Reference(RegistryKey<T> key) -> Either.left(key);
+            case Direct(T value) -> Either.right(value);
+        };
     }
 
     default @Nullable T resolve(DynamicRegistry<T> registry) {
-        final var key = asKey();
-        if (key != null) {
-            return registry.get(key);
-        } else {
-            //noinspection unchecked
-            return (T) this;
-        }
+        return switch (this) {
+            case Reference(RegistryKey<T> key) -> registry.get(key);
+            case Direct(T value) -> value;
+        };
     }
 
 }

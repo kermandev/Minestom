@@ -10,7 +10,7 @@ import java.util.List;
  */
 public sealed interface HolderSet<T> permits HolderSet.Direct, RegistryTag {
 
-    static <T extends Holder<T>> Codec<HolderSet<T>> codec(
+    static <T> Codec<HolderSet<T>> codec(
             Registries.Selector<T> selector,
             Codec<T> registryCodec
     ) {

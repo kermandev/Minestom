@@ -13,7 +13,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 import java.util.Map;
 
-public sealed interface Dialog extends Holder.Direct<Dialog>, DialogLike {
+public sealed interface Dialog extends DialogLike {
     Registry<StructCodec<? extends Dialog>> REGISTRY = DynamicRegistry.fromMap(
             Key.key("dialog_type"),
             Map.entry(Key.key("notice"), Notice.CODEC),
@@ -40,19 +40,18 @@ public sealed interface Dialog extends Holder.Direct<Dialog>, DialogLike {
     }
 
     @ApiStatus.Internal
-    static DialogLike wrap(Holder<Dialog> dialog) {
-        return switch (dialog) {
-            case Dialog direct -> direct;
-            case RegistryKey<Dialog> reference -> new RegistryKeyDialog(reference);
-            default -> throw new IllegalArgumentException("Unsupported dialog type: " + dialog.getClass().getName());
+    static DialogLike wrap(Holder<Dialog> holder) {
+        return switch (holder) {
+            case Holder.Direct(Dialog direct) -> direct;
+            case Holder.Reference(RegistryKey<Dialog> reference) -> new RegistryKeyDialog(reference);
         };
     }
 
     @ApiStatus.Internal
     static Holder<Dialog> unwrap(DialogLike dialog) {
         return switch (dialog) {
-            case Dialog direct -> direct;
-            case RegistryKeyDialog reference -> reference.key();
+            case Dialog direct -> Holder.direct(direct);
+            case RegistryKeyDialog reference -> Holder.reference(reference.key());
             default -> throw new IllegalArgumentException("Unsupported dialog type: " + dialog.getClass().getName());
         };
     }

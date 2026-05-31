@@ -14,7 +14,7 @@ import net.minestom.server.registry.RegistryData;
 import net.minestom.server.sound.SoundEvent;
 import org.jetbrains.annotations.ApiStatus;
 
-public sealed interface Instrument extends Holder.Direct<Instrument>, Instruments permits InstrumentImpl {
+public sealed interface Instrument extends Instruments permits InstrumentImpl {
     NetworkBuffer.Type<Instrument> REGISTRY_NETWORK_TYPE = NetworkBufferTemplate.template(
             SoundEvent.NETWORK_TYPE, Instrument::soundEvent,
             NetworkBuffer.FLOAT, Instrument::useDuration,

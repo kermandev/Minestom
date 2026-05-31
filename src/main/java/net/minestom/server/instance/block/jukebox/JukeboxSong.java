@@ -11,7 +11,7 @@ import net.minestom.server.sound.SoundEvent;
 import net.minestom.server.utils.Either;
 import org.jetbrains.annotations.ApiStatus;
 
-public sealed interface JukeboxSong extends Holder.Direct<JukeboxSong>, JukeboxSongs permits JukeboxSongImpl {
+public sealed interface JukeboxSong extends JukeboxSongs permits JukeboxSongImpl {
     NetworkBuffer.Type<JukeboxSong> REGISTRY_NETWORK_TYPE = NetworkBufferTemplate.template(
             SoundEvent.NETWORK_TYPE, JukeboxSong::soundEvent,
             NetworkBuffer.COMPONENT, JukeboxSong::description,
@@ -29,7 +29,7 @@ public sealed interface JukeboxSong extends Holder.Direct<JukeboxSong>, JukeboxS
     // However, in this case, this component _must_ be hashable, which uses the regular codec on the client which does not
     // support holders. So it is **never valid** to use a direct holder here, so we use a weirdly serialized registrykey here.
     NetworkBuffer.Type<RegistryKey<JukeboxSong>> NETWORK_TYPE = Holder.networkType(Registries::jukeboxSong, REGISTRY_NETWORK_TYPE)
-            .transform(Holder::asKey, key -> key);
+            .transform(Holder::asKey, Holder::reference);
     Codec<RegistryKey<JukeboxSong>> CODEC = RegistryKey.codec(Registries::jukeboxSong);
 
     // The network type of jukebox playable is an EitherHolder, but as discussed it always has to be a registry key,

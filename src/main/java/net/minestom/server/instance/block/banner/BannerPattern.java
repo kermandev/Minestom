@@ -12,7 +12,7 @@ import net.minestom.server.registry.RegistryData;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Contract;
 
-public sealed interface BannerPattern extends Holder.Direct<BannerPattern>, BannerPatterns permits BannerPatternImpl {
+public sealed interface BannerPattern extends BannerPatterns permits BannerPatternImpl {
     NetworkBuffer.Type<BannerPattern> REGISTRY_NETWORK_TYPE = NetworkBufferTemplate.template(
             NetworkBuffer.KEY, BannerPattern::assetId,
             NetworkBuffer.STRING, BannerPattern::translationKey,

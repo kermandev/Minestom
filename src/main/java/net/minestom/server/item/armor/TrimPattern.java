@@ -13,7 +13,7 @@ import net.minestom.server.registry.RegistryData;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Contract;
 
-public sealed interface TrimPattern extends Holder.Direct<TrimPattern>, TrimPatterns permits TrimPatternImpl {
+public sealed interface TrimPattern extends TrimPatterns permits TrimPatternImpl {
     NetworkBuffer.Type<TrimPattern> REGISTRY_NETWORK_TYPE = NetworkBufferTemplate.template(
             NetworkBuffer.KEY, TrimPattern::assetId,
             NetworkBuffer.COMPONENT, TrimPattern::description,

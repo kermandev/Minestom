@@ -6,6 +6,7 @@ import net.minestom.server.instance.block.Block;
 import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.network.NetworkBufferTemplate;
 import net.minestom.server.registry.Registries;
+import net.minestom.server.registry.RegistryKey;
 import net.minestom.server.registry.RegistryTag;
 import org.jetbrains.annotations.Nullable;
 
@@ -49,8 +50,9 @@ public record Tool(List<Rule> rules, float defaultMiningSpeed, int damagePerBloc
     }
 
     public boolean isCorrectForDrops(Block block) {
+        final RegistryKey<Block> key = block.registryKey();
         for (Rule rule : rules) {
-            if (rule.correctForDrops != null && rule.blocks.contains(block)) {
+            if (rule.correctForDrops != null && rule.blocks.contains(key)) {
                 // First matching rule is picked, other rules are ignored
                 return rule.correctForDrops;
             }
@@ -59,8 +61,9 @@ public record Tool(List<Rule> rules, float defaultMiningSpeed, int damagePerBloc
     }
 
     public float getSpeed(Block block) {
+        final RegistryKey<Block> key = block.registryKey();
         for (Rule rule : rules) {
-            if (rule.speed != null && rule.blocks.contains(block)) {
+            if (rule.speed != null && rule.blocks.contains(key)) {
                 // First matching rule is picked, other rules are ignored
                 return rule.speed;
             }

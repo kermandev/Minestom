@@ -8,10 +8,13 @@ import net.minestom.server.instance.block.BlockHandler;
 import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.network.NetworkBufferTemplate;
 import net.minestom.server.registry.Registries;
+import net.minestom.server.registry.RegistryKey;
 import net.minestom.server.registry.RegistryTag;
+import net.minestom.server.registry.StaticProtocolObject;
 import net.minestom.server.utils.block.BlockUtils;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Predicate;
@@ -67,7 +70,7 @@ public record BlockPredicate(
     }
 
     public BlockPredicate(Block... blocks) {
-        this(RegistryTag.direct(blocks));
+        this(RegistryTag.direct(Arrays.stream(blocks).map(StaticProtocolObject::registryKey).toList()));
     }
 
     public BlockPredicate(PropertiesPredicate state) {
@@ -84,7 +87,7 @@ public record BlockPredicate(
 
     @Override
     public boolean test(Block block) {
-        if (blocks != null && !blocks.contains(block))
+        if (blocks != null && !blocks.contains(block.registryKey()))
             return false;
         if (state != null && !state.test(block))
             return false;

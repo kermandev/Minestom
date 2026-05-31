@@ -26,14 +26,14 @@ public class GameRuleEventIntegrationTest {
         var event = env.listen(PlayerGameRulesRequestEvent.class);
 
         env.process().eventHandler().addListener(PlayerGameRulesRequestEvent.class, it -> {
-            it.getPlayer().sendPacket(new GameRuleValuesPacket(Map.of(GameRule.COMMAND_BLOCKS_WORK, "false")));
+            it.getPlayer().sendPacket(new GameRuleValuesPacket(Map.of(GameRule.COMMAND_BLOCKS_WORK.registryKey(), "false")));
         });
         event.followup();
 
         player.addPacketToQueue(new ClientStatusPacket(ClientStatusPacket.Action.REQUEST_GAMERULE_VALUES));
         player.interpretPacketQueue();
         response.assertSingle(it ->
-                Assertions.assertEquals("false", it.values().get(GameRule.COMMAND_BLOCKS_WORK)));
+                Assertions.assertEquals("false", it.values().get(GameRule.COMMAND_BLOCKS_WORK.registryKey())));
     }
 
     @Test
@@ -42,7 +42,7 @@ public class GameRuleEventIntegrationTest {
         var connection = env.createConnection();
         var player = connection.connect(instance, new Pos(0, 43, 0));
         var event = env.listen(PlayerSetGameRulesEvent.class);
-        var entry = new ClientSetGameRulesPacket.Entry(GameRule.COMMAND_BLOCKS_WORK, "false");
+        var entry = new ClientSetGameRulesPacket.Entry(GameRule.COMMAND_BLOCKS_WORK.registryKey(), "false");
         event.followup(it -> Assertions.assertEquals(entry, it.getRequestedRules().getFirst()));
 
         player.addPacketToQueue(new ClientSetGameRulesPacket(List.of(entry)));

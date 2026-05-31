@@ -11,7 +11,7 @@ import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.Nullable;
 
-public sealed interface PaintingVariant extends Holder.Direct<PaintingVariant>, PaintingVariants permits PaintingVariantImpl {
+public sealed interface PaintingVariant extends PaintingVariants permits PaintingVariantImpl {
     NetworkBuffer.Type<PaintingVariant> REGISTRY_NETWORK_TYPE = NetworkBufferTemplate.template(
             NetworkBuffer.INT, PaintingVariant::width,
             NetworkBuffer.INT, PaintingVariant::height,
@@ -34,7 +34,7 @@ public sealed interface PaintingVariant extends Holder.Direct<PaintingVariant>, 
     // IMPL: Please remove the workaround later if this is fixed.
     NetworkBuffer.Type<Holder<PaintingVariant>> NETWORK_TYPE = Holder.networkType(Registries::paintingVariant, REGISTRY_NETWORK_TYPE);
     Codec<Holder<PaintingVariant>> CODEC = RegistryKey.codec(Registries::paintingVariant)
-            .transform(key -> key, Holder::asKey);
+            .transform(Holder::reference, Holder::asKey);
 
     static PaintingVariant create(
             Key assetId,

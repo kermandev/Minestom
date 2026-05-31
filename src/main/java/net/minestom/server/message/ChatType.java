@@ -8,7 +8,7 @@ import net.minestom.server.registry.Holder;
 import net.minestom.server.registry.RegistryData;
 import org.jetbrains.annotations.ApiStatus;
 
-public sealed interface ChatType extends Holder.Direct<ChatType>, ChatTypes permits ChatTypeImpl {
+public sealed interface ChatType extends ChatTypes permits ChatTypeImpl {
 
     Codec<ChatType> REGISTRY_CODEC = StructCodec.struct(
             "chat", ChatTypeDecoration.CODEC, ChatType::chat,

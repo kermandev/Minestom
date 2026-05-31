@@ -249,7 +249,7 @@ public final class Metadata {
     private static final Type<RegistryKey<ChickenSoundVariant>> CHICKEN_SOUND_VARIANT = type(ChickenSoundVariant.NETWORK_TYPE, ChickenSoundVariant.CLASSIC);
     private static final Type<RegistryKey<ZombieNautilusVariant>> ZOMBIE_NAUTILUS_VARIANT = type(ZombieNautilusVariant.NETWORK_TYPE, ZombieNautilusVariant.TEMPERATE);
     private static final Type<@Nullable WorldPos> OPT_GLOBAL_POSITION = type(WorldPos.NETWORK_TYPE.optional(), null);
-    private static final Type<Holder<PaintingVariant>> PAINTING_VARIANT = type(PaintingVariant.NETWORK_TYPE, PaintingVariant.KEBAB);
+    private static final Type<Holder<PaintingVariant>> PAINTING_VARIANT = type(PaintingVariant.NETWORK_TYPE, Holder.reference(PaintingVariant.KEBAB));
     private static final Type<SnifferMeta.State> SNIFFER_STATE = type(SnifferMeta.State.NETWORK_TYPE, SnifferMeta.State.IDLING);
     private static final Type<ArmadilloMeta.State> ARMADILLO_STATE = type(ArmadilloMeta.State.NETWORK_TYPE, ArmadilloMeta.State.IDLE);
     private static final Type<CopperGolemMeta.State> COPPER_GOLEM_STATE = type(CopperGolemMeta.State.NETWORK_TYPE, CopperGolemMeta.State.IDLE);

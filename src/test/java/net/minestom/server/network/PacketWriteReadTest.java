@@ -197,19 +197,17 @@ public class PacketWriteReadTest {
         addServerPackets(new CustomReportDetailsPacket(Map.of("key", "value", "key1", "value1")));
         addServerPackets(new ServerLinksPacket(new ServerLinksPacket.Entry(ServerLinksPacket.KnownLinkType.BUG_REPORT, "https://minestom.net"), new ServerLinksPacket.Entry(ServerLinksPacket.KnownLinkType.ANNOUNCEMENTS, "https://minestom.net")));
         addServerPackets(new ClearDialogPacket());
-        addServerPackets(new ShowDialogPacket(
-                new Dialog.MultiAction(
-                        new DialogMetadata(COMPONENT, COMPONENT, true, false, DialogAfterAction.WAIT_FOR_RESPONSE, List.of(), List.of(new DialogInput.Text("heyt", 12, COMPONENT, true, "", 10, null))),
-                        List.of(),
-                        null,
-                        10
-                )));
-        addServerPackets(new ShowDialogPacket(
-                new Dialog.Confirmation(
-                        new DialogMetadata(COMPONENT, COMPONENT.append(Component.text(OG)), true, false, DialogAfterAction.WAIT_FOR_RESPONSE, List.of(), List.of(new DialogInput.Text("heyt", 12, COMPONENT, true, "", 10, null))),
-                        new DialogActionButton(COMPONENT.appendNewline(), COMPONENT, DialogActionButton.DEFAULT_WIDTH, new DialogAction.OpenUrl("https://minestom.net")),
-                        new DialogActionButton(COMPONENT.appendNewline(), COMPONENT, 10, new DialogAction.CopyToClipboard("https://minestom.net"))
-                )));
+        addServerPackets(new ShowDialogPacket(Dialog.unwrap(new Dialog.MultiAction(
+                                new DialogMetadata(COMPONENT, COMPONENT, true, false, DialogAfterAction.WAIT_FOR_RESPONSE, List.of(), List.of(new DialogInput.Text("heyt", 12, COMPONENT, true, "", 10, null))),
+                                List.of(),
+                                null,
+                                10
+                        ))));
+        addServerPackets(new ShowDialogPacket(Dialog.unwrap(new Dialog.Confirmation(
+                                new DialogMetadata(COMPONENT, COMPONENT.append(Component.text(OG)), true, false, DialogAfterAction.WAIT_FOR_RESPONSE, List.of(), List.of(new DialogInput.Text("heyt", 12, COMPONENT, true, "", 10, null))),
+                                new DialogActionButton(COMPONENT.appendNewline(), COMPONENT, DialogActionButton.DEFAULT_WIDTH, new DialogAction.OpenUrl("https://minestom.net")),
+                                new DialogActionButton(COMPONENT.appendNewline(), COMPONENT, 10, new DialogAction.CopyToClipboard("https://minestom.net"))
+                        ))));
         addServerPackets(new CodeOfConductPacket("You need to be a nice person, i think?"));
         // Play
         addServerPackets(new AcknowledgeBlockChangePacket(0));

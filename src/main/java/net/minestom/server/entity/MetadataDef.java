@@ -206,7 +206,7 @@ public sealed class MetadataDef {
 
     public static final class Painting extends Hanging {
         public static final Entry<Holder<PaintingVariant>> VARIANT = index(0, Metadata::PaintingVariant,
-                                                                           PaintingVariant.KEBAB);
+                                                                           Holder.reference(PaintingVariant.KEBAB));
     }
 
     public static final class ItemEntity extends MetadataDef {

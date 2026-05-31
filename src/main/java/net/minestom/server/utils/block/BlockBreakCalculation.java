@@ -48,7 +48,7 @@ public class BlockBreakCalculation {
         ItemStack item = player.getItemInMainHand();
         // Bamboo is hard-coded in client
         if (block.id() == Block.BAMBOO.id() || block.id() == Block.BAMBOO_SAPLING.id()) {
-            if (SWORD_TAG.contains(item.material())) {
+            if (SWORD_TAG.contains(item.material().registryKey())) {
                 return 0;
             }
         }
@@ -124,7 +124,7 @@ public class BlockBreakCalculation {
         Block block = instance.getBlock(eye);
 
         final Fluid fluid = Fluid.fromKey(block.key());
-        if (fluid == null || !WATER_TAG.contains(fluid)) {
+        if (fluid == null || !WATER_TAG.contains(fluid.registryKey())) {
             return false;
         }
         float fluidHeight = getFluidHeight(player.getInstance(), x, y, z, block);

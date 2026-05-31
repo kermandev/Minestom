@@ -31,7 +31,7 @@ final class RegistryNetworkTypes {
         }
     }
 
-    record HolderNetworkTypeImpl<T extends Holder<T>>(
+    record HolderNetworkTypeImpl<T>(
             Registries.Selector<T> selector,
             NetworkBuffer.Type<T> registryNetworkType
     ) implements NetworkBuffer.Type<Holder<T>> {
@@ -57,11 +57,11 @@ final class RegistryNetworkTypes {
             final var registries = Objects.requireNonNull(buffer.registries(), "Buffer is missing registries");
             final int id = buffer.read(NetworkBuffer.VAR_INT);
             if (id == 0)
-                return buffer.read(registryNetworkType);
+                return Holder.direct(buffer.read(registryNetworkType));
             final var registry = selector.select(registries);
             final var key = registry.getKey(id - 1);
             Check.stateCondition(key == null, "Unknown id {0} for registry {1}", id - 1, registry.key());
-            return key;
+            return Holder.reference(key);
         }
     }
 

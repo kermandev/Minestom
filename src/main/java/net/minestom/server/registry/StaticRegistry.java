@@ -124,8 +124,7 @@ final class StaticRegistry<T extends StaticProtocolObject<T>> implements Registr
             final int[] entries = new int[tag.size()];
             int i = 0;
             for (var staticEntry : tag) {
-                entries[i++] = staticEntry instanceof StaticProtocolObject<T> po
-                        ? po.id() : getId(staticEntry);
+                entries[i++] = getId(staticEntry);
             }
             tagList.add(new TagsPacket.Tag(tag.key().key().asString(), entries));
         }
