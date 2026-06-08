@@ -68,9 +68,15 @@ jobs:
         name: Run Tests in Native Image
         continue-on-error: true
         run: ./gradlew nativeTest
-      - name: Run Tests in Native Image (Agent Fallback)
+      - name: Run Tracing Agent (Fallback)
         if: steps.native-run.outcome == 'failure'
-        run: ./gradlew -Pagent nativeTest
+        run: ./gradlew -Pagent test
+      - name: Copy Native Metadata (Fallback)
+        if: steps.native-run.outcome == 'failure'
+        run: ./gradlew metadataCopy
+      - name: Run Tests in Native Image (Fallback)
+        if: steps.native-run.outcome == 'failure'
+        run: ./gradlew nativeTest
 
   publish-snapshot:
     name: Publish Snapshot
