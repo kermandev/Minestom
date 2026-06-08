@@ -128,10 +128,15 @@ jobs:
     name: Publish PR
     needs: [build, javadoc, native-test, binary-compatibility]
     if: |
+      always() &&
       github.repository == 'Minestom/Minestom' &&
       github.event.action != 'closed' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
-      contains(github.event.pull_request.labels.*.name, 'Publish Pull Request')
+      contains(github.event.pull_request.labels.*.name, 'Publish Pull Request') &&
+      needs.build.result == 'success' &&
+      needs.javadoc.result == 'success' &&
+      needs.native-test.result == 'success' &&
+      (needs.binary-compatibility.result == 'success' || needs.binary-compatibility.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
