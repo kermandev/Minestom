@@ -57,15 +57,16 @@ tasks.withType<JavaCompile> {
 
 graalvmNative {
     agent {
-        defaultMode.set("standard")
+        defaultMode = "standard"
+
         modes {
-            direct {
+            standard {
                 val file = layout.projectDirectory.file("src/test/resources/agent-filter.json").asFile.absolutePath
-                options.add("config-output-dir={output_dir}")
-                options.add("caller-filter-file=$file")
-                options.add("access-filter-file=$file")
+                callerFilterFiles.from(file)
+                accessFilterFiles.from(file)
             }
         }
+
         metadataCopy {
             inputTaskNames.add("test")
             outputDirectories.add("src/main/resources/META-INF/native-image/net.minestom/minestom")
