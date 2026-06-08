@@ -107,8 +107,15 @@ jobs:
           cd baseline-repo
           ./gradlew jar
           mkdir -p ${{ runner.temp }}/baseline-libs
-          cp build/libs/minestom-*.jar ${{ runner.temp }}/baseline-libs/minestom.jar
-          cp testing/build/libs/testing-*.jar ${{ runner.temp }}/baseline-libs/testing.jar
+          find . -name "*.jar" -path "*/build/libs/*" -not -name "*-sources.jar" -not -name "*-javadoc.jar" | while read -r jar_path; do
+            proj_dir=$(echo "$jar_path" | sed 's|/build/libs/.*||')
+            if [ "$proj_dir" = "." ]; then
+              proj_name="minestom"
+            else
+              proj_name=$(basename "$proj_dir")
+            fi
+            cp "$jar_path" "${{ runner.temp }}/baseline-libs/${proj_name}.jar"
+          done
       - name: Checkout PR Branch
         uses: actions/checkout@v6
       - name: Check Binary Compatibility
