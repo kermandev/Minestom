@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   build:
-    name: Build & Test PR
+    name: JVM Test
     if: github.event.action != 'closed'
     runs-on: ubuntu-latest
     steps:
@@ -31,8 +31,27 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
         with:
           cache-read-only: ${{ github.repository_owner != github.event.pull_request.head.repo.owner.login }}
-      - name: Build
-        run: ./gradlew test javadoc
+      - name: Run JVM Tests
+        run: ./gradlew test
+
+  javadoc:
+    name: Javadoc Compilation
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: graalvm
+          java-version: 25
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: ${{ github.repository_owner != github.event.pull_request.head.repo.owner.login }}
+      - name: Build Javadoc
+        run: ./gradlew javadoc
 
   native-test:
     name: Native Test
@@ -76,7 +95,7 @@ jobs:
 
   publish:
     name: Publish PR
-    needs: [build, native-test, binary-compatibility]
+    needs: [build, javadoc, native-test, binary-compatibility]
     if: |
       github.repository == 'Minestom/Minestom' &&
       github.event.action != 'closed' &&
