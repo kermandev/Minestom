@@ -68,16 +68,17 @@ signing {
 }
 
 val baselineJar by configurations.creating
+val baselineVersion = project.findProperty("baselineVersion")?.toString() ?: "latest.release"
 
 dependencies {
-    baselineJar("${project.group}:${project.name}:latest.release") {
+    baselineJar("${project.group}:${project.name}:$baselineVersion") {
         isTransitive = false
     }
 }
 
 tasks.register<CheckAbiTask>("checkBinaryCompatibility") {
     group = "verification"
-    description = "Checks binary compatibility against the latest released version on Maven Central."
+    description = "Checks binary compatibility against the baseline released version."
 
     oldJar.set(layout.file(provider {
         try {

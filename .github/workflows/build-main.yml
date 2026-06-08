@@ -90,8 +90,12 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
         with:
           cache-read-only: false
+      - name: Fetch tags
+        run: git fetch --tags --force
       - name: Check Binary Compatibility
-        run: ./gradlew checkBinaryCompatibility
+        run: |
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "latest.release")
+          ./gradlew checkBinaryCompatibility -PbaselineVersion="$LATEST_TAG"
 
   publish-snapshot:
     name: Publish Snapshot
