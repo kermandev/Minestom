@@ -74,9 +74,12 @@ jobs:
         name: Run Tests in Native Image
         continue-on-error: true
         run: ./gradlew nativeTest
-      - name: Native Test (Fallback with Agent)
+      - name: Run Tracing Agent (Fallback)
         if: steps.native-run.outcome == 'failure'
-        run: ./gradlew -Pagent=standard test metadataCopy nativeTest --no-configuration-cache --no-build-cache
+        run: ./gradlew -Pagent=standard test
+      - name: Run Tests in Native Image (Fallback)
+        if: steps.native-run.outcome == 'failure'
+        run: ./gradlew metadataCopy nativeTest
 
   binary-compatibility:
     name: Binary Compatibility
