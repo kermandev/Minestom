@@ -70,7 +70,7 @@ jobs:
         run: ./gradlew nativeTest
       - name: Run Tracing Agent (Fallback)
         if: steps.native-run.outcome == 'failure'
-        run: ./gradlew -Pagent=standard test
+        run: ./gradlew -Pagent test
       - name: Copy Native Metadata (Fallback)
         if: steps.native-run.outcome == 'failure'
         run: ./gradlew metadataCopy
@@ -80,7 +80,7 @@ jobs:
 
   publish-snapshot:
     name: Publish Snapshot
-    needs: [build, javadoc, native-test]
+    needs: [ build, javadoc, native-test ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -96,7 +96,7 @@ jobs:
           cache-read-only: false
 
       - name: Run Tracing Agent
-        run: ./gradlew -Pagent=standard test
+        run: ./gradlew -Pagent test
 
       - name: Copy Reachability Metadata
         run: ./gradlew metadataCopy

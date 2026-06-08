@@ -76,7 +76,7 @@ jobs:
         run: ./gradlew nativeTest
       - name: Run Tracing Agent (Fallback)
         if: steps.native-run.outcome == 'failure'
-        run: ./gradlew -Pagent=standard test
+        run: ./gradlew -Pagent test
       - name: Copy Native Metadata (Fallback)
         if: steps.native-run.outcome == 'failure'
         run: ./gradlew metadataCopy
