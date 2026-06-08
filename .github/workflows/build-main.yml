@@ -100,7 +100,6 @@ jobs:
   publish-snapshot:
     name: Publish Snapshot
     needs: [build, javadoc, native-test, binary-compatibility]
-    if: github.repository == 'Minestom/Minestom'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -119,7 +118,7 @@ jobs:
         run: ./gradlew -Pagent=standard test
 
       - name: Copy Reachability Metadata
-        run: ./gradlew -Pagent=standard metadataCopy
+        run: ./gradlew metadataCopy
 
       - name: Commit and Push Updated Metadata
         run: |
@@ -134,6 +133,7 @@ jobs:
           fi
 
       - name: Publish Snapshot
+        if: github.repository == 'Minestom/Minestom'
         env:
           MINESTOM_VERSION: master-SNAPSHOT
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
