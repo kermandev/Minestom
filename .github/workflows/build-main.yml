@@ -50,6 +50,7 @@ jobs:
 
   native-test:
     name: Native Test
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -63,8 +64,13 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
         with:
           cache-read-only: false
-      - name: Run Tests in Native Image
-        run: ./gradlew -Pagent=standard test metadataCopy nativeTest --no-configuration-cache
+      - id: native-run
+        name: Run Tests in Native Image
+        continue-on-error: true
+        run: ./gradlew nativeTest
+      - name: Native Test (Fallback with Agent)
+        if: steps.native-run.outcome == 'failure'
+        run: ./gradlew -Pagent=standard test metadataCopy nativeTest --no-configuration-cache --no-build-cache
 
   binary-compatibility:
     name: Binary Compatibility
@@ -103,7 +109,7 @@ jobs:
           cache-read-only: false
 
       - name: Generate GraalVM Reachability Metadata
-        run: ./gradlew -Pagent=standard test metadataCopy --no-configuration-cache
+        run: ./gradlew -Pagent=standard test metadataCopy --no-configuration-cache --no-build-cache
 
       - name: Commit and Push Updated Metadata
         run: |

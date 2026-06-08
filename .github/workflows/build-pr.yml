@@ -55,6 +55,7 @@ jobs:
 
   native-test:
     name: Native Test
+    needs: build
     if: github.event.action != 'closed'
     runs-on: ubuntu-latest
     steps:
@@ -69,8 +70,13 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
         with:
           cache-read-only: ${{ github.repository_owner != github.event.pull_request.head.repo.owner.login }}
-      - name: Run Tests in Native Image
-        run: ./gradlew -Pagent=standard test metadataCopy nativeTest --no-configuration-cache
+      - id: native-run
+        name: Run Tests in Native Image
+        continue-on-error: true
+        run: ./gradlew nativeTest
+      - name: Native Test (Fallback with Agent)
+        if: steps.native-run.outcome == 'failure'
+        run: ./gradlew -Pagent=standard test metadataCopy nativeTest --no-configuration-cache --no-build-cache
 
   binary-compatibility:
     name: Binary Compatibility
