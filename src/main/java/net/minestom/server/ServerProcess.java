@@ -23,6 +23,7 @@ import net.minestom.server.scoreboard.TeamManager;
 import net.minestom.server.snapshot.Snapshotable;
 import net.minestom.server.thread.ThreadDispatcher;
 import net.minestom.server.timer.SchedulerManager;
+import net.minestom.server.network.NetworkBufferPool;
 import org.jetbrains.annotations.ApiStatus;
 
 import java.net.SocketAddress;
@@ -30,6 +31,12 @@ import java.net.SocketAddress;
 @ApiStatus.NonExtendable
 public interface ServerProcess extends Registries, Snapshotable {
     Auth auth();
+
+    /**
+     * Gets the network buffer pool of the server process.
+     */
+    @ApiStatus.Experimental
+    NetworkBufferPool pool();
 
     /**
      * Handles incoming connections/players.

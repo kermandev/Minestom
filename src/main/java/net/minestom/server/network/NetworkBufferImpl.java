@@ -10,11 +10,11 @@ import javax.crypto.ShortBufferException;
 import java.io.*;
 import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
+import java.lang.foreign.SegmentAllocator;
 import java.lang.foreign.ValueLayout;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SocketChannel;
-import java.util.Arrays;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.zip.DataFormatException;
@@ -33,17 +33,17 @@ final class NetworkBufferImpl implements NetworkBuffer {
     private @UnknownNullability MemorySegment segment; // null for dummy buffers
     private long readIndex, writeIndex;
 
-    private final @Nullable AutoResize autoResize;
+    private final @Nullable ResizeableSegmentAllocator allocator;
     private @Nullable Registries registries;
 
     NetworkBufferImpl(@UnknownNullability MemorySegment segment,
                       long readIndex, long writeIndex,
-                      @Nullable AutoResize autoResize,
+                      @Nullable ResizeableSegmentAllocator allocator,
                       @Nullable Registries registries) {
         this.segment = segment;
         this.readIndex = readIndex;
         this.writeIndex = writeIndex;
-        this.autoResize = autoResize;
+        this.allocator = allocator;
         this.registries = registries;
     }
 
@@ -185,17 +185,32 @@ final class NetworkBufferImpl implements NetworkBuffer {
         final long capacity = capacity();
         if (newSize < capacity) throw new IllegalArgumentException("New size is smaller than the current size");
         if (newSize == capacity) throw new IllegalArgumentException("New size is the same as the current size");
-        final MemorySegment newSegment = Arena.ofAuto().allocate(newSize);
-        MemorySegment.copy(segment, 0, newSegment, 0, capacity);
-        this.segment = newSegment;
+        final ResizeableSegmentAllocator allocator = this.allocator;
+        if (allocator == null) {
+            throw new UnsupportedOperationException("Buffer is not resizeable");
+        }
+        this.segment = allocator.resize(segment, newSize);
     }
 
     @Override
     public void ensureWritable(long length) {
         assertReadOnly();
         if (writableBytes() >= length) return;
-        final long newCapacity = newCapacity(length, capacity());
-        resize(newCapacity);
+        final long targetSize = writeIndex + length;
+        upsize(targetSize);
+    }
+
+    private void upsize(long targetSize) {
+        final ResizeableSegmentAllocator allocator = this.allocator;
+        if (allocator == null) {
+            throw new IndexOutOfBoundsException("Buffer is full and cannot be resized: " + capacity() + " -> " + targetSize);
+        }
+        final MemorySegment segment = this.segment;
+        final MemorySegment newSegment = allocator.resize(segment, targetSize);
+        if (newSegment.byteSize() == segment.byteSize()) {
+            throw new IndexOutOfBoundsException("Buffer is full and was not resized: " + capacity() + " -> " + targetSize);
+        }
+        this.segment = newSegment;
     }
 
     @Override
@@ -204,17 +219,6 @@ final class NetworkBufferImpl implements NetworkBuffer {
         long readableBytes = readableBytes();
         if (readableBytes >= length) return;
         throw new IndexOutOfBoundsException("Buffer does not have %d bytes left, only %d are readable".formatted(length, readableBytes));
-    }
-
-    private long newCapacity(long length, long capacity) {
-        final long targetSize = writeIndex + length;
-        final AutoResize strategy = this.autoResize;
-        if (strategy == null)
-            throw new IndexOutOfBoundsException("Buffer is full and cannot be resized: " + capacity + " -> " + targetSize);
-        final long newCapacity = strategy.resize(capacity, targetSize);
-        if (newCapacity == capacity)
-            throw new IndexOutOfBoundsException("Buffer is full has been resized to the same capacity: " + capacity + " -> " + targetSize);
-        return newCapacity;
     }
 
     @Override
@@ -235,7 +239,13 @@ final class NetworkBufferImpl implements NetworkBuffer {
         Objects.checkFromIndexSize(index, length, capacity());
         final MemorySegment newSegment = Arena.ofAuto().allocate(length);
         MemorySegment.copy(segment, index, newSegment, 0, length);
-        return new NetworkBufferImpl(newSegment, readIndex, writeIndex, autoResize, registries);
+        final ResizeableSegmentAllocator newAllocator;
+        if (allocator instanceof ResizeableSegmentAllocator.Pooled p) {
+            newAllocator = new ResizeableSegmentAllocator.Resizeable(Arena.ofAuto(), p.strategy());
+        } else {
+            newAllocator = allocator;
+        }
+        return new NetworkBufferImpl(newSegment, readIndex, writeIndex, newAllocator, registries);
     }
 
     @Override
@@ -350,8 +360,8 @@ final class NetworkBufferImpl implements NetworkBuffer {
 
     @Override
     public String toString() {
-        return String.format("NetworkBuffer{r%d|w%d->%d, registries=%s, autoResize=%s, readOnly=%s}",
-                readIndex, writeIndex, capacity(), registries != null, autoResize != null, isReadOnly());
+        return String.format("NetworkBuffer{r%d|w%d->%d, registries=%s, allocator=%s, readOnly=%s}",
+                readIndex, writeIndex, capacity(), registries != null, allocator != null, isReadOnly());
     }
 
     private boolean isDummy() {
@@ -471,11 +481,18 @@ final class NetworkBufferImpl implements NetworkBuffer {
 
     static final class Builder implements NetworkBuffer.Builder {
         private final long initialSize;
+        private @Nullable SegmentAllocator allocator;
         private @Nullable AutoResize autoResize;
         private @Nullable Registries registries;
 
         public Builder(long initialSize) {
             this.initialSize = initialSize;
+        }
+
+        @Override
+        public NetworkBuffer.Builder allocator(SegmentAllocator allocator) {
+            this.allocator = Objects.requireNonNull(allocator);
+            return this;
         }
 
         @Override
@@ -492,8 +509,52 @@ final class NetworkBufferImpl implements NetworkBuffer {
 
         @Override
         public NetworkBuffer build() {
-            final MemorySegment segment = Arena.ofAuto().allocate(initialSize);
-            return new NetworkBufferImpl(segment, 0, 0, autoResize, registries);
+            final SegmentAllocator segmentAllocator = this.allocator != null ? this.allocator : Arena.ofAuto();
+            final MemorySegment segment = segmentAllocator.allocate(initialSize);
+            final ResizeableSegmentAllocator memoryAllocator = autoResize != null ? new ResizeableSegmentAllocator.Resizeable(segmentAllocator, autoResize) : null;
+            return new NetworkBufferImpl(segment, 0, 0, memoryAllocator, registries);
+        }
+    }
+
+    MemorySegment extractSegment() {
+        MemorySegment segment = this.segment;
+        if (segment == null) {
+            throw new IllegalStateException("Buffer is already released or is a dummy buffer");
+        }
+        if (segment.isReadOnly()) {
+            throw new IllegalArgumentException("Cannot release a read only buffer");
+        }
+        this.segment = null;
+        return segment;
+    }
+
+    // value based
+    sealed interface ResizeableSegmentAllocator {
+        // Buffers passed to resize are considered consumed
+        // If segment passed return is the same segment its assumed that we have reached max capacity.
+        MemorySegment resize(MemorySegment segment, long targetSize);
+
+        record Resizeable(SegmentAllocator allocator, AutoResize strategy) implements ResizeableSegmentAllocator {
+
+            @Override
+            public MemorySegment resize(MemorySegment segment, long targetSize) {
+                long newCapacity = strategy.resize(segment.byteSize(), targetSize);
+                MemorySegment newSegment = allocator.allocate(newCapacity);
+                MemorySegment.copy(segment, 0, newSegment, 0, segment.byteSize());
+                return newSegment;
+            }
+        }
+
+        record Pooled(NetworkBufferPool pool, AutoResize strategy) implements ResizeableSegmentAllocator {
+
+            @Override
+            public MemorySegment resize(MemorySegment segment, long targetSize) {
+                long newCapacity = strategy.resize(segment.byteSize(), targetSize);
+                MemorySegment newSegment = pool.leaseSegment(newCapacity);
+                MemorySegment.copy(segment, 0, newSegment, 0, segment.byteSize());
+                pool.returnSegment(segment);
+                return newSegment;
+            }
         }
     }
 

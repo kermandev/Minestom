@@ -1,6 +1,5 @@
 package net.minestom.server.network;
 
-import net.minestom.server.network.packet.PacketVanilla;
 import net.minestom.server.network.packet.PacketWriting;
 import net.minestom.server.network.packet.server.ServerPacket;
 import org.junit.jupiter.api.Test;
@@ -29,9 +28,10 @@ public class SocketWriteTest {
     @Test
     public void writeSingleUncompressed() {
         var packet = new IntPacket(5);
+        var pool = NetworkBufferPool.pool(8 * 1024 * 1024);
 
-        var buffer = PacketVanilla.PACKET_POOL.get();
-        PacketWriting.writeFramedPacket(buffer, IntPacket.SERIALIZER, 1, packet, -1);
+        var buffer = NetworkBuffer.resizableBuffer(256);
+        PacketWriting.writeFramedPacket(pool, buffer, IntPacket.SERIALIZER, 1, packet, -1);
 
         // 3 bytes length [var-int] + 1 byte packet id [var-int] + 4 bytes int
         // The 3 bytes var-int length is hardcoded for performance purpose, could change in the future
@@ -41,10 +41,11 @@ public class SocketWriteTest {
     @Test
     public void writeMultiUncompressed() {
         var packet = new IntPacket(5);
+        var pool = NetworkBufferPool.pool(8 * 1024 * 1024);
 
-        var buffer = PacketVanilla.PACKET_POOL.get();
-        PacketWriting.writeFramedPacket(buffer, IntPacket.SERIALIZER, 1, packet, -1);
-        PacketWriting.writeFramedPacket(buffer, IntPacket.SERIALIZER, 1, packet, -1);
+        var buffer = NetworkBuffer.resizableBuffer(256);
+        PacketWriting.writeFramedPacket(pool, buffer, IntPacket.SERIALIZER, 1, packet, -1);
+        PacketWriting.writeFramedPacket(pool, buffer, IntPacket.SERIALIZER, 1, packet, -1);
 
         // 3 bytes length [var-int] + 1 byte packet id [var-int] + 4 bytes int
         // The 3 bytes var-int length is hardcoded for performance purpose, could change in the future
@@ -58,9 +59,10 @@ public class SocketWriteTest {
         var lengthLength = getVarIntSize(stringLength);
 
         var packet = new CompressiblePacket(string);
+        var pool = NetworkBufferPool.pool(8 * 1024 * 1024);
 
-        var buffer = PacketVanilla.PACKET_POOL.get();
-        PacketWriting.writeFramedPacket(buffer, CompressiblePacket.SERIALIZER, 1, packet, 256);
+        var buffer = NetworkBuffer.resizableBuffer(256);
+        PacketWriting.writeFramedPacket(pool, buffer, CompressiblePacket.SERIALIZER, 1, packet, 256);
 
         // 3 bytes packet length [var-int] + 3 bytes data length [var-int] + 1 byte packet id [var-int] + payload
         // The 3 bytes var-int length is hardcoded for performance purpose, could change in the future
@@ -70,9 +72,10 @@ public class SocketWriteTest {
     @Test
     public void writeSingleCompressedSmall() {
         var packet = new IntPacket(5);
+        var pool = NetworkBufferPool.pool(8 * 1024 * 1024);
 
-        var buffer = PacketVanilla.PACKET_POOL.get();
-        PacketWriting.writeFramedPacket(buffer, IntPacket.SERIALIZER, 1, packet, 256);
+        var buffer = NetworkBuffer.resizableBuffer(256);
+        PacketWriting.writeFramedPacket(pool, buffer, IntPacket.SERIALIZER, 1, packet, 256);
 
         // 3 bytes packet length [var-int] + 3 bytes data length [var-int] + 1 byte packet id [var-int] + 4 bytes int
         // The 3 bytes var-int length is hardcoded for performance purpose, could change in the future
@@ -82,10 +85,11 @@ public class SocketWriteTest {
     @Test
     public void writeMultiCompressedSmall() {
         var packet = new IntPacket(5);
+        var pool = NetworkBufferPool.pool(8 * 1024 * 1024);
 
-        var buffer = PacketVanilla.PACKET_POOL.get();
-        PacketWriting.writeFramedPacket(buffer, IntPacket.SERIALIZER, 1, packet, 256);
-        PacketWriting.writeFramedPacket(buffer, IntPacket.SERIALIZER, 1, packet, 256);
+        var buffer = NetworkBuffer.resizableBuffer(256);
+        PacketWriting.writeFramedPacket(pool, buffer, IntPacket.SERIALIZER, 1, packet, 256);
+        PacketWriting.writeFramedPacket(pool, buffer, IntPacket.SERIALIZER, 1, packet, 256);
 
         // 3 bytes packet length [var-int] + 3 bytes data length [var-int] + 1 byte packet id [var-int] + 4 bytes int
         // The 3 bytes var-int length is hardcoded for performance purpose, could change in the future

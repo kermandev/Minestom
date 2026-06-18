@@ -3,6 +3,7 @@ package net.minestom.server.network.packet;
 import net.minestom.server.ServerFlag;
 import net.minestom.server.network.ConnectionState;
 import net.minestom.server.network.NetworkBuffer;
+import net.minestom.server.network.NetworkBufferPool;
 import net.minestom.server.network.packet.client.ClientPacket;
 import net.minestom.server.network.packet.server.ServerPacket;
 import org.jetbrains.annotations.ApiStatus;
@@ -71,22 +72,25 @@ public final class PacketReading {
     }
 
     public static Result<ClientPacket> readClients(
+            NetworkBufferPool pool,
             NetworkBuffer buffer,
             ConnectionState state,
             boolean compressed
     ) throws DataFormatException {
-        return readPackets(buffer, PacketVanilla.CLIENT_PACKET_PARSER, state, PacketVanilla::nextClientState, compressed);
+        return readPackets(pool, buffer, PacketVanilla.CLIENT_PACKET_PARSER, state, PacketVanilla::nextClientState, compressed);
     }
 
     public static Result<ServerPacket> readServers(
+            NetworkBufferPool pool,
             NetworkBuffer buffer,
             ConnectionState state,
             boolean compressed
     ) throws DataFormatException {
-        return readPackets(buffer, PacketVanilla.SERVER_PACKET_PARSER, state, PacketVanilla::nextServerState, compressed);
+        return readPackets(pool, buffer, PacketVanilla.SERVER_PACKET_PARSER, state, PacketVanilla::nextServerState, compressed);
     }
 
     public static <T> Result<T> readPackets(
+            NetworkBufferPool pool,
             NetworkBuffer buffer,
             PacketParser<T> parser,
             ConnectionState state,
@@ -96,7 +100,7 @@ public final class PacketReading {
         List<ParsedPacket<T>> packets = new ArrayList<>();
         readLoop:
         while (buffer.readableBytes() > 0) {
-            final Result<T> result = readPacket(buffer, parser, state, stateUpdater, compressed);
+            final Result<T> result = readPacket(pool, buffer, parser, state, stateUpdater, compressed);
             if (buffer.readableBytes() == 0 && packets.isEmpty()) return result;
             switch (result) {
                 case Result.Success<T> success -> {
@@ -116,23 +120,8 @@ public final class PacketReading {
         return !packets.isEmpty() ? new Result.Success<>(packets) : EMPTY_CLIENT_PACKET;
     }
 
-    public static Result<ClientPacket> readClient(
-            NetworkBuffer buffer,
-            ConnectionState state,
-            boolean compressed
-    ) throws DataFormatException {
-        return readPacket(buffer, PacketVanilla.CLIENT_PACKET_PARSER, state, PacketVanilla::nextClientState, compressed);
-    }
-
-    public static Result<ServerPacket> readServer(
-            NetworkBuffer buffer,
-            ConnectionState state,
-            boolean compressed
-    ) throws DataFormatException {
-        return readPacket(buffer, PacketVanilla.SERVER_PACKET_PARSER, state, PacketVanilla::nextServerState, compressed);
-    }
-
     public static <T> Result<T> readPacket(
+            NetworkBufferPool pool,
             NetworkBuffer buffer,
             PacketParser<T> parser,
             ConnectionState state,
@@ -172,13 +161,14 @@ public final class PacketReading {
         final long writerEnd = buffer.writeIndex();
         buffer.writeIndex(readerEnd);
         final PacketRegistry<? extends T> registry = parser.stateRegistry(state);
-        final T packet = readFramedPacket(buffer, registry, compressed, maxPacketSize);
+        final T packet = readFramedPacket(pool, buffer, registry, compressed, maxPacketSize);
         final ConnectionState nextState = stateUpdater.apply(packet, state);
         buffer.index(readerEnd, writerEnd);
         return new Result.Success<>(new ParsedPacket<>(nextState, packet));
     }
 
-    private static <T> T readFramedPacket(NetworkBuffer buffer,
+    private static <T> T readFramedPacket(NetworkBufferPool pool,
+                                          NetworkBuffer buffer,
                                           PacketRegistry<T> registry,
                                           boolean compressed,
                                           int maxPacketSize) throws DataFormatException {
@@ -197,17 +187,15 @@ public final class PacketReading {
         }
 
         // Decompress the packet into the pooled buffer and read the uncompressed packet from it
-        NetworkBuffer decompressed = PacketVanilla.PACKET_POOL.get();
+        NetworkBuffer decompressed = pool.acquireStatic(Math.max(ServerFlag.POOLED_BUFFER_SIZE, dataLength), buffer.registries());
         try {
-            if (decompressed.capacity() < dataLength) decompressed.resize(dataLength);
-            decompressed.registries(buffer.registries());
             final long written = buffer.decompress(buffer.readIndex(), buffer.readableBytes(), decompressed);
             if (written != dataLength) {
                 throw new DataFormatException("Decompressed length mismatch: expected " + dataLength + ", got " + written);
             }
             return readPayload(decompressed, registry);
         } finally {
-            PacketVanilla.PACKET_POOL.add(decompressed);
+            pool.release(decompressed);
         }
     }
 

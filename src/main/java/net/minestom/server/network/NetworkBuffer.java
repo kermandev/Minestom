@@ -24,6 +24,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.lang.foreign.MemorySegment;
+import java.lang.foreign.SegmentAllocator;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SocketChannel;
 import java.security.PublicKey;
@@ -320,6 +321,8 @@ public sealed interface NetworkBuffer permits NetworkBufferImpl {
     }
 
     sealed interface Builder permits NetworkBufferImpl.Builder {
+        Builder allocator(SegmentAllocator allocator);
+
         Builder autoResize(@Nullable AutoResize autoResize);
 
         Builder registry(@Nullable Registries registries);

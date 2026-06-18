@@ -19,6 +19,7 @@ import net.minestom.server.monitoring.BenchmarkManager;
 import net.minestom.server.monitoring.EventsJFR;
 import net.minestom.server.monitoring.TickMonitor;
 import net.minestom.server.network.ConnectionManager;
+import net.minestom.server.network.NetworkBufferPool;
 import net.minestom.server.network.packet.PacketParser;
 import net.minestom.server.network.packet.PacketVanilla;
 import net.minestom.server.network.packet.client.ClientPacket;
@@ -68,6 +69,7 @@ final class ServerProcessImpl implements ServerProcess, Registries.Delegating {
     private final BossBarManager bossBar;
     private final ClickCallbackManager clickCallbackManager;
 
+    private final NetworkBufferPool pool;
     private final Server server;
 
     private final ThreadDispatcher<Chunk, Entity> dispatcher;
@@ -96,6 +98,7 @@ final class ServerProcessImpl implements ServerProcess, Registries.Delegating {
         this.bossBar = new BossBarManager();
         this.clickCallbackManager = new ClickCallbackManager();
 
+        this.pool = NetworkBufferPool.pool(ServerFlag.PACKET_POOL_SIZE);
         this.server = new Server(packetParser);
 
         this.dispatcher = ThreadDispatcher.dispatcher(ThreadProvider.counter(), ServerFlag.DISPATCHER_THREADS);
@@ -183,6 +186,11 @@ final class ServerProcessImpl implements ServerProcess, Registries.Delegating {
     }
 
     @Override
+    public NetworkBufferPool pool() {
+        return pool;
+    }
+
+    @Override
     public Server server() {
         return server;
     }
@@ -233,7 +241,7 @@ final class ServerProcessImpl implements ServerProcess, Registries.Delegating {
         }
 
         // Start server
-        server.start();
+        server.start(pool);
 
         LOGGER.info("{} server started successfully.", brand);
 
@@ -249,6 +257,7 @@ final class ServerProcessImpl implements ServerProcess, Registries.Delegating {
         scheduler.shutdown();
         connection.shutdown();
         server.stop();
+        pool.clear();
         LOGGER.info("Shutting down all thread pools.");
         benchmark.disable();
         dispatcher.shutdown();

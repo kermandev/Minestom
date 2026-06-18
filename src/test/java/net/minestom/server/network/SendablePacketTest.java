@@ -17,6 +17,9 @@ import java.util.zip.DataFormatException;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class SendablePacketTest {
+    static {
+        MinecraftServer.init();
+    }
 
     @Test
     public void cached() {
@@ -24,7 +27,8 @@ public class SendablePacketTest {
         var cached = new CachedPacket(packet);
         assertSame(packet, cached.packet(ConnectionState.PLAY));
 
-        var buffer = PacketWriting.allocateTrimmedPacket(ConnectionState.PLAY, packet,
+        var pool = MinecraftServer.process().pool();
+        var buffer = PacketWriting.allocateTrimmedPacket(pool, MinecraftServer.process(), ConnectionState.PLAY, packet,
                 MinecraftServer.getCompressionThreshold());
         var cachedBuffer = cached.body(ConnectionState.PLAY);
         assertTrue(NetworkBuffer.equals(buffer, cachedBuffer));
@@ -39,9 +43,10 @@ public class SendablePacketTest {
     public void trimmed() throws DataFormatException {
         var packet = new ClientAnimationPacket(PlayerHand.MAIN);
 
-        var buffer = PacketWriting.allocateTrimmedPacket(ConnectionState.PLAY, packet, 0);
+        var pool = MinecraftServer.process().pool();
+        var buffer = PacketWriting.allocateTrimmedPacket(pool, MinecraftServer.process(), ConnectionState.PLAY, packet, 0);
 
-        var result = PacketReading.readClient(buffer, ConnectionState.PLAY, false);
+        var result = PacketReading.readClients(pool, buffer, ConnectionState.PLAY, false);
         if (!(result instanceof PacketReading.Result.Success<ClientPacket>(
                 List<PacketReading.ParsedPacket<ClientPacket>> packets
         ))) {

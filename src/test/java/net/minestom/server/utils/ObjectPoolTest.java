@@ -14,7 +14,7 @@ public class ObjectPoolTest {
 
     @Test
     public void pool() {
-        var pool = PacketVanilla.PACKET_POOL;
+        var pool = ObjectPool.pool(() -> NetworkBuffer.staticBuffer(1024));
         Set<NetworkBuffer> pooledBuffers = Collections.newSetFromMap(new IdentityHashMap<>());
         pool.clear();
 
@@ -34,7 +34,7 @@ public class ObjectPoolTest {
 
     @Test
     public void autoClose() {
-        var pool = PacketVanilla.PACKET_POOL;
+        var pool = ObjectPool.pool(() -> NetworkBuffer.staticBuffer(1024));
         assertEquals(0, pool.count());
         try (var ignored = pool.hold()) {
             assertEquals(0, pool.count());

@@ -10,6 +10,7 @@ import net.minestom.server.event.player.PlayerPacketOutEvent;
 import net.minestom.server.extras.mojangAuth.MojangCrypt;
 import net.minestom.server.network.ConnectionState;
 import net.minestom.server.network.NetworkBuffer;
+import net.minestom.server.network.NetworkBufferPool;
 import net.minestom.server.network.packet.PacketParser;
 import net.minestom.server.network.packet.PacketReading;
 import net.minestom.server.network.packet.PacketVanilla;
@@ -46,6 +47,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.LockSupport;
+import java.util.function.BiPredicate;
 import java.util.zip.DataFormatException;
 
 /**
@@ -87,7 +89,7 @@ public class PlayerSocketConnection extends PlayerConnection {
     private final MessagePassingQueue<SendablePacket> packetQueue = ConcurrentMessageQueues.mpscUnboundedArrayQueue(1024);
     private final Thread readThread, writeThread;
 
-    private final AtomicLong sentPacketCounter = new AtomicLong();
+    private volatile long sentPacketCounter = 0;
     // Index where compression starts, linked to `sentPacketCounter`
     // Used instead of a simple boolean so we can get proper timing for serialization
     private volatile long compressionStart = Long.MAX_VALUE;
@@ -106,7 +108,7 @@ public class PlayerSocketConnection extends PlayerConnection {
         this.readThread = readThread;
     }
 
-    public void read(PacketParser<ClientPacket> packetParser) throws IOException {
+    public void read(NetworkBufferPool pool, PacketParser<ClientPacket> packetParser) throws IOException {
         NetworkBuffer readBuffer = this.readBuffer;
         final long writeIndex = readBuffer.writeIndex();
         final int length = readBuffer.readChannel(channel);
@@ -116,18 +118,19 @@ public class PlayerSocketConnection extends PlayerConnection {
             readBuffer.cipher(encryptionContext.decrypt(), writeIndex, length);
         }
         // Process packets
-        processPackets(readBuffer, packetParser);
+        processPackets(pool, readBuffer, packetParser);
     }
 
     private boolean compression() {
         return compressionStart != Long.MAX_VALUE;
     }
 
-    private void processPackets(NetworkBuffer readBuffer, PacketParser<ClientPacket> packetParser) {
+    private void processPackets(NetworkBufferPool pool, NetworkBuffer readBuffer, PacketParser<ClientPacket> packetParser) {
         final ConnectionState startingState = getClientState();
         final PacketReading.Result<ClientPacket> result;
         try {
             result = PacketReading.readPackets(
+                    pool,
                     readBuffer,
                     packetParser,
                     startingState, PacketVanilla::nextClientState,
@@ -192,7 +195,7 @@ public class PlayerSocketConnection extends PlayerConnection {
      */
     public void startCompression() {
         Check.stateCondition(compression(), "Compression is already enabled!");
-        this.compressionStart = sentPacketCounter.get();
+        this.compressionStart = Long.MAX_VALUE - 1;
         final int threshold = MinecraftServer.getCompressionThreshold();
         Check.stateCondition(threshold == 0, "Compression cannot be enabled because the threshold is equal to 0");
         sendPacket(new SetCompressionPacket(threshold));
@@ -322,9 +325,9 @@ public class PlayerSocketConnection extends PlayerConnection {
         this.nonce = nonce;
     }
 
-    private boolean writeSendable(NetworkBuffer buffer, SendablePacket sendable, boolean compressed) {
+    private boolean writeSendable(NetworkBufferPool pool, NetworkBuffer buffer, SendablePacket sendable, boolean compressed) {
         final long start = buffer.writeIndex();
-        final boolean result = writePacketSync(buffer, sendable, compressed);
+        final boolean result = writePacketSync(pool, buffer, sendable, compressed);
         if (!result) return false;
         // Encrypt data
         final long length = buffer.writeIndex() - start;
@@ -335,7 +338,7 @@ public class PlayerSocketConnection extends PlayerConnection {
         return true;
     }
 
-    private boolean writePacketSync(NetworkBuffer buffer, SendablePacket packet, boolean compressed) {
+    private boolean writePacketSync(NetworkBufferPool pool, NetworkBuffer buffer, SendablePacket packet, boolean compressed) {
         final Player player = getPlayer();
         final ConnectionState state = getServerState();
         if (player != null) {
@@ -358,12 +361,12 @@ public class PlayerSocketConnection extends PlayerConnection {
         final long start = buffer.writeIndex();
         final int compressionThreshold = compressed ? MinecraftServer.getCompressionThreshold() : 0;
         try {
-            return switch (packet) {
+            final boolean success = switch (packet) {
                 case ServerPacket serverPacket -> {
                     var nextState = PacketVanilla.nextServerState(serverPacket, state);
                     if (nextState != state) setServerState(nextState);
 
-                    PacketWriting.writeFramedPacket(buffer, state, serverPacket, compressionThreshold);
+                    PacketWriting.writeFramedPacket(pool, buffer, state, serverPacket, compressionThreshold);
                     yield true;
                 }
                 case FramedPacket framedPacket -> {
@@ -375,7 +378,7 @@ public class PlayerSocketConnection extends PlayerConnection {
                     if (body != null) {
                         yield writeBuffer(buffer, body, 0, body.capacity());
                     } else {
-                        PacketWriting.writeFramedPacket(buffer, state, cachedPacket.packet(state), compressionThreshold);
+                        PacketWriting.writeFramedPacket(pool, buffer, state, cachedPacket.packet(state), compressionThreshold);
                         yield true;
                     }
                 }
@@ -386,6 +389,13 @@ public class PlayerSocketConnection extends PlayerConnection {
                     yield writeBuffer(buffer, rawBuffer, index, length);
                 }
             };
+            if (success) {
+                final ServerPacket serverPacket = SendablePacket.extractServerPacket(state, packet);
+                if (serverPacket instanceof SetCompressionPacket) {
+                    this.compressionStart = sentPacketCounter;
+                }
+            }
+            return success;
         } catch (IndexOutOfBoundsException exception) {
             buffer.writeIndex(start);
             return false;
@@ -393,10 +403,7 @@ public class PlayerSocketConnection extends PlayerConnection {
     }
 
     private boolean writeBuffer(NetworkBuffer buffer, NetworkBuffer body, long index, long length) {
-        if (buffer.writableBytes() < length) {
-            // Not enough space in the buffer
-            return false;
-        }
+        buffer.ensureWritable(length);
         NetworkBuffer.copy(body, index, buffer, buffer.writeIndex(), length);
         buffer.advanceWrite(length);
         return true;
@@ -404,14 +411,14 @@ public class PlayerSocketConnection extends PlayerConnection {
 
     private @Nullable NetworkBuffer writeLeftover = null;
 
-    public void flushSync() throws IOException {
+    public void flushSync(NetworkBufferPool pool) throws IOException {
         // Write leftover if any
         NetworkBuffer leftover = this.writeLeftover;
         if (leftover != null) {
             final boolean success = leftover.writeChannel(channel);
             if (success) {
                 this.writeLeftover = null;
-                PacketVanilla.PACKET_POOL.add(leftover);
+                pool.release(leftover);
             } else {
                 // Failed to write the whole leftover, try again next flush
                 return;
@@ -437,19 +444,40 @@ public class PlayerSocketConnection extends PlayerConnection {
             }
         }
         if (!channel.isConnected()) throw new EOFException("Channel is closed");
-        NetworkBuffer buffer = PacketVanilla.PACKET_POOL.get();
-        // Write to buffer
-        PacketWriting.writeQueue(buffer, packetQueue, 1, (b, packet) -> {
-            final boolean compressed = sentPacketCounter.get() > compressionStart;
-            final boolean success = writeSendable(b, packet, compressed);
-            if (success) sentPacketCounter.getAndIncrement();
-            return success;
-        });
-        // Write to channel
-        final boolean success = buffer.writeChannel(channel);
-        // Keep the buffer if not fully written
-        if (success) PacketVanilla.PACKET_POOL.add(buffer);
-        else this.writeLeftover = buffer;
+        NetworkBuffer buffer = pool.acquireResizeable(ServerFlag.POOLED_BUFFER_SIZE, PacketWriting.PACKET_WRITE_RESIZE, MinecraftServer.process());
+        boolean success = false;
+        try {
+            SendablePacket packet;
+            //noinspection ConstantValue
+            while ((packet = packetQueue.peek()) != null) {
+                final long index = buffer.writeIndex();
+                boolean writeSuccess;
+                try {
+                    final long sentPacketCounter = this.sentPacketCounter;
+                    final boolean compressed = sentPacketCounter > compressionStart;
+                    writeSuccess = writeSendable(pool, buffer, packet, compressed);
+                    if (writeSuccess) this.sentPacketCounter = sentPacketCounter + 1;
+                } catch (IndexOutOfBoundsException e) {
+                    writeSuccess = false;
+                }
+                assert !writeSuccess || buffer.writeIndex() > 0;
+                if (writeSuccess) {
+                    packetQueue.poll();
+                } else {
+                    buffer.writeIndex(index);
+                    break;
+                }
+            }
+            // Write to channel
+            success = buffer.writeChannel(channel);
+            if (!success) {
+                this.writeLeftover = buffer;
+            }
+        } finally {
+            if (success || this.writeLeftover != buffer) {
+                pool.release(buffer);
+            }
+        }
     }
 
     @Override
@@ -467,10 +495,10 @@ public class PlayerSocketConnection extends PlayerConnection {
     }
 
     @ApiStatus.Internal
-    public void cleanup() {
+    public void cleanup(NetworkBufferPool pool) {
         final var writeLeftover = this.writeLeftover;
         if (writeLeftover != null) {
-            PacketVanilla.PACKET_POOL.add(writeLeftover);
+            pool.release(writeLeftover);
             this.writeLeftover = null;
         }
     }

@@ -1,5 +1,6 @@
 package net.minestom.server.network.socket;
 
+import net.minestom.server.network.NetworkBufferPool;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -24,7 +25,7 @@ public class ServerAddressTest {
         assertEquals(address.getHostString(), server.getAddress());
         assertEquals(address.getPort(), server.getPort());
 
-        assertDoesNotThrow(server::start);
+        assertDoesNotThrow(() -> server.start(NetworkBufferPool.pool(0)));
         assertDoesNotThrow(server::stop);
     }
 
@@ -40,7 +41,7 @@ public class ServerAddressTest {
         assertEquals(address.getHostString(), server.getAddress());
         assertNotEquals(address.getPort(), server.getPort());
 
-        assertDoesNotThrow(server::start);
+        assertDoesNotThrow(() -> server.start(NetworkBufferPool.pool(0)));
         assertDoesNotThrow(server::stop);
     }
 
@@ -57,7 +58,7 @@ public class ServerAddressTest {
         assertEquals("unix://" + address.getPath(), server.getAddress());
         assertEquals(0, server.getPort());
 
-        assertDoesNotThrow(server::start);
+        assertDoesNotThrow(() -> server.start(NetworkBufferPool.pool(0)));
         assertDoesNotThrow(server::stop);
         assertFalse(Files.exists(address.getPath()), "The socket file should be deleted");
     }

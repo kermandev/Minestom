@@ -11,6 +11,7 @@ import net.minestom.server.instance.generator.GeneratorImpl;
 import net.minestom.server.instance.heightmap.Heightmap;
 import net.minestom.server.network.ConnectionState;
 import net.minestom.server.network.NetworkBuffer;
+import net.minestom.server.network.NetworkBufferPool;
 import net.minestom.server.network.packet.PacketReading;
 import net.minestom.server.network.packet.PacketVanilla;
 import net.minestom.server.network.packet.PacketWriting;
@@ -101,6 +102,7 @@ public final class Scratch {
             while (channel.isOpen()) {
                 connection.readBuffer.readChannel(channel);
                 switch (PacketReading.readPackets(
+                        connection.pool,
                         connection.readBuffer,
                         PacketVanilla.CLIENT_PACKET_PARSER,
                         clientState,
@@ -188,12 +190,14 @@ public final class Scratch {
         private final SocketChannel channel;
         private final Registries registries;
         private final NetworkBuffer readBuffer;
+        private final NetworkBufferPool pool;
         private ConnectionState serverState = ConnectionState.STATUS;
 
         private Connection(SocketChannel channel, Registries registries) {
             this.channel = channel;
             this.registries = registries;
             this.readBuffer = NetworkBuffer.resizableBuffer(4096, registries);
+            this.pool = NetworkBufferPool.pool(8 * 1024 * 1024);
         }
 
         private void send(SendablePacket packet) {
@@ -202,7 +206,7 @@ public final class Scratch {
             if (serverPacket == null) throw new IllegalArgumentException("Unsupported packet: " + packet);
             serverState = PacketVanilla.nextServerState(serverPacket, serverState);
             NetworkBuffer buffer = NetworkBuffer.resizableBuffer(1024, registries);
-            PacketWriting.writeFramedPacket(buffer, previousState, serverPacket, 0);
+            PacketWriting.writeFramedPacket(pool, buffer, previousState, serverPacket, 0);
             try {
                 while (!buffer.writeChannel(channel)) Thread.onSpinWait();
             } catch (IOException e) {

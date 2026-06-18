@@ -2,6 +2,7 @@ package net.minestom.server.network.socket;
 
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.ServerFlag;
+import net.minestom.server.network.NetworkBufferPool;
 import net.minestom.server.network.packet.PacketParser;
 import net.minestom.server.network.packet.PacketVanilla;
 import net.minestom.server.network.player.PlayerSocketConnection;
@@ -65,7 +66,7 @@ public final class Server {
     }
 
     @ApiStatus.Internal
-    public void start() {
+    public void start(NetworkBufferPool pool) {
         Thread.ofVirtual().name("Ms-Socket-Server").start(() -> {
             // Use named thread builders for logging
             var readBuilder = Thread.ofVirtual().name("Ms-Socket-Reader-", 0);
@@ -85,8 +86,8 @@ public final class Server {
                 AtomicReference<@UnknownNullability PlayerSocketConnection> reference = new AtomicReference<>(null);
                 try {
                     configureSocket(client);
-                    Thread readThread = readBuilder.unstarted(() -> playerReadLoop(reference.get()));
-                    Thread writeThread = writeBuilder.unstarted(() -> playerWriteLoop(reference.get()));
+                    Thread readThread = readBuilder.unstarted(() -> playerReadLoop(reference.get(), pool));
+                    Thread writeThread = writeBuilder.unstarted(() -> playerWriteLoop(reference.get(), pool));
                     PlayerSocketConnection connection = new PlayerSocketConnection(client, client.getRemoteAddress(), readThread, writeThread);
                     reference.set(connection);
                     readThread.start();
@@ -110,12 +111,12 @@ public final class Server {
         }
     }
 
-    private void playerReadLoop(PlayerSocketConnection connection) {
+    private void playerReadLoop(PlayerSocketConnection connection, NetworkBufferPool pool) {
         Objects.requireNonNull(connection, "connection cannot be null");
         while (!stop) {
             try {
                 // Read & process packets
-                connection.read(packetParser);
+                connection.read(pool, packetParser);
             } catch (ClosedChannelException | EOFException _) {
                 connection.disconnect(); // We closed the socket during read, just exit.
                 break;
@@ -128,12 +129,12 @@ public final class Server {
         }
     }
 
-    private void playerWriteLoop(PlayerSocketConnection connection) {
+    private void playerWriteLoop(PlayerSocketConnection connection, NetworkBufferPool pool) {
         Objects.requireNonNull(connection, "connection cannot be null");
         try {
             while (!stop) {
                 try {
-                    connection.flushSync();
+                    connection.flushSync(pool);
                 } catch (ClosedChannelException | EOFException _) {
                     connection.disconnect();
                 } catch (Throwable e) {
@@ -143,7 +144,7 @@ public final class Server {
                 }
                 if (!connection.isOnline()) {
                     try {
-                        connection.flushSync();
+                        connection.flushSync(pool);
                     } catch (IOException _) {
                         // Ignore IO errors
                     } finally {
@@ -157,7 +158,7 @@ public final class Server {
                 }
             }
         } finally {
-            connection.cleanup(); // Cleanup pooling
+            connection.cleanup(pool); // Cleanup pooling
         }
     }
 

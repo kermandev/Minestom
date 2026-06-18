@@ -2,6 +2,7 @@ package net.minestom.server.network.packet.server;
 
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.ServerFlag;
+import net.minestom.server.ServerProcess;
 import net.minestom.server.network.ConnectionState;
 import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.network.packet.PacketWriting;
@@ -32,6 +33,7 @@ public final class CachedPacket implements SendablePacket {
     }
 
     public void invalidate() {
+        if (!ServerFlag.CACHED_PACKET) return;
         this.packet = null;
     }
 
@@ -52,7 +54,8 @@ public final class CachedPacket implements SendablePacket {
         FramedPacket cache;
         if (ref == null || (cache = ref.get()) == null) {
             final ServerPacket packet = packetSupplier.get();
-            final NetworkBuffer buffer = PacketWriting.allocateTrimmedPacket(state, packet,
+            final ServerProcess process = MinecraftServer.process();
+            final NetworkBuffer buffer = PacketWriting.allocateTrimmedPacket(process.pool(), process, state, packet,
                     MinecraftServer.getCompressionThreshold());
             cache = new FramedPacket(packet, buffer);
             this.packet = new SoftReference<>(cache);
@@ -61,6 +64,7 @@ public final class CachedPacket implements SendablePacket {
     }
 
     public boolean isValid() {
+        if (!ServerFlag.CACHED_PACKET) return false;
         final SoftReference<FramedPacket> ref = packet;
         return ref != null && ref.get() != null;
     }

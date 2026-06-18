@@ -2,6 +2,7 @@ package net.minestom.server.utils.collection;
 
 import net.minestom.server.ServerFlag;
 import org.jctools.queues.MessagePassingQueue;
+import org.jctools.queues.MpmcArrayQueue;
 import org.jctools.queues.MpmcUnboundedXaddArrayQueue;
 import org.jctools.queues.MpscArrayQueue;
 import org.jctools.queues.MpscUnboundedXaddArrayQueue;
@@ -9,6 +10,8 @@ import org.jctools.queues.atomic.MpmcAtomicArrayQueue;
 import org.jctools.queues.atomic.MpscAtomicArrayQueue;
 import org.jctools.queues.atomic.MpscUnboundedAtomicArrayQueue;
 import org.jetbrains.annotations.ApiStatus;
+
+import java.util.Queue;
 
 @ApiStatus.Internal
 public final class ConcurrentMessageQueues {
@@ -24,5 +27,10 @@ public final class ConcurrentMessageQueues {
     // Atomic is bounded; no unbounded atomic variant exists that is MPMC.
     public static <T> MessagePassingQueue<T> mpmcSpecialUnboundedArrayQueue(int value) {
         return ServerFlag.UNSAFE_COLLECTIONS ? new MpmcUnboundedXaddArrayQueue<>(value) : new MpmcAtomicArrayQueue<>(value);
+    }
+
+    public static <T> Queue<T> mpmcArrayQueue(int capacity) {
+        int cap = Math.max(2, capacity);
+        return ServerFlag.UNSAFE_COLLECTIONS ? new MpmcArrayQueue<>(cap) : new MpmcAtomicArrayQueue<>(cap);
     }
 }

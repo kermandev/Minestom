@@ -12,7 +12,7 @@ import static org.openjdk.jcstress.annotations.Expect.ACCEPTABLE;
 @Outcome(id = "2", expect = ACCEPTABLE)
 @State
 public class ObjectPoolTest {
-    private final ObjectPool<NetworkBuffer> pool = PacketVanilla.PACKET_POOL;
+    private final ObjectPool<NetworkBuffer> pool = ObjectPool.pool(() -> NetworkBuffer.staticBuffer(1024));
 
     @Actor
     public void actor1() {
