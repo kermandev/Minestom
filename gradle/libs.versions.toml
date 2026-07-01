@@ -31,6 +31,9 @@ nmcp = "1.6.0"
 graaltools = "1.1.3"
 jmh-plugin = "0.7.3"
 jcstress-plugin = "0.9.0"
+spotless = "8.8.0"
+errorProne = "5.1.0"
+errorProneCore = "2.50.0"
 
 [libraries]
 
@@ -57,6 +60,9 @@ gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
 jcTools = { group = "org.jctools", name = "jctools-core-jdk11", version.ref = "jcTools" }
 
 # Code quality
+errorProneCore = { group = "com.google.errorprone", name = "error_prone_core", version.ref = "errorProneCore" }
+spotless-plugin = { group = "com.diffplug.spotless", name = "spotless-plugin-gradle", version.ref = "spotless" }
+errorprone-plugin = { group = "net.ltgt.gradle", name = "gradle-errorprone-plugin", version.ref = "errorProne" }
 junit-api = { group = "org.junit.jupiter", name = "junit-jupiter-api", version.ref = "junit" }
 junit-engine = { group = "org.junit.jupiter", name = "junit-jupiter-engine", version.ref = "junit" }
 junit-params = { group = "org.junit.jupiter", name = "junit-jupiter-params", version.ref = "junit" }
@@ -87,3 +93,5 @@ jcstress-plugin = { id = "io.github.reyerizo.gradle.jcstress", version.ref = "jc
 nmcp = { id = "com.gradleup.nmcp", version.ref = "nmcp" }
 nmcp-aggregation = { id = "com.gradleup.nmcp.aggregation", version.ref = "nmcp" }
 graalvm-native = { id = "org.graalvm.buildtools.native", version.ref = "graaltools" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
+errorprone = { id = "net.ltgt.errorprone", version.ref = "errorProne" }

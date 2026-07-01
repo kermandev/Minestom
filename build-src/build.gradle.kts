@@ -6,3 +6,8 @@ repositories {
     mavenCentral()
     gradlePluginPortal()
 }
+
+dependencies {
+    implementation(libs.spotless.plugin)
+    implementation(libs.errorprone.plugin)
+}

@@ -1,5 +1,6 @@
 plugins {
     `java-library`
+    id("minestom.java-quality")
 }
 
 val javaVersion = System.getenv("JAVA_VERSION") ?: "25"

@@ -12,6 +12,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  spotless:
+    name: Spotless Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: graalvm
+          java-version: 25
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: false
+      - name: Spotless Check
+        run: ./gradlew spotlessCheck
+
   build:
     name: JVM Test
     runs-on: ubuntu-latest
@@ -82,7 +100,7 @@ jobs:
 
   publish-snapshot:
     name: Publish Snapshot
-    needs: [ build, javadoc, native-test ]
+    needs: [ build, spotless, javadoc, native-test ]
     runs-on: ubuntu-latest
     steps:
       - name: Generate Bot Token
