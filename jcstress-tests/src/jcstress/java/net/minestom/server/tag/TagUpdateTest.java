@@ -32,4 +32,3 @@ public class TagUpdateTest {
         r.r1 = handler.getTag(TAG);
     }
 }
-

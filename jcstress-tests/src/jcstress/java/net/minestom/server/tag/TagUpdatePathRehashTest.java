@@ -54,4 +54,3 @@ public class TagUpdatePathRehashTest {
         r.r1 = handler.getTag(TAG);
     }
 }
-

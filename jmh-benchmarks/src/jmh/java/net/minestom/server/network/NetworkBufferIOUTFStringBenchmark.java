@@ -219,4 +219,3 @@ public class NetworkBufferIOUTFStringBenchmark {
         blackhole.consume(writeBufferMixedLong.read(NetworkBuffer.STRING_IO_UTF8));
     }
 }
-
