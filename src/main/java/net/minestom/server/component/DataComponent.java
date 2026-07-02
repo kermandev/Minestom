@@ -1,11 +1,5 @@
 package net.minestom.server.component;
 
-import java.util.Collection;
-import java.util.function.UnaryOperator;
-
-import org.jetbrains.annotations.ApiStatus;
-import org.jetbrains.annotations.Nullable;
-
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.key.KeyPattern;
 import net.minestom.server.codec.Codec;
@@ -14,6 +8,11 @@ import net.minestom.server.codec.Encoder;
 import net.minestom.server.item.enchant.EffectComponent;
 import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.registry.StaticProtocolObject;
+import org.jetbrains.annotations.ApiStatus;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.Collection;
+import java.util.function.UnaryOperator;
 
 /**
  * A common type to represent all forms of component in the game. Each group of component types has its own declaration

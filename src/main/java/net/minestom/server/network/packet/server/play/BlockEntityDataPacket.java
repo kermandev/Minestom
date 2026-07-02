@@ -9,7 +9,10 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
-import static net.minestom.server.network.NetworkBuffer.*;
+import static net.minestom.server.network.NetworkBuffer.BLOCK_POSITION;
+import static net.minestom.server.network.NetworkBuffer.BYTE;
+import static net.minestom.server.network.NetworkBuffer.NBT_COMPOUND;
+import static net.minestom.server.network.NetworkBuffer.Type;
 
 public record BlockEntityDataPacket(
         Point blockPosition,

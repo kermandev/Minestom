@@ -9,10 +9,19 @@ import net.minestom.server.network.packet.server.ServerPacket;
 import net.minestom.server.network.player.GameProfile;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.UUID;
 import java.util.function.UnaryOperator;
 
-import static net.minestom.server.network.NetworkBuffer.*;
+import static net.minestom.server.network.NetworkBuffer.BOOLEAN;
+import static net.minestom.server.network.NetworkBuffer.COMPONENT;
+import static net.minestom.server.network.NetworkBuffer.EnumSet;
+import static net.minestom.server.network.NetworkBuffer.STRING;
+import static net.minestom.server.network.NetworkBuffer.Type;
+import static net.minestom.server.network.NetworkBuffer.VAR_INT;
 
 public record PlayerInfoUpdatePacket(
         EnumSet<Action> actions,

@@ -26,11 +26,36 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.UTFDataFormatException;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.Arrays;
+import java.util.BitSet;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import static net.minestom.server.network.NetworkBuffer.*;
+import static net.minestom.server.network.NetworkBuffer.BOOLEAN;
+import static net.minestom.server.network.NetworkBuffer.BYTE;
+import static net.minestom.server.network.NetworkBuffer.BYTE_ARRAY;
+import static net.minestom.server.network.NetworkBuffer.DOUBLE;
+import static net.minestom.server.network.NetworkBuffer.FLOAT;
+import static net.minestom.server.network.NetworkBuffer.FixedBitSet;
+import static net.minestom.server.network.NetworkBuffer.FixedRawBytes;
+import static net.minestom.server.network.NetworkBuffer.INT;
+import static net.minestom.server.network.NetworkBuffer.LONG;
+import static net.minestom.server.network.NetworkBuffer.NBT;
+import static net.minestom.server.network.NetworkBuffer.RAW_BYTES;
+import static net.minestom.server.network.NetworkBuffer.SHORT;
+import static net.minestom.server.network.NetworkBuffer.STRING;
+import static net.minestom.server.network.NetworkBuffer.Type;
+import static net.minestom.server.network.NetworkBuffer.UNSIGNED_BYTE;
+import static net.minestom.server.network.NetworkBuffer.UNSIGNED_INT;
+import static net.minestom.server.network.NetworkBuffer.UNSIGNED_SHORT;
+import static net.minestom.server.network.NetworkBuffer.VAR_INT;
+import static net.minestom.server.network.NetworkBuffer.VAR_LONG;
 import static net.minestom.server.network.NetworkBufferImpl.impl;
 
 interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {

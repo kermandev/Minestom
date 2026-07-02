@@ -13,7 +13,12 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.UnaryOperator;
 
-import static net.minestom.server.network.NetworkBuffer.*;
+import static net.minestom.server.network.NetworkBuffer.BYTE;
+import static net.minestom.server.network.NetworkBuffer.COMPONENT;
+import static net.minestom.server.network.NetworkBuffer.Enum;
+import static net.minestom.server.network.NetworkBuffer.FLOAT;
+import static net.minestom.server.network.NetworkBuffer.Type;
+import static net.minestom.server.network.NetworkBuffer.VAR_INT;
 
 public record BossBarPacket(UUID uuid,
                             Action action) implements ServerPacket.Play, ServerPacket.ComponentHolding {

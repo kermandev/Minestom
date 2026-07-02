@@ -26,7 +26,10 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static net.minestom.server.coordinate.CoordConversion.*;
+import static net.minestom.server.coordinate.CoordConversion.chunkBlockIndex;
+import static net.minestom.server.coordinate.CoordConversion.chunkIndex;
+import static net.minestom.server.coordinate.CoordConversion.globalToChunk;
+import static net.minestom.server.coordinate.CoordConversion.globalToSectionRelative;
 
 @ApiStatus.Internal
 public final class SnapshotImpl {

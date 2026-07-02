@@ -14,7 +14,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.UnaryOperator;
 
-import static net.minestom.server.network.NetworkBuffer.*;
+import static net.minestom.server.network.NetworkBuffer.BYTE;
+import static net.minestom.server.network.NetworkBuffer.COMPONENT;
+import static net.minestom.server.network.NetworkBuffer.STRING;
+import static net.minestom.server.network.NetworkBuffer.Tagged;
+import static net.minestom.server.network.NetworkBuffer.Type;
+import static net.minestom.server.network.NetworkBuffer.VAR_INT;
 
 /**
  * The packet creates or updates teams

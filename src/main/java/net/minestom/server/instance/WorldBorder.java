@@ -3,7 +3,12 @@ package net.minestom.server.instance;
 import net.minestom.server.ServerFlag;
 import net.minestom.server.coordinate.Point;
 import net.minestom.server.entity.Entity;
-import net.minestom.server.network.packet.server.play.*;
+import net.minestom.server.network.packet.server.play.InitializeWorldBorderPacket;
+import net.minestom.server.network.packet.server.play.WorldBorderCenterPacket;
+import net.minestom.server.network.packet.server.play.WorldBorderLerpSizePacket;
+import net.minestom.server.network.packet.server.play.WorldBorderSizePacket;
+import net.minestom.server.network.packet.server.play.WorldBorderWarningDelayPacket;
+import net.minestom.server.network.packet.server.play.WorldBorderWarningReachPacket;
 import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.Contract;
 

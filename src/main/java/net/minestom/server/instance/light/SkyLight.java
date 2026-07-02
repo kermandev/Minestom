@@ -12,7 +12,12 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static net.minestom.server.coordinate.CoordConversion.SECTION_BLOCK_COUNT;
-import static net.minestom.server.instance.light.LightCompute.*;
+import static net.minestom.server.instance.light.LightCompute.CONTENT_FULLY_LIT;
+import static net.minestom.server.instance.light.LightCompute.EMPTY_CONTENT;
+import static net.minestom.server.instance.light.LightCompute.FACES;
+import static net.minestom.server.instance.light.LightCompute.UNSET_CONTENT;
+import static net.minestom.server.instance.light.LightCompute.buildExternalQueue;
+import static net.minestom.server.instance.light.LightCompute.lazyArray;
 
 final class SkyLight implements Light {
     private byte[] content;

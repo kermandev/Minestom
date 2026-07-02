@@ -6,7 +6,11 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.minestom.server.adventure.ComponentHolder;
 import net.minestom.server.entity.Player;
 import net.minestom.server.network.NetworkBuffer;
-import net.minestom.server.network.packet.server.play.*;
+import net.minestom.server.network.packet.server.play.DisplayScoreboardPacket;
+import net.minestom.server.network.packet.server.play.ResetScorePacket;
+import net.minestom.server.network.packet.server.play.ScoreboardObjectivePacket;
+import net.minestom.server.network.packet.server.play.TeamsPacket;
+import net.minestom.server.network.packet.server.play.UpdateScorePacket;
 import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.Nullable;
 

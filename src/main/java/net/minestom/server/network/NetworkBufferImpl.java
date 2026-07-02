@@ -7,14 +7,14 @@ import org.jetbrains.annotations.UnknownNullability;
 
 import javax.crypto.Cipher;
 import javax.crypto.ShortBufferException;
-import java.io.*;
+import java.io.EOFException;
+import java.io.IOException;
 import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SocketChannel;
-import java.util.Arrays;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.zip.DataFormatException;

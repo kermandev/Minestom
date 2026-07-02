@@ -20,7 +20,9 @@ import java.util.Objects;
 
 import static java.util.Map.entry;
 import static net.minestom.server.codec.CodecAssertions.assertOk;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class ItemComponentReadWriteTest {
     private static final Gson GSON = new Gson();
@@ -100,4 +102,3 @@ public class ItemComponentReadWriteTest {
 
     }
 }
-

@@ -8,7 +8,9 @@ import net.minestom.server.world.clock.WorldClock;
 
 import java.util.Map;
 
-import static net.minestom.server.network.NetworkBuffer.*;
+import static net.minestom.server.network.NetworkBuffer.FLOAT;
+import static net.minestom.server.network.NetworkBuffer.LONG;
+import static net.minestom.server.network.NetworkBuffer.VAR_LONG;
 
 public record SetTimePacket(long gameTime,
                             Map<RegistryKey<WorldClock>, ClockState> clocks) implements ServerPacket.Play {

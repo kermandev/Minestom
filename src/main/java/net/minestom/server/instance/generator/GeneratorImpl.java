@@ -18,7 +18,11 @@ import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
-import static net.minestom.server.coordinate.CoordConversion.*;
+import static net.minestom.server.coordinate.CoordConversion.ceilSection;
+import static net.minestom.server.coordinate.CoordConversion.chunkBlockIndex;
+import static net.minestom.server.coordinate.CoordConversion.floorSection;
+import static net.minestom.server.coordinate.CoordConversion.globalToChunk;
+import static net.minestom.server.coordinate.CoordConversion.globalToSectionRelative;
 
 @ApiStatus.Internal
 public final class GeneratorImpl {

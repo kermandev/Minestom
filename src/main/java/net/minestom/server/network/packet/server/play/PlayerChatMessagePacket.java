@@ -15,7 +15,9 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.UnaryOperator;
 
-import static net.minestom.server.network.NetworkBuffer.*;
+import static net.minestom.server.network.NetworkBuffer.COMPONENT;
+import static net.minestom.server.network.NetworkBuffer.UUID;
+import static net.minestom.server.network.NetworkBuffer.VAR_INT;
 
 /**
  * Represents an outgoing chat message packet.
