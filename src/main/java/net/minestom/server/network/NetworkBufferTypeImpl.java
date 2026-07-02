@@ -476,13 +476,13 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
 
     record UUIDType() implements NetworkBufferTypeImpl<UUID> {
         @Override
-        public void write(NetworkBuffer buffer, java.util.UUID value) {
+        public void write(NetworkBuffer buffer, UUID value) {
             buffer.write(LONG, value.getMostSignificantBits());
             buffer.write(LONG, value.getLeastSignificantBits());
         }
 
         @Override
-        public java.util.UUID read(NetworkBuffer buffer) {
+        public UUID read(NetworkBuffer buffer) {
             final long mostSignificantBits = buffer.read(LONG);
             final long leastSignificantBits = buffer.read(LONG);
             return new UUID(mostSignificantBits, leastSignificantBits);

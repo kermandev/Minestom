@@ -158,6 +158,7 @@ public sealed interface IntProvider {
                 "plateau", Codec.INT, Trapezoid::plateau,
                 Trapezoid::new);
 
+        @SuppressWarnings("IdentityBinaryExpression")
         @Override
         public int sample(Random random) {
             if (plateau == 0 && maxInclusive == -minInclusive) {

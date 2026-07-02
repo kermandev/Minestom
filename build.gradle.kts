@@ -1,6 +1,7 @@
 plugins {
     id("minestom.java-library")
     id("minestom.publishing")
+    id("minestom.java-quality")
     alias(libs.plugins.blossom)
 
     alias(libs.plugins.nmcp.aggregation)

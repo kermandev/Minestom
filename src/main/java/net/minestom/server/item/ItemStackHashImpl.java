@@ -2,6 +2,7 @@ package net.minestom.server.item;
 
 import net.minestom.server.codec.Transcoder;
 import net.minestom.server.component.DataComponent;
+import net.minestom.server.item.ItemStack.Hash;
 import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.network.NetworkBufferTemplate;
 
@@ -14,7 +15,7 @@ import java.util.Set;
 final class ItemStackHashImpl {
 
     public static ItemStack.Hash of(Transcoder<Integer> hashCoder, ItemStack itemStack) {
-        if (itemStack.isAir()) return net.minestom.server.item.ItemStack.Hash.AIR;
+        if (itemStack.isAir()) return Hash.AIR;
 
         final Map<DataComponent<?>, Integer> addedComponents = new HashMap<>();
         final Set<DataComponent<?>> removedComponents = new HashSet<>();

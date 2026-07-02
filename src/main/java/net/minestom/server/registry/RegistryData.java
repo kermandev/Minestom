@@ -36,6 +36,7 @@ import org.jetbrains.annotations.Unmodifiable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -131,7 +132,7 @@ public final class RegistryData {
         try (InputStream resourceStream = loadRegistryFile(resourcePath)) {
             if (resourceStream != null) {
                 final Map<String, Object> map = new HashMap<>();
-                try (JsonReader reader = new JsonReader(new InputStreamReader(resourceStream))) {
+                try (JsonReader reader = new JsonReader(new InputStreamReader(resourceStream, StandardCharsets.UTF_8))) {
                     reader.beginObject();
                     while (reader.hasNext()) map.put(reader.nextName(), readObject(reader));
                     reader.endObject();

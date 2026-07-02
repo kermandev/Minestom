@@ -468,8 +468,8 @@ public final class GeneratorImpl {
                 }
             }
             // Middle sections (to fill)
-            final int startSection = (minMultiple) / 16 + (startOffset ? 1 : 0);
-            final int endSection = (maxMultiple) / 16 + (endOffset ? -1 : 0);
+            final int startSection = minMultiple / 16 + (startOffset ? 1 : 0);
+            final int endSection = maxMultiple / 16 + (endOffset ? -1 : 0);
             for (int i = startSection; i < endSection; i++) {
                 for (int x = 0; x < width; x++) {
                     for (int z = 0; z < depth; z++) {
@@ -578,7 +578,7 @@ public final class GeneratorImpl {
     private static int findIndex(int width, int height, int depth,
                                  int x, int y, int z) {
         assert width > 0 && height > 0 && depth > 0;
-        return (z * width * height) + (y * width) + x;
+        return z * width * height + y * width + x;
     }
 
     private static int indexToX(int index, int width) {
@@ -586,7 +586,7 @@ public final class GeneratorImpl {
     }
 
     private static int indexToY(int index, int width, int height) {
-        return (index / width) % height;
+        return index / width % height;
     }
 
     private static int indexToZ(int index, int width, int height) {

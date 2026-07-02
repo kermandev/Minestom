@@ -452,7 +452,7 @@ public class Player extends LivingEntity implements CommandSender, HoverEventSou
                         if (!expandedBoundingBox.intersectEntity(position, experienceOrb)) return;
                         final PickupExperienceEvent pickupExperienceEvent = new PickupExperienceEvent(this, experienceOrb);
                         EventDispatcher.callCancellable(pickupExperienceEvent, () -> {
-                            short experienceCount = pickupExperienceEvent.getExperienceCount(); // TODO give to player
+                            short _ = pickupExperienceEvent.getExperienceCount(); // TODO give to player
                             experienceOrb.remove();
                         });
                     });

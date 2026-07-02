@@ -1,8 +1,12 @@
 package net.minestom.server.command.builder;
 
 import net.minestom.server.command.CommandManager;
-import net.minestom.server.command.CommandParser;
+import net.minestom.server.command.CommandParser.Result;
+import net.minestom.server.command.CommandParser.Result.KnownCommand.Invalid;
+import net.minestom.server.command.CommandParser.Result.KnownCommand.Valid;
+import net.minestom.server.command.CommandParser.Result.UnknownCommand;
 import net.minestom.server.command.CommandSender;
+import net.minestom.server.command.builder.CommandResult.Type;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Set;
@@ -67,15 +71,15 @@ public class CommandDispatcher {
      * @return the parsing result
      */
     public CommandResult parse(CommandSender sender, String commandString) {
-        final net.minestom.server.command.CommandParser.Result test = manager.parseCommand(sender, commandString);
+        final Result test = manager.parseCommand(sender, commandString);
         return resultConverter(test, commandString);
     }
 
-    private static CommandResult resultConverter(net.minestom.server.command.CommandParser.Result parseResult, String input) {
-        CommandResult.Type type = switch (parseResult) {
-            case CommandParser.Result.UnknownCommand unknownCommand -> CommandResult.Type.UNKNOWN;
-            case CommandParser.Result.KnownCommand.Valid valid -> CommandResult.Type.SUCCESS;
-            case CommandParser.Result.KnownCommand.Invalid invalid -> CommandResult.Type.INVALID_SYNTAX;
+    private static CommandResult resultConverter(Result parseResult, String input) {
+        Type type = switch (parseResult) {
+            case UnknownCommand unknownCommand -> Type.UNKNOWN;
+            case Valid valid -> Type.SUCCESS;
+            case Invalid invalid -> Type.INVALID_SYNTAX;
             case null -> throw new IllegalStateException("Unknown CommandParser.Result type");
         };
         return CommandResult.of(type, input, ParsedCommand.fromExecutable(parseResult.executable()), null);

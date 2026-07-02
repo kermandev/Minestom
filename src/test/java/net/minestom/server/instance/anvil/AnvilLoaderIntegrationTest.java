@@ -355,8 +355,8 @@ public class AnvilLoaderIntegrationTest {
         final var secondInstance = env.createEmptyInstance(secondChunkLoader);
         for (int chunkX = 0; chunkX < 16; chunkX++) {
             for (int chunkZ = 0; chunkZ < 16; chunkZ++) {
-                final Chunk originalChunk = instance.loadChunk(chunkX, chunkZ).join();
-                final Chunk chunk = secondInstance.loadChunk(chunkX, chunkZ).join();
+                instance.loadChunk(chunkX, chunkZ).join();
+                secondInstance.loadChunk(chunkX, chunkZ).join();
                 for (int x = 0; x < Chunk.CHUNK_SIZE_X; x++) {
                     for (int y = secondInstance.getCachedDimensionType().minY(); y < secondInstance.getCachedDimensionType().maxY(); y++) {
                         for (int z = 0; z < Chunk.CHUNK_SIZE_Z; z++) {

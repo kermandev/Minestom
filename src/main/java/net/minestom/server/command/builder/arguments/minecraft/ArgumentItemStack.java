@@ -110,19 +110,19 @@ public class ArgumentItemStack extends Argument<ItemStack> {
         return String.format("ItemStack<%s>", getId());
     }
 
-    private static class StringReader {
+    private static final class StringReader {
         private String input;
         private int index = 0;
 
-        public StringReader(String input) {
+        private StringReader(String input) {
             this.input = input;
         }
 
-        public boolean hasMore() {
+        private boolean hasMore() {
             return index < input.length();
         }
 
-        public char peek() {
+        private char peek() {
             if (!hasMore()) {
                 throw new ArgumentSyntaxException("Unexpected end of input", input, INVALID_NBT);
             }
@@ -130,7 +130,7 @@ public class ArgumentItemStack extends Argument<ItemStack> {
             return input.charAt(index);
         }
 
-        public void consume(char c) {
+        private void consume(char c) {
             char next = peek();
             if (next != c) {
                 throw new ArgumentSyntaxException("Expected '" + c + "', got '" + next + "'", input, INVALID_NBT);
@@ -138,7 +138,7 @@ public class ArgumentItemStack extends Argument<ItemStack> {
             index++;
         }
 
-        public Key readKey() {
+        private Key readKey() {
             char c;
             int start = index;
             while (hasMore() && (c = peek()) != '{' && c != '[' && c != '=') {
@@ -147,7 +147,7 @@ public class ArgumentItemStack extends Argument<ItemStack> {
             return Key.key(input.substring(start, index));
         }
 
-        public BinaryTag readTag() {
+        private BinaryTag readTag() {
             try {
                 StringBuilder remainder = new StringBuilder();
                 final BinaryTag result = MinestomAdventure.tagStringIO().asTag(input.substring(index), remainder);

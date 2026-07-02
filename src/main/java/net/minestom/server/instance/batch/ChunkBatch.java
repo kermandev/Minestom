@@ -196,7 +196,7 @@ public class ChunkBatch implements Batch<ChunkCallback> {
             }
 
             if (inverse != null) inverse.readyLatch.countDown();
-            updateChunk(instance, chunk, sections, callback, safeCallback);
+            updateChunk(instance, chunk, callback, safeCallback);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -225,7 +225,7 @@ public class ChunkBatch implements Batch<ChunkCallback> {
     /**
      * Updates the given chunk for all of its viewers, and executes the callback.
      */
-    private void updateChunk(Instance instance, Chunk chunk, IntSet updatedSections, @Nullable ChunkCallback callback, boolean safeCallback) {
+    private void updateChunk(Instance instance, Chunk chunk, @Nullable ChunkCallback callback, boolean safeCallback) {
         // Refresh chunk for viewers
         if (options.shouldSendUpdate()) {
             // TODO update all sections from `updatedSections`

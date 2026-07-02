@@ -2,6 +2,7 @@ package net.minestom.server.codec;
 
 import org.jetbrains.annotations.ApiStatus;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -123,7 +124,7 @@ final class TranscoderJavaImpl implements Transcoder<Object> {
 
     @Override
     public ListBuilder<Object> createList(int expectedSize) {
-        final List<Object> list = new java.util.ArrayList<>(expectedSize);
+        final List<Object> list = new ArrayList<>(expectedSize);
         return new ListBuilder<>() {
             @Override
             public ListBuilder<Object> add(Object value) {

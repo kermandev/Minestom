@@ -46,7 +46,7 @@ public class GraphConversionTest {
 
     @Test
     public void doubleSyntax() {
-        enum A {A, B, C, D, E}
+        enum A {@SuppressWarnings("VariableNameSameAsType") A, B, C, D, E}
         final Command foo = new Command("foo");
 
         var bar = Literal("bar");

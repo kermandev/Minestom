@@ -26,7 +26,7 @@ public sealed interface Range<T extends Number> {
         }
     }
 
-    record Int(int min, int max) implements Range<java.lang.Integer> {
+    record Int(int min, int max) implements Range<Integer> {
         public Int(int value) {
             this(value, value);
         }

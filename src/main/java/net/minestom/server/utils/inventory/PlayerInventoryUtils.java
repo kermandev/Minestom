@@ -120,6 +120,7 @@ public final class PlayerInventoryUtils {
      * @param slot the internal slot
      * @return a slot id which can be used for packets
      */
+    @SuppressWarnings("SelfAssignment")
     public static int convertMinestomSlotToWindowSlot(int slot) {
         if (slot > -1 && slot < 9) { // Held bar 0-8
             slot = slot + 36;

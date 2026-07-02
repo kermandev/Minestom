@@ -321,7 +321,7 @@ non-sealed class EventNodeImpl<T extends Event> implements EventNode<T> {
     }
 
     private static boolean equals(EventNode<?> node, String name, Class<?> eventType) {
-        return node.getName().equals(name) && eventType.isAssignableFrom((node.getEventType()));
+        return node.getName().equals(name) && eventType.isAssignableFrom(node.getEventType());
     }
 
     private static void forTargetEvents(Class<?> type, Consumer<Class<?>> consumer) {

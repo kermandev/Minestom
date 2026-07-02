@@ -10,6 +10,8 @@ import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.UnknownNullability;
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
@@ -649,8 +651,8 @@ public class NetworkBufferTest {
 
     @Test
     public void testStringUtf8ModifiedWrite() throws IOException {
-        var stream = new java.io.ByteArrayOutputStream();
-        java.io.DataOutputStream out = new java.io.DataOutputStream(stream);
+        var stream = new ByteArrayOutputStream();
+        DataOutputStream out = new DataOutputStream(stream);
         out.writeUTF("Hello");
 
         assertBufferType(STRING_IO_UTF8, "Hello", stream.toByteArray());
@@ -658,8 +660,8 @@ public class NetworkBufferTest {
 
     @Test
     public void testStringUtf8ModifiedRead() throws IOException {
-        var stream = new java.io.ByteArrayOutputStream();
-        java.io.DataOutputStream out = new java.io.DataOutputStream(stream);
+        var stream = new ByteArrayOutputStream();
+        DataOutputStream out = new DataOutputStream(stream);
         out.writeUTF("Hello");
         var buffer = NetworkBuffer.wrap(stream.toByteArray(), 0, stream.size());
         assertEquals("Hello", buffer.read(STRING_IO_UTF8));
@@ -675,8 +677,8 @@ public class NetworkBufferTest {
         assertThrows(IllegalArgumentException.class, () -> buffer.read(STRING_IO_UTF8)); // oom
         buffer.clear();
 
-        var stream = new java.io.ByteArrayOutputStream();
-        java.io.DataOutputStream out = new java.io.DataOutputStream(stream);
+        var stream = new ByteArrayOutputStream();
+        DataOutputStream out = new DataOutputStream(stream);
         out.writeUTF("Hello");
         var byteArray = stream.toByteArray();
 

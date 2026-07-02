@@ -216,25 +216,25 @@ final class EntityTrackerImpl implements EntityTracker {
         return entry.viewers.computeIfAbsent(new ChunkViewKey(sharedInstances, chunkX, chunkZ), ChunkView::new);
     }
 
-    private static class EntityTrackerEntry {
+    private static final class EntityTrackerEntry {
         private final Entity entity;
-        private Point lastPosition;
+        private @Nullable Point lastPosition;
 
         private EntityTrackerEntry(Entity entity, @Nullable Point lastPosition) {
             this.entity = entity;
             this.lastPosition = lastPosition;
         }
 
-        public Entity getEntity() {
+        private Entity getEntity() {
             return entity;
         }
 
         @Nullable
-        public Point getLastPosition() {
+        private Point getLastPosition() {
             return lastPosition;
         }
 
-        public void setLastPosition(Point lastPosition) {
+        private void setLastPosition(Point lastPosition) {
             this.lastPosition = lastPosition;
         }
     }

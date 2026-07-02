@@ -6,6 +6,7 @@ import org.jetbrains.annotations.Nullable;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyPair;
@@ -60,7 +61,7 @@ public sealed interface Auth {
         }
 
         public static Key secretKey(String secret) {
-            return new SecretKeySpec(secret.getBytes(), MAC_ALGORITHM);
+            return new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), MAC_ALGORITHM);
         }
     }
 

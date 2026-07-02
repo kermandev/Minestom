@@ -239,7 +239,7 @@ public class CommandPacketTest {
         CommandTestUtils.assertPacket(packet, expected);
     }
 
-    enum A {A, B, C}
+    enum A {@SuppressWarnings("VariableNameSameAsType") A, B, C}
 
     enum B {D, E, F}
 

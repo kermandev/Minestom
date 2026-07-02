@@ -171,12 +171,4 @@ public class SocketReadTest {
             PacketVanilla.PACKET_POOL.add(pooled);
         }
     }
-
-    private static int getVarIntSize(int input) {
-        return (input & 0xFFFFFF80) == 0
-                ? 1 : (input & 0xFFFFC000) == 0
-                ? 2 : (input & 0xFFE00000) == 0
-                ? 3 : (input & 0xF0000000) == 0
-                ? 4 : 5;
-    }
 }

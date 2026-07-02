@@ -247,7 +247,7 @@ final class TranscoderCrc32Impl implements Transcoder<Integer> {
 
     // Loosely based on the Hasher implementation from Guava, licensed under the Apache 2.0 license.
     private record Hasher(CRC32C crc32, ByteBuffer buffer) {
-        public Hasher() {
+        private Hasher() {
             this(new CRC32C(), ByteBuffer.allocate(8).order(ByteOrder.LITTLE_ENDIAN));
         }
 
@@ -257,22 +257,22 @@ final class TranscoderCrc32Impl implements Transcoder<Integer> {
             return this;
         }
 
-        public Hasher putByte(byte b) {
+        private Hasher putByte(byte b) {
             crc32.update(b);
             return this;
         }
 
-        public Hasher putShort(short s) {
+        private Hasher putShort(short s) {
             buffer.putShort(s);
             return update(Short.BYTES);
         }
 
-        public Hasher putInt(int i) {
+        private Hasher putInt(int i) {
             buffer.putInt(i);
             return update(Integer.BYTES);
         }
 
-        public Hasher putIntBytes(int i) {
+        private Hasher putIntBytes(int i) {
             putByte((byte) i);
             putByte((byte) (i >> 8));
             putByte((byte) (i >> 16));
@@ -280,37 +280,37 @@ final class TranscoderCrc32Impl implements Transcoder<Integer> {
             return this;
         }
 
-        public Hasher putLong(long l) {
+        private Hasher putLong(long l) {
             buffer.putLong(l);
             return update(Long.BYTES);
         }
 
-        public Hasher putFloat(float f) {
+        private Hasher putFloat(float f) {
             return putInt(Float.floatToRawIntBits(f));
         }
 
-        public Hasher putDouble(double d) {
+        private Hasher putDouble(double d) {
             return putLong(Double.doubleToRawLongBits(d));
         }
 
-        public Hasher putChar(char c) {
+        private Hasher putChar(char c) {
             this.putByte((byte) c);
             this.putByte((byte) (c >>> 8));
             return this;
         }
 
-        public Hasher putChars(String string) {
+        private Hasher putChars(String string) {
             for (int i = 0; i < string.length(); ++i)
                 this.putChar(string.charAt(i));
             return this;
         }
 
-        public Hasher putBytes(byte[] bytes) {
+        private Hasher putBytes(byte[] bytes) {
             crc32.update(bytes);
             return this;
         }
 
-        public int hash() {
+        private int hash() {
             return (int) crc32.getValue();
         }
     }

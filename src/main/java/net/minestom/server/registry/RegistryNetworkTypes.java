@@ -1,7 +1,13 @@
 package net.minestom.server.registry;
 
 import net.minestom.server.network.NetworkBuffer;
-import net.minestom.server.utils.Either;
+import net.minestom.server.network.NetworkBuffer.Type;
+import net.minestom.server.registry.Registries.Selector;
+import net.minestom.server.registry.RegistryTagImpl.Backed;
+import net.minestom.server.registry.RegistryTagImpl.Direct;
+import net.minestom.server.registry.RegistryTagImpl.Empty;
+import net.minestom.server.utils.Either.Left;
+import net.minestom.server.utils.Either.Right;
 import net.minestom.server.utils.validate.Check;
 
 import java.util.ArrayList;
@@ -10,7 +16,7 @@ import java.util.Objects;
 
 final class RegistryNetworkTypes {
 
-    record RegistryKeyImpl<T>(Registries.Selector<T> selector) implements NetworkBuffer.Type<RegistryKey<T>> {
+    record RegistryKeyImpl<T>(Selector<T> selector) implements Type<RegistryKey<T>> {
         @Override
         public void write(NetworkBuffer buffer, RegistryKey<T> value) {
             final var registries = Objects.requireNonNull(buffer.registries(), "Buffer is missing registries");
@@ -32,20 +38,20 @@ final class RegistryNetworkTypes {
     }
 
     record HolderNetworkTypeImpl<T extends Holder<T>>(
-            Registries.Selector<T> selector,
-            NetworkBuffer.Type<T> registryNetworkType
-    ) implements NetworkBuffer.Type<Holder<T>> {
+            Selector<T> selector,
+            Type<T> registryNetworkType
+    ) implements Type<Holder<T>> {
         @Override
         public void write(NetworkBuffer buffer, Holder<T> value) {
             final var registries = Objects.requireNonNull(buffer.registries(), "Buffer is missing registries");
             switch (value.unwrap()) {
-                case Either.Left(RegistryKey<T> key) -> {
+                case Left(RegistryKey<T> key) -> {
                     final var registry = selector.select(registries);
                     final int id = registry.getId(key);
                     Check.stateCondition(id == -1, "Key {0} is not registered in registry {1}", key, registry.key());
                     buffer.write(NetworkBuffer.VAR_INT, id + 1);
                 }
-                case Either.Right(T direct) -> {
+                case Right(T direct) -> {
                     buffer.write(NetworkBuffer.VAR_INT, 0);
                     buffer.write(registryNetworkType, direct);
                 }
@@ -65,16 +71,16 @@ final class RegistryNetworkTypes {
         }
     }
 
-    record RegistryTagImpl<T>(Registries.Selector<T> selector) implements NetworkBuffer.Type<RegistryTag<T>> {
+    record RegistryTagImpl<T>(Selector<T> selector) implements Type<RegistryTag<T>> {
         @Override
         public void write(NetworkBuffer buffer, RegistryTag<T> value) {
             switch (value) {
-                case net.minestom.server.registry.RegistryTagImpl.Backed<T> backed -> {
+                case Backed<T> backed -> {
                     buffer.write(NetworkBuffer.VAR_INT, 0);
                     buffer.write(NetworkBuffer.KEY, backed.key().key());
                 }
-                case net.minestom.server.registry.RegistryTagImpl.Empty() -> buffer.write(NetworkBuffer.VAR_INT, 1);
-                case net.minestom.server.registry.RegistryTagImpl.Direct(var entries) -> {
+                case Empty() -> buffer.write(NetworkBuffer.VAR_INT, 1);
+                case Direct(var entries) -> {
                     final var registries = Objects.requireNonNull(buffer.registries(), "Buffer is missing registries");
                     final var registry = selector.select(registries);
                     buffer.write(NetworkBuffer.VAR_INT, entries.size() + 1);
@@ -107,7 +113,7 @@ final class RegistryNetworkTypes {
                     Check.stateCondition(key == null, "Unknown id {0} for registry {1}", id, registry.key());
                     keys.add(key);
                 }
-                return new net.minestom.server.registry.RegistryTagImpl.Direct<>(keys);
+                return new Direct<>(keys);
             }
         }
     }

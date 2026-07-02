@@ -421,7 +421,7 @@ public class Sidebar implements Scoreboard {
     /**
      * This class is used to create a team for the {@link Sidebar}
      */
-    private static class SidebarTeam {
+    private static final class SidebarTeam {
 
         private final String teamName;
         private Component prefix, suffix;
@@ -479,15 +479,6 @@ public class Sidebar implements Scoreboard {
             final var action = new TeamsPacket.UpdateTeamAction(teamDisplayName, friendlyFlags,
                     nameTagVisibility, collisionRule, teamColor, prefix, suffix);
             return new TeamsPacket(teamName, action);
-        }
-
-        /**
-         * Gets the entity name of the team
-         *
-         * @return the entity name
-         */
-        private String getEntityName() {
-            return entityName;
         }
 
         /**

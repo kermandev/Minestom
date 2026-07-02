@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Objects;
@@ -50,7 +51,7 @@ public class ItemComponentReadWriteTest {
         try (InputStream is = MinestomData.resource("item.json")) {
             Objects.requireNonNull(is, "item.json not found");
 
-            var object = GSON.fromJson(new InputStreamReader(is), JsonObject.class);
+            var object = GSON.fromJson(new InputStreamReader(is, StandardCharsets.UTF_8), JsonObject.class);
             for (var itemEntry : object.entrySet()) {
                 for (var componentEntry : itemEntry.getValue().getAsJsonObject().getAsJsonObject("components").entrySet()) {
                     componentEntries.add(entry(componentEntry.getKey(), componentEntry.getValue()));
@@ -96,9 +97,5 @@ public class ItemComponentReadWriteTest {
         } catch (AssertionError | Exception e) {
             throw new AssertionError(component.name() + " failed on \"" + input + "\"", e);
         }
-    }
-
-    private static void assertEqualsJson(JsonElement expected, JsonElement actual) {
-
     }
 }

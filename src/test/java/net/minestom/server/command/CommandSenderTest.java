@@ -44,7 +44,7 @@ public class CommandSenderTest {
             mostRecentMessage = message;
         }
 
-        public @Nullable Component getMostRecentMessage() {
+        private @Nullable Component getMostRecentMessage() {
             return mostRecentMessage;
         }
 

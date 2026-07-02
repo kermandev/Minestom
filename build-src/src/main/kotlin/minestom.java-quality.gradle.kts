@@ -21,15 +21,9 @@ spotless {
 }
 
 tasks.withType<JavaCompile> {
+    options.compilerArgs.addAll(listOf("-Xlint:all"))
     options.errorprone {
-        error("StatementSwitchToExpressionSwitch")
-        error("UnnecessarilyFullyQualified")
-        disable(
-            "StringSplitter",
-            "ClassInitializationDeadlock",
-            "BadImport",
-            "AvoidCommonTypeNames",
-            "ArrayRecordComponent"
-        )
+        error("StatementSwitchToExpressionSwitch", "UnnecessarilyFullyQualified", "UnnecessaryParentheses", "DefaultCharset", "UnusedVariable", "EffectivelyPrivate", "BooleanLiteral", "UnusedMethod", "VariableNameSameAsType", "AttemptedNegativeZero", "EqualsHashCode")
+        disable("StringSplitter", "ClassInitializationDeadlock", "BadImport", "AvoidCommonTypeNames", "ArrayRecordComponent", "LabelledBreakTarget", "SameNameButDifferent")
     }
 }

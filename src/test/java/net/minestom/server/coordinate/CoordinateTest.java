@@ -95,6 +95,7 @@ public class CoordinateTest {
         assertEquals(0, temp.z());
     }
 
+    @SuppressWarnings("AttemptedNegativeZero") // what we are testing
     @Test
     public void vecNegCompare() {
         assertFalse(Vec.ZERO.samePoint(Vec.ONE.neg()));
