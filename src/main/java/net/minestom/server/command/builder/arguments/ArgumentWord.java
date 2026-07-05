@@ -21,7 +21,7 @@ public class ArgumentWord extends Argument<String> {
     public static final int SPACE_ERROR = 1;
     public static final int RESTRICTION_ERROR = 2;
 
-    protected String[] restrictions;
+    protected String @Nullable [] restrictions;
 
     public ArgumentWord(String id) {
         super(id);
@@ -38,7 +38,7 @@ public class ArgumentWord extends Argument<String> {
      * @return 'this' for chaining
      * @throws NullPointerException if {@code restrictions} is not null but contains null value(s)
      */
-    public ArgumentWord from(@Nullable String... restrictions) {
+    public ArgumentWord from(String @Nullable... restrictions) {
         if (restrictions != null) {
             for (String restriction : restrictions) {
                 Objects.requireNonNull(restriction, "ArgumentWord restriction cannot be null, you can pass 'null' instead of an empty array");
@@ -90,8 +90,7 @@ public class ArgumentWord extends Argument<String> {
      *
      * @return the word restrictions, can be null
      */
-    @Nullable
-    public String[] getRestrictions() {
+    public String @Nullable [] getRestrictions() {
         return restrictions;
     }
 

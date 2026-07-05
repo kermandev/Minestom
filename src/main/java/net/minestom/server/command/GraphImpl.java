@@ -37,8 +37,8 @@ record GraphImpl(NodeImpl root) implements Graph {
         return compare(root, graph.root(), comparator);
     }
 
-    record BuilderImpl(Argument<?> argument, List<BuilderImpl> children, Execution execution) implements Graph.Builder {
-        public BuilderImpl(Argument<?> argument, Execution execution) {
+    record BuilderImpl(Argument<?> argument, List<BuilderImpl> children, @Nullable Execution execution) implements Graph.Builder {
+        public BuilderImpl(Argument<?> argument, @Nullable Execution execution) {
             this(argument, new ArrayList<>(), execution);
         }
 
@@ -65,8 +65,8 @@ record GraphImpl(NodeImpl root) implements Graph {
         }
     }
 
-    record NodeImpl(Argument<?> argument, ExecutionImpl execution, List<Graph.Node> next) implements Graph.Node {
-        NodeImpl(Argument<?> argument, ExecutionImpl execution, List<Graph.Node> next) {
+    record NodeImpl(Argument<?> argument, @Nullable ExecutionImpl execution, List<Graph.Node> next) implements Graph.Node {
+        NodeImpl(Argument<?> argument, @Nullable ExecutionImpl execution, List<Graph.Node> next) {
             this.argument = argument;
             this.execution = execution;
             this.next = next.stream().sorted(nodePriority).toList();
@@ -149,16 +149,16 @@ record GraphImpl(NodeImpl root) implements Graph {
 
     private static final class ConversionNode {
         final Argument<?> argument;
-        ExecutionImpl execution;
+        @Nullable ExecutionImpl execution;
         final Map<Argument<?>, ConversionNode> nextMap;
 
-        public ConversionNode(Argument<?> argument, ExecutionImpl execution, Map<Argument<?>, ConversionNode> nextMap) {
+        public ConversionNode(Argument<?> argument, @Nullable ExecutionImpl execution, Map<Argument<?>, ConversionNode> nextMap) {
             this.argument = argument;
             this.execution = execution;
             this.nextMap = nextMap;
         }
 
-        ConversionNode(Argument<?> argument, ExecutionImpl execution) {
+        ConversionNode(Argument<?> argument, @Nullable ExecutionImpl execution) {
             this(argument, execution, new LinkedHashMap<>());
         }
 
