@@ -78,5 +78,12 @@ tasks.register<CheckAbiTask>("checkBinaryCompatibility") {
     })
 
     newJar = tasks.named<Jar>("jar").flatMap { it.archiveFile }
+
+    rootProjectDir.set(project.rootProject.projectDir)
+    val javaExtension = project.extensions.findByType<JavaPluginExtension>() // No java plugin applied
+    if (javaExtension != null) {
+        sourceDirectories.from(javaExtension.sourceSets["main"].java.srcDirs)
+    }
+    ci = providers.environmentVariable("CI").isPresent
 }
 
