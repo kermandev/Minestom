@@ -362,6 +362,6 @@ abstract class CheckAbiTask : DefaultTask() {
     private fun hasUnscannedSupertype(className: String, apis: Map<String, ClassApi>): Boolean {
         // If a supertype isn't in our map, it's external/unscanned, if it's not an object cause those are noisy
         val api = apis[className] ?: return className != "java/lang/Object"
-        return api.supertypes.any { it !in apis || hasUnscannedSupertype(it, apis) }
+        return api.supertypes.any { hasUnscannedSupertype(it, apis) }
     }
 }
