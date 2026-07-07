@@ -3,15 +3,13 @@ import org.gradle.api.GradleException
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.InputFiles
-import org.gradle.api.tasks.Optional
-import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.*
 import java.io.File
 import java.lang.classfile.*
+import java.lang.constant.ConstantDescs
 import java.lang.reflect.AccessFlag
 import java.util.jar.JarFile
+import kotlin.jvm.optionals.getOrNull
 
 /**
  * Simple dependency free ABI checker for Java code.
@@ -67,6 +65,14 @@ abstract class CheckAbiTask : DefaultTask() {
                 logViolation("Class type changed (class <-> interface): $className", newClass, oldClass, newClass.line)
                 violations++
             }
+            if (oldClass.enum != newClass.enum) {
+                logViolation("Class type changed (enum status modified): $className", newClass, oldClass, newClass.line)
+                violations++
+            }
+            if (oldClass.annotation != newClass.annotation) {
+                logViolation("Class type changed (annotation status modified): $className", newClass, oldClass, newClass.line)
+                violations++
+            }
             if (!oldClass.final && newClass.final) {
                 logViolation("Class made final: $className (breaks subclasses)", newClass, oldClass, newClass.line)
                 violations++
@@ -90,7 +96,11 @@ abstract class CheckAbiTask : DefaultTask() {
             for ((methodKey, oldMethod) in oldClass.methods) {
                 val newMethod = newClass.methods[methodKey] ?: lookupMethod(className, methodKey, newApis)
                 if (newMethod == null) {
-                    logViolation("Public/protected method removed or signature changed: $className#$methodKey", newClass, oldClass, oldMethod.line)
+                    if (hasUnscannedSupertype(className, newApis)) {
+                        logWarning("Cannot verify binary compatibility because the class hierarchy contains external/unscanned supertypes: Method removed -> $className#$methodKey", newClass, oldClass, newClass.line)
+                        continue
+                    }
+                    logViolation("Public/protected method removed or signature changed: $className#$methodKey", newClass, oldClass, newClass.line)
                     violations++
                     continue
                 }
@@ -117,7 +127,11 @@ abstract class CheckAbiTask : DefaultTask() {
             for ((fieldKey, oldField) in oldClass.fields) {
                 val newField = newClass.fields[fieldKey] ?: lookupField(className, fieldKey, newApis)
                 if (newField == null) {
-                    logViolation("Public/protected field removed or type changed: $className#$fieldKey", newClass, oldClass, oldField.line)
+                    if (hasUnscannedSupertype(className, newApis)) {
+                        logWarning("Cannot verify binary compatibility because the class hierarchy contains external/unscanned supertypes: Field removed or type changed -> $className#$fieldKey", newClass, oldClass, newClass.line)
+                        continue
+                    }
+                    logViolation("Public/protected field removed or type changed: $className#$fieldKey", newClass, oldClass, newClass.line)
                     violations++
                     continue
                 }
@@ -150,7 +164,14 @@ abstract class CheckAbiTask : DefaultTask() {
             for ((methodKey, newMethod) in newClass.methods) {
                 // If the new method is abstract, not internal, and did not exist in the baseline version
                 if (!newMethod.abstract) continue
-                if (lookupMethod(className, methodKey, oldApis) != null) continue
+                val oldMethod = lookupMethod(className, methodKey, oldApis)
+                if (oldMethod != null) {
+                    if (!oldMethod.abstract) {
+                        logViolation("Inherited concrete method made abstract: $className#$methodKey (breaks subclasses)", newClass, oldClass, newMethod.line)
+                        violations++
+                    }
+                    continue
+                }
 
                 if (newClass.`interface`) {
                     logViolation("New abstract method added to interface: $className#$methodKey (breaks implementing classes)", newClass, oldClass, newMethod.line)
@@ -174,27 +195,18 @@ abstract class CheckAbiTask : DefaultTask() {
         }
     }
 
-    private data class ElementApi(
-            val descriptor: String,
-            val abstract: Boolean,
-            val static: Boolean,
-            val final: Boolean,
-            val protected: Boolean,
-            val line: Int
-    )
+    private fun logWarning(message: String, newClass: ClassApi?, oldClass: ClassApi, line: Int) {
+        logger.warn(message)
+        val sourceFile = newClass?.sourceFile ?: oldClass.sourceFile
+        if (ci.getOrElse(false) && sourceFile != null) {
+            println("::warning file=$sourceFile,line=$line::$message")
+        }
+    }
 
-    private data class ClassApi(
-            val `interface`: Boolean, // Annoying reserved keyword ugh
-            val final: Boolean,
-            val abstract: Boolean,
-            val nonExtendable: Boolean,
-            val protected: Boolean,
-            val supertypes: Set<String>,
-            val methods: Map<String, ElementApi>,
-            val fields: Map<String, ElementApi>,
-            val sourceFile: String?,
-            val line: Int
-    )
+    private data class ElementApi(val descriptor: String, val abstract: Boolean, val static: Boolean, val final: Boolean, val protected: Boolean, val line: Int)
+
+    private data class ClassApi(val `interface`: Boolean, // Annoying reserved keyword ugh
+                                val enum: Boolean, val annotation: Boolean, val final: Boolean, val abstract: Boolean, val nonExtendable: Boolean, val protected: Boolean, val supertypes: Set<String>, val methods: Map<String, ElementApi>, val fields: Map<String, ElementApi>, val outerClassName: String?, val sourceFile: String?, val line: Int)
 
     private fun extractPublicApi(jarFile: File): Map<String, ClassApi> {
         val apis = mutableMapOf<String, ClassApi>()
@@ -216,6 +228,8 @@ abstract class CheckAbiTask : DefaultTask() {
                     // Omit internal classes
                     if (isInternal(classModel)) return@use
                     val isClassInterface = AccessFlag.INTERFACE in classFlags
+                    val isClassEnum = AccessFlag.ENUM in classFlags
+                    val isClassAnnotation = AccessFlag.ANNOTATION in classFlags
                     val isClassFinal = AccessFlag.FINAL in classFlags
                     val isClassAbstract = AccessFlag.ABSTRACT in classFlags
                     val isClassNonExtendable = isNonExtendable(classModel)
@@ -225,29 +239,27 @@ abstract class CheckAbiTask : DefaultTask() {
                     classModel.superclass().ifPresent { supertypes.add(it.asInternalName()) }
                     classModel.interfaces().forEach { supertypes.add(it.asInternalName()) }
 
+                    // Determine the outer class if we are nested
+                    val outerClassName = classModel.findAttribute(Attributes.innerClasses()).getOrNull()?.classes()?.firstOrNull { it.innerClass().name().stringValue() == className }?.outerClass()?.getOrNull()?.name()?.stringValue()
+
                     // Reconstruct source file path
-                    val sourceFileName = classModel.findAttribute(Attributes.sourceFile())
-                        .map { it.sourceFile().stringValue() }.orElse(null)
+                    val sourceFileName = classModel.findAttribute(Attributes.sourceFile()).map { it.sourceFile().stringValue() }.orElse(null)
                     val fullSourcePath = if (sourceFileName != null) {
                         val packagePath = className.substringBeforeLast('/', "")
                         val path = if (packagePath.isEmpty()) sourceFileName else "$packagePath/$sourceFileName"
-                        
+
                         // Find where the file exists locally across all configured source directories
-                        val resolvedFile = sourceDirectories.files.asSequence()
-                            .map { File(it, path) }
-                            .firstOrNull { it.exists() }
-                            
+                        val resolvedFile = sourceDirectories.files.asSequence().map { File(it, path) }.firstOrNull { it.exists() }
+
                         // Fallback to the first source directory if not found locally
                         val fileToUse = resolvedFile ?: sourceDirectories.files.firstOrNull()?.let { File(it, path) }
-                        
+
                         fileToUse?.relativeTo(rootProjectDir.get())?.path
                     } else null
 
                     // Find class declaration line (minimum line of any method)
-                    val classLine = classModel.methods().asSequence()
-                            .mapNotNull { it.code().orElse(null) }
-                            .mapNotNull { it.findAttribute(Attributes.lineNumberTable()).orElse(null) }
-                            .flatMap { it.lineNumbers() }.minOfOrNull { it.lineNumber() } ?: 1
+                    val classLine = classModel.methods().asSequence().mapNotNull { it.code().orElse(null) }.mapNotNull { it.findAttribute(Attributes.lineNumberTable()).orElse(null) }.flatMap { it.lineNumbers() }.minOfOrNull { it.lineNumber() }
+                            ?: 1
 
                     val methods = mutableMapOf<String, ElementApi>()
                     val fields = mutableMapOf<String, ElementApi>()
@@ -259,6 +271,7 @@ abstract class CheckAbiTask : DefaultTask() {
                         if (isInternal(method)) continue
 
                         val methodName = method.methodName().stringValue()
+                        if (methodName == ConstantDescs.CLASS_INIT_NAME) continue
                         val descriptor = method.methodType().stringValue()
                         val isMethodAbstract = AccessFlag.ABSTRACT in flags
                         val isMethodStatic = AccessFlag.STATIC in flags
@@ -287,13 +300,13 @@ abstract class CheckAbiTask : DefaultTask() {
                     }
 
                     apis[className] = ClassApi(
-                            isClassInterface, isClassFinal, isClassAbstract, isClassNonExtendable, isClassProtected, supertypes, methods, fields, fullSourcePath, classLine
+                            isClassInterface, isClassEnum, isClassAnnotation, isClassFinal, isClassAbstract, isClassNonExtendable, isClassProtected, supertypes, methods, fields, outerClassName, fullSourcePath, classLine,
                     )
                 }
             }
         }
         // If the parent class doesn't we omit them, has to be done here as we can read in any order
-        return apis.filterKeys { hasPublicEnclosure(it, apis) }
+        return apis.filterValues { hasPublicEnclosure(it, apis) }
     }
 
     private fun hasPrivateAccess(flags: Set<AccessFlag>): Boolean {
@@ -325,19 +338,30 @@ abstract class CheckAbiTask : DefaultTask() {
         return false
     }
 
-    private fun hasPublicEnclosure(className: String, apis: Map<String, ClassApi>): Boolean {
-        val parent = className.substringBeforeLast('$', "")
-        if (parent.isEmpty()) return true // No outer class
-        if (apis[parent] == null) return false // Parent is not public
-        return hasPublicEnclosure(parent, apis)
+    private fun hasPublicEnclosure(classApi: ClassApi, apis: Map<String, ClassApi>): Boolean {
+        val parent = classApi.outerClassName ?: return true
+        val parentClass = apis[parent] ?: return false
+        return hasPublicEnclosure(parentClass, apis)
     }
 
-    private fun lookupMethod(className: String, key: String, apis: Map<String, ClassApi>): ElementApi? =
-            apis[className]?.let { api -> api.methods[key] ?: api.supertypes.firstNotNullOfOrNull { lookupMethod(it, key, apis) } }
+    private fun lookupMethod(className: String, key: String, apis: Map<String, ClassApi>): ElementApi? = apis[className]?.let { api ->
+        api.methods[key] ?: api.supertypes.firstNotNullOfOrNull { lookupMethod(it, key, apis) }
+    }
 
-    private fun lookupField(className: String, key: String, apis: Map<String, ClassApi>): ElementApi? =
-            apis[className]?.let { api -> api.fields[key] ?: api.supertypes.firstNotNullOfOrNull { lookupField(it, key, apis) } }
+    private fun lookupField(className: String, key: String, apis: Map<String, ClassApi>): ElementApi? = apis[className]?.let { api ->
+        api.fields[key] ?: api.supertypes.firstNotNullOfOrNull { lookupField(it, key, apis) }
+    }
 
-    private fun isSubtypeOf(className: String, supertype: String, apis: Map<String, ClassApi>): Boolean =
-            apis[className]?.let { api -> supertype in api.supertypes || api.supertypes.any { isSubtypeOf(it, supertype, apis) } } ?: false
+    private fun isSubtypeOf(className: String, supertype: String, apis: Map<String, ClassApi>): Boolean {
+        if (className == supertype) return true
+        val api = apis[className] ?: return false
+        if (supertype in api.supertypes) return true
+        return api.supertypes.any { isSubtypeOf(it, supertype, apis) }
+    }
+
+    private fun hasUnscannedSupertype(className: String, apis: Map<String, ClassApi>): Boolean {
+        // If a supertype isn't in our map, it's external/unscanned, if it's not an object cause those are noisy
+        val api = apis[className] ?: return className != "java/lang/Object"
+        return api.supertypes.any { it !in apis || hasUnscannedSupertype(it, apis) }
+    }
 }
