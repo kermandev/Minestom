@@ -29,14 +29,6 @@ public class AbstractDisplayMeta extends EntityMeta {
         metadata.set(MetadataDef.Display.TRANSFORMATION_INTERPOLATION_DURATION, value);
     }
 
-    public int getPosRotInterpolationDuration() {
-        return metadata.get(MetadataDef.Display.POSITION_ROTATION_INTERPOLATION_DURATION);
-    }
-
-    public void setPosRotInterpolationDuration(int value) {
-        metadata.set(MetadataDef.Display.POSITION_ROTATION_INTERPOLATION_DURATION, value);
-    }
-
     public Point getTranslation() {
         return metadata.get(MetadataDef.Display.TRANSLATION);
     }
