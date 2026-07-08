@@ -162,36 +162,43 @@ abstract class CheckAbiTask : DefaultTask() {
     private data class ClassApi(val `interface`: Boolean, // Annoying reserved keyword ugh
                                 val enum: Boolean, val annotation: Boolean, val final: Boolean, val abstract: Boolean, val nonExtendable: Boolean, val protected: Boolean, val supertypes: Set<String>, val methods: Map<String, ElementApi>, val fields: Map<String, ElementApi>, val outerClassName: String?, val sourceFile: String?, val line: Int)
 
-    @delegate:Transient
-    private val classIndex: Map<String, Pair<File, String>> by lazy {
-        buildMap {
-            for (file in classpath.files) {
-                if (!file.exists()) continue
-                val isJmod = file.extension == "jmod"
-                if (!isJmod && file.extension != "jar") continue
-                try {
-                    ZipFile(file).use { zip ->
-                        for (entry in zip.entries().asSequence()) {
-                            val className = when {
-                                isJmod && entry.name.startsWith("classes/") && entry.name.endsWith(".class") ->
-                                    entry.name.removePrefix("classes/").removeSuffix(".class")
+    @Transient
+    private var classIndexMap: Map<String, Pair<File, String>>? = null
 
-                                !isJmod && entry.name.endsWith(".class") ->
-                                    entry.name.removeSuffix(".class")
+    private fun getClassIndex(): Map<String, Pair<File, String>> {
+        var index = classIndexMap
+        if (index == null) {
+            index = buildMap {
+                for (file in classpath.files) {
+                    if (!file.exists()) continue
+                    val isJmod = file.extension == "jmod"
+                    if (!isJmod && file.extension != "jar") continue
+                    try {
+                        ZipFile(file).use { zip ->
+                            for (entry in zip.entries().asSequence()) {
+                                val className = when {
+                                    isJmod && entry.name.startsWith("classes/") && entry.name.endsWith(".class") ->
+                                        entry.name.removePrefix("classes/").removeSuffix(".class")
 
-                                else -> continue
+                                    !isJmod && entry.name.endsWith(".class") ->
+                                        entry.name.removeSuffix(".class")
+
+                                    else -> continue
+                                }
+                                putIfAbsent(className, file to entry.name)
                             }
-                            putIfAbsent(className, file to entry.name)
                         }
+                    } catch (_: Exception) {
                     }
-                } catch (_: Exception) {
                 }
             }
+            classIndexMap = index
         }
+        return index
     }
 
     private fun loadClassBytes(className: String): ByteArray? {
-        val (archive, entryPath) = classIndex[className] ?: return null
+        val (archive, entryPath) = getClassIndex()[className] ?: return null
         return try {
             ZipFile(archive).use { zip ->
                 zip.getInputStream(zip.getEntry(entryPath) ?: return null).readAllBytes()
