@@ -296,9 +296,9 @@ final class ServerProcessImpl implements ServerProcess, Registries.Delegating {
 
             // Monitoring
             {
-                final double acquisitionTimeMs = Acquirable.resetAcquiringTime() / 1e6D;
-                final double tickTimeMs = (System.nanoTime() - nanoTime) / 1e6D;
-                final TickMonitor tickMonitor = new TickMonitor(tickTimeMs, acquisitionTimeMs);
+                final long acquisitionTimeNanos = Acquirable.resetAcquiringTime();
+                final long tickTimeNanos = System.nanoTime() - nanoTime;
+                final TickMonitor tickMonitor = new TickMonitor(tickTimeNanos, acquisitionTimeNanos);
                 EventDispatcher.call(new ServerTickMonitorEvent(tickMonitor));
             }
             serverTickEvent.commit();

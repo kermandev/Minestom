@@ -1,20 +1,14 @@
 package net.minestom.server.monitoring;
 
-public class TickMonitor {
+public record TickMonitor(long tickNanos, long acquisitionNanos) {
 
-    private final double tickTime;
-    private final double acquisitionTime;
-
-    public TickMonitor(double tickTime, double acquisitionTime) {
-        this.tickTime = tickTime;
-        this.acquisitionTime = acquisitionTime;
-    }
-
+    @Deprecated
     public double getTickTime() {
-        return tickTime;
+        return tickNanos / 1e6D;
     }
 
+    @Deprecated
     public double getAcquisitionTime() {
-        return acquisitionTime;
+        return acquisitionNanos / 1e6D;
     }
 }
