@@ -117,7 +117,7 @@ final class RegistryTagImpl {
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
-            if (!(o instanceof RegistryTagImpl.Direct<?>(var keys1))
+            if (!(o instanceof RegistryTagImpl.Direct<?>(List<RegistryKey<?>> keys1))
                     || keys.size() != keys1.size()) return false;
             for (int i = 0; i < keys.size(); i++)
                 if (!keys.get(i).key().equals(keys1.get(i).key())) return false;
